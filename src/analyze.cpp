@@ -750,20 +750,51 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
 
   const int old_size = new_conflict->size;
   int new_size = 0;
+  int best = 0;
+  int second_best = 0;
   for (int i = 0; i < old_size; ++i) {
     const int other = lits[i];
     sorted.push_back (other);
     if (var (other).level)
       lits[new_size++] = other;
+    if (other == uip)
+      continue;
+    if (!best || var (other).level > var (best).level) {
+      second_best = best;
+      best = other;
+    } else if (!second_best || var (other).level > var (second_best).level)
+      second_best = other;
   }
 
   LOG (new_conflict, "removing all units in");
 
   assert (lits[0] == uip || lits[1] == uip);
-  const int other = lits[0] ^ lits[1] ^ uip;
+  int other = lits[0] ^ lits[1] ^ uip;
   lits[0] = other;
   lits[1] = lits[--new_size];
   LOG (new_conflict, "putting uip at pos 1");
+
+  if (lits[0] != best) {
+    const int repl = lits[0];
+    other = lits[0] = best;
+    for (int i = 1; i < new_size; i++) {
+      if (lits[i] != best)
+        continue;
+      lits[i] = repl;
+      break;
+    }
+  }
+  if (lits[1] != second_best) {
+    const int repl = lits[1];
+    lits[1] = second_best;
+    for (int i = 2; i < new_size; i++) {
+      if (lits[i] != second_best)
+        continue;
+      lits[i] = repl;
+      break;
+    }
+  }
+  LOG (new_conflict, "fix watch invariant");
 
   if (other_init != other)
     remove_watch (watches (other_init), new_conflict);
@@ -781,7 +812,7 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
       const auto id = *i;
       mini_chain.push_back (id);
     }
-    lrat_chain.clear (); // see if this is correct...
+    lrat_chain.clear ();
     clear_unit_analyzed_literals ();
     unit_chain.clear ();
   }
@@ -881,6 +912,44 @@ void Internal::otfs_strengthen_clause (Clause *c, int lit, int new_size,
 
 /*------------------------------------------------------------------------*/
 
+void Internal::fix_trail_levels () {
+  LOG ("fixing all trail levels before backtracking");
+  assert (out_of_order_level != -1);
+  if (out_of_order_level > level || opts.chronoadd != 3) {
+    out_of_order_level = -1;
+    out_of_order_trail = -1;
+    return;
+  }
+  const size_t trix = control[out_of_order_level].trail;
+  assert (trix < trail.size ());
+  for (size_t i = trix; i < trail.size (); i++) {
+    const int lit = trail[i];
+    const Clause *reason = var (lit).reason;
+    if (!reason || reason == external_reason)
+      continue;
+
+    int res = 0;
+
+    for (const auto &other : *reason) {
+      if (other == lit)
+        continue;
+      assert (val (other));
+      int tmp = var (other).level;
+      if (tmp > res)
+        res = tmp;
+    }
+    if (var (lit).level != res)
+      LOG (reason, "update level of %d from %d to %d with", lit,
+           var (lit).level, res);
+
+    var (lit).level = res;
+  }
+  out_of_order_level = -1;
+  out_of_order_trail = -1;
+}
+
+/*------------------------------------------------------------------------*/
+
 // This is the main conflict analysis routine.  It assumes that a conflict
 // was found.  Then we derive the 1st UIP clause, optionally minimize it,
 // add it as learned clause, and then uses the clause for conflict directed
@@ -913,7 +982,12 @@ void Internal::analyze () {
 
     int forced;
 
-    const int conflict_level = find_conflict_level (forced);
+    int conflict_level = find_conflict_level (forced);
+
+    if (control[conflict_level].trail <= out_of_order_trail) {
+      fix_trail_levels ();
+      conflict_level = find_conflict_level (forced);
+    }
 
     // In principle we can perform conflict analysis as in non-chronological
     // backtracking except if there is only one literal with the maximum

@@ -107,6 +107,8 @@ run newdelete
 run unit
 run morenmore
 run ctest
+run cilb
+run cilb_units
 run example
 run example_constraint
 run example_tracer

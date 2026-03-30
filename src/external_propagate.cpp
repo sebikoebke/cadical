@@ -408,16 +408,20 @@ void Internal::move_literals_to_watch () {
 
     int highest_level = var (highest_literal).level;
     int highest_value = val (highest_literal);
+    int highest_trail = var (highest_literal).trail;
 
     for (size_t j = i + 1; j < clause.size (); j++) {
       const int other = clause[j];
       const int other_level = var (other).level;
       const int other_value = val (other);
+      const int other_trail = var (other).trail;
 
       if (other_value < 0) {
         if (highest_value >= 0)
           continue;
-        if (other_level <= highest_level)
+        if (other_level < highest_level)
+          continue;
+        if (other_level == highest_level && other_trail < highest_trail)
           continue;
       } else if (other_value > 0) {
         if (highest_value > 0 && other_level >= highest_level)
@@ -431,10 +435,13 @@ void Internal::move_literals_to_watch () {
       highest_literal = other;
       highest_level = other_level;
       highest_value = other_value;
+      highest_trail = other_trail;
     }
 #ifndef NDEBUG
-    LOG ("highest position: %d highest level: %d highest value: %d trail position: %d",
-         highest_position, highest_level, highest_value, var (highest_literal).trail);
+    LOG ("highest position: %d highest level: %d highest value: %d trail "
+         "position: %d",
+         highest_position, highest_level, highest_value,
+         var (highest_literal).trail);
 #endif
 
     if (highest_position == i)
@@ -758,91 +765,118 @@ void Internal::handle_external_clause (Clause *res) {
   assert (res->size >= 2);
   const int pos0 = res->literals[0];
   const int pos1 = res->literals[1];
+  const int l1 = var (pos1).level;
+  const int l0 = var (pos0).level;
   if (force_no_backtrack) {
+    assert (from_propagator);
     assert (val (pos1) < 0);
     assert (val (pos0) >= 0);
     return;
     // TODO: maybe fix levels
-  } 
-  if (val (pos0) > 0 && val(pos1) < 0) {
-    //It is a clause that would have propagated
-    Var &v = var (pos0);
-    Var &other = var (pos1);
-    
-    if (v.level > other.level) {
-      // It would have propagated pos0 on an earlier level than it is assigned
-      LOG(res, "elevate assignment of %d from level %d to level %d with new reason clause",pos0,var (pos0).level,var (pos1).level );
-    
+  }
+  if (val (pos0) > 0 && val (pos1) < 0) {
+    // It is a clause that would have propagated
+
+    if (l0 > l1) {
+      // It would have propagated pos0 on an earlier level than it is
+      // assigned
+
       // Find the highest literal based on trail-position of the clause
       int highest_literal = res->literals[0];
-      assert (val(highest_literal));
+      assert (val (highest_literal));
 
       int highest_position = var (highest_literal).trail;
+      int highest_idx = 0;
 
       for (int i = 1; i < res->size; i++) {
         const int highest_candidate = res->literals[i];
-        assert (val(highest_candidate));
+        assert (val (highest_candidate));
         if (var (highest_candidate).trail > highest_position) {
           highest_position = var (highest_candidate).trail;
           highest_literal = highest_candidate;
+          highest_idx = i;
         }
       }
-      Var &m = var(highest_literal);
-      assert(v.level >= m.level);
-      
-      if (v.trail >= m.trail && v.reason && opts.chrono) {
-        // If v.trail == m.trail, then the propagated literal is the maximum 
+      Var &m = var (highest_literal);
+      assert (l0 >= m.level);
+
+      Var &v = var (pos0);
+      if (v.trail > m.trail && opts.chrono && opts.chronoadd > 0 &&
+          (opts.chronoadd > 1 || v.reason)) {
+        // If v.trail == m.trail, then the propagated literal is the maximum
         // as well, so no need to backtrack
         // we simply reassign the reason and level of the propagation
-        v.level = other.level;
+        LOG (res,
+             "elevate assignment of %d from level %d to level %d with new "
+             "reason clause",
+             pos0, var (pos0).level, var (pos1).level);
+        v.level = l1;
         v.reason = res;
-      } else {
-        // we need to make sure that v.trail >= m.trail
-        
+
+        if (out_of_order_level == -1 || l1 < out_of_order_level)
+          out_of_order_level = l1;
+        if (v.trail > out_of_order_trail)
+          out_of_order_trail = v.trail;
+
+      } else if (v.trail < m.trail && opts.chrono && opts.chronoadd > 0) {
+        assert (highest_idx);
+        if (highest_idx != 1) {
+          res->literals[1] = highest_literal;
+          res->literals[highest_idx] = pos1;
+        }
+        LOG (res,
+             "ignore out-of-order missed assignment of %d from level %d to "
+             "level %d with new "
+             "reason clause",
+             pos0, var (pos0).level, var (pos1).level);
+      } else if (!opts.chrono || opts.chronoadd != -1) {
+
+        LOG (res,
+             "backtrack due to missed assignment of %d from level %d to "
+             "level %d with new reason clause",
+             pos0, l0, l1);
         assert (!force_no_backtrack);
 
-        backtrack (other.level); //pos0 is unassigned by that backtrack step
+        if (opts.chrono)
+          backtrack (l0 - 1);
+        else
+          backtrack (l1);
 
-        assert (!val (pos0) && val (pos1));
+        assert (!val (pos0) && val (pos1) < 0);
         search_assign_driving (pos0, res);
-        
-        assert(v.trail >= m.trail);
-        assert(v.level == other.level);
-        assert(val (pos0) > 0 && val (pos1) < 0);
+
+        assert (v.trail >= m.trail);
+        assert (v.level == l1);
+        assert (val (pos0) > 0 && val (pos1) < 0);
+      } else {
+        // this will lead to missed implications later.
+        LOG (res,
+             "ignore missed assignment of %d from level %d to "
+             "level %d with new "
+             "reason clause",
+             pos0, var (pos0).level, var (pos1).level);
       }
     }
-  }
-  const int l1 = var (pos1).level;
-  if (val (pos0) < 0) { // conflicting or propagating clause
+  } else if (!val (pos0) && val (pos1) < 0) { // propagating
+    if (!opts.chrono) {
+      backtrack (l1);
+    }
+    if (val (pos1) < 0 && !val (pos0))
+      search_assign_driving (pos0, res);
+  } else if (val (pos0) < 0) { // conflicting
     assert (0 < l1 && l1 <= var (pos0).level);
     if (!opts.chrono) {
       backtrack (l1);
     }
-    if (val (pos0) < 0) {
+    // its better to backtrack instead of analyze without propagator
+    // but analyze with propagaor
+    if (val (pos0) && !from_propagator)
+      backtrack (l0 - 1);
+    else if (val (pos0) && from_propagator)
       conflict = res;
-      if (!from_propagator) {
-        // analyze (); // TODO: is it good to do conflict analysis?
-        // apparently its better to backtrack :(
-        backtrack (l1 - 1);
-        conflict = 0;
-        assert (!val (pos0) && !val (pos1));
-      }
-    } else {
+    if (val (pos1) < 0 && !val (pos0))
       search_assign_driving (pos0, res);
-    }
-    if (from_propagator)
-      stats.ext_prop.elearn_conf++;
-    return;
-  }
-  if (val (pos1) < 0 && !val (pos0)) { // propagating clause
-    if (!opts.chrono) {
-      backtrack (l1);
-    }
-    search_assign_driving (pos0, res);
-    if (from_propagator)
-      stats.ext_prop.elearn_conf++;
-    return;
-  }
+  } // else do nothing
 }
 
 /*----------------------------------------------------------------------------*/
@@ -877,6 +911,7 @@ bool Internal::external_check_solution () {
 
   bool trail_changed = true;
   bool added_new_clauses = false;
+
   while (trail_changed || added_new_clauses) {
     notify_assignments ();
     if (!satisfied ())

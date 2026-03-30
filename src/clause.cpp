@@ -480,6 +480,20 @@ void Internal::add_new_original_clause (uint64_t id) {
         assert (val (clause[0]));
         v.level = 0;
         v.reason = 0;
+        did_external_prop = true;
+        const unsigned uidx = vlit (clause[0]);
+        if (lrat || frat)
+          unit_clauses (uidx) = new_id;
+        mark_fixed (clause[0]);
+      } else if (val (clause[0]) > 0 && opts.chrono && opts.chronoadd > 0 &&
+                 (opts.chronoadd > 1 || var (clause[0]).reason)) {
+        const int idx = vidx (clause[0]);
+        assert (val (clause[0]) >= 0);
+        assert (!flags (idx).eliminated ());
+        Var &v = var (idx);
+        assert (val (clause[0]));
+        v.level = 0;
+        v.reason = 0;
         const unsigned uidx = vlit (clause[0]);
         if (lrat || frat)
           unit_clauses (uidx) = new_id;
@@ -504,10 +518,10 @@ void Internal::add_new_original_clause (uint64_t id) {
       Clause *c = new_clause (clause_redundancy, glue);
       c->id = new_id;
       clause_id--;
-      watch_clause (c);
       clause.clear ();
       original.clear ();
       handle_external_clause (c);
+      watch_clause (c);
       newest_clause = c;
     }
   }

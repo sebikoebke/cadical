@@ -175,7 +175,9 @@ struct Internal {
   bool external_prop_is_lazy; // true if the external propagator is lazy
   bool forced_backt_allowed;  // external propagator can force backtracking
   bool private_steps;    // no notification of ext. prop during these steps
-  char rephased;         // last type of resetting phases
+  int out_of_order_level; // lowest out-of-order level to fix
+  int out_of_order_trail; // highest out-of-order literal on the trail
+  char rephased;          // last type of resetting phases
   Reluctant reluctant;   // restart counter in stable mode
   size_t vsize;          // actually allocated variable data size
   int max_var;           // internal maximum variable index
@@ -624,6 +626,7 @@ struct Internal {
   void unassign (int lit);
   void update_target_and_best ();
   void backtrack (int target_level = 0);
+  void fix_trail_levels ();
 
   // Minimized learned clauses in 'minimize.cpp'.
   //
