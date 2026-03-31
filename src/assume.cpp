@@ -7,7 +7,7 @@ namespace CaDiCaL {
 // adds an assumption literal onto the assumption stack.
 
 void Internal::assume (int lit) {
-  if (level && !opts.ilbassumptions)
+  if (level && (!opts.ilb || !opts.ilbassumptions))
     backtrack ();
   else if (val (lit) < 0)
     backtrack (max (0, var (lit).level - 1));
