@@ -755,9 +755,7 @@ void Internal::handle_external_clause (Clause *res) {
     // new unit clause. For now just backtrack.
     assert (!force_no_backtrack);
     assert (level);
-    // if (!opts.chrono) {
     backtrack ();
-    // }
     return;
   }
   if (from_propagator)
@@ -829,7 +827,7 @@ void Internal::handle_external_clause (Clause *res) {
              "level %d with new "
              "reason clause",
              pos0, var (pos0).level, var (pos1).level);
-      } else if (!opts.chrono || opts.chronoadd != -1) {
+      } else {
 
         LOG (res,
              "backtrack due to missed assignment of %d from level %d to "
@@ -837,10 +835,10 @@ void Internal::handle_external_clause (Clause *res) {
              pos0, l0, l1);
         assert (!force_no_backtrack);
 
-        if (opts.chrono)
-          backtrack (l0 - 1);
-        else
+        if (!opts.chrono || opts.chronoadd == -1)
           backtrack (l1);
+        else
+          backtrack (l0 - 1);
 
         assert (!val (pos0) && val (pos1) < 0);
         search_assign_driving (pos0, res);
@@ -848,26 +846,17 @@ void Internal::handle_external_clause (Clause *res) {
         assert (v.trail >= m.trail);
         assert (v.level == l1);
         assert (val (pos0) > 0 && val (pos1) < 0);
-      } else {
-        // this will lead to missed implications later.
-        LOG (res,
-             "ignore missed assignment of %d from level %d to "
-             "level %d with new "
-             "reason clause",
-             pos0, var (pos0).level, var (pos1).level);
       }
     }
   } else if (!val (pos0) && val (pos1) < 0) { // propagating
-    if (!opts.chrono) {
+    if (!opts.chrono || opts.chronoadd == -1)
       backtrack (l1);
-    }
     if (val (pos1) < 0 && !val (pos0))
       search_assign_driving (pos0, res);
   } else if (val (pos0) < 0) { // conflicting
     assert (0 < l1 && l1 <= var (pos0).level);
-    if (!opts.chrono) {
+    if (!opts.chrono || opts.chronoadd == -1)
       backtrack (l1);
-    }
     // its better to backtrack instead of analyze without propagator
     // but analyze with propagaor
     if (val (pos0) && !from_propagator)
