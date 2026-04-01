@@ -915,7 +915,7 @@ bool Internal::external_check_solution () {
     external->reset_extended ();
     external->extend ();
 
-    std::vector<int> etrail;
+    assert (!notification_trail.size());
 
     // Here the variables must be filtered by external->is_observed,
     // because fixed variables are internally not necessarily observed
@@ -927,7 +927,7 @@ bool Internal::external_check_solution () {
       if (!external->is_observed[idx])
         continue;
       const int lit = external->ival (idx);
-      etrail.push_back (lit);
+      notification_trail.push_back (lit);
 #ifndef NDEBUG
 #ifdef LOGGING
       bool p = external->vals[idx];
@@ -940,7 +940,8 @@ bool Internal::external_check_solution () {
     size_t assigned = num_assigned;
     int level_before = level;
     bool is_consistent =
-        external->propagator->cb_check_found_model (etrail);
+        external->propagator->cb_check_found_model (notification_trail);
+    notification_trail.clear();
     stats.ext_prop.ext_cb++;
     forced_backt_allowed = false;
 
@@ -1026,7 +1027,7 @@ void Internal::notify_assignments () {
     return;
 
   LOG ("notify external propagator about new assignments");
-  std::vector<int> assigned;
+  assert(notification_trail.empty());
 
   while (notified < end_of_trail) {
     int ilit = trail[notified++];
@@ -1043,10 +1044,12 @@ void Internal::notify_assignments () {
     // already done.
     assert (external->observed (elit) ||
             (fixed (ilit) && !external->ervars[abs (elit)]));
-    assigned.push_back (elit);
+    notification_trail.push_back (elit);
   }
-  if (assigned.size ())
-    external->propagator->notify_assignment (assigned);
+  if (notification_trail.size ()) {
+    external->propagator->notify_assignment (notification_trail);
+    notification_trail.clear();
+  }
   return;
 }
 
