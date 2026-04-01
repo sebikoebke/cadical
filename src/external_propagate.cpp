@@ -687,35 +687,36 @@ void Internal::explain_external_propagations () {
       assert (!flags (idx).seen);
     }
 #endif
-  }
-
-  // Traverse now in the opposite direction (from lower to higher levels)
-  // and calculate the actual assignment level for the seen assignments.
-  for (auto it = seen_lits.rbegin (); it != seen_lits.rend (); ++it) {
-    const int lit = *it;
-    Flags &f = flags (lit);
-    Var &v = var (lit);
-    if (v.reason) {
-      int real_level = 0;
-      for (const auto &other : *v.reason) {
-        if (other == lit)
-          continue;
-        int tmp = var (other).level;
-        if (tmp > real_level)
-          real_level = tmp;
+  } else {
+    assert(external_prop && !external_prop_is_lazy && opts.exteagerreasons && opts.exteagerrecalc);
+    // Traverse now in the opposite direction (from lower to higher levels)
+    // and calculate the actual assignment level for the seen assignments.
+    for (auto it = seen_lits.rbegin (); it != seen_lits.rend (); ++it) {
+      const int lit = *it;
+      Flags &f = flags (lit);
+      Var &v = var (lit);
+      if (v.reason) {
+        int real_level = 0;
+        for (const auto &other : *v.reason) {
+          if (other == lit)
+            continue;
+          int tmp = var (other).level;
+          if (tmp > real_level)
+            real_level = tmp;
+        }
+        if (v.level && !real_level) {
+          build_chain_for_units (lit, v.reason, 1);
+          learn_unit_clause (lit);
+          lrat_chain.clear ();
+          v.reason = 0;
+        }
+        assert (v.level >= real_level);
+        if (v.level > real_level) {
+          v.level = real_level;
+        }
       }
-      if (v.level && !real_level) {
-        build_chain_for_units (lit, v.reason, 1);
-        learn_unit_clause (lit);
-        lrat_chain.clear ();
-        v.reason = 0;
-      }
-      assert (v.level >= real_level);
-      if (v.level > real_level) {
-        v.level = real_level;
-      }
+      f.seen = false;
     }
-    f.seen = false;
   }
 
 #if 0 // has been fuzzed extensively
