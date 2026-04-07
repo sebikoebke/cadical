@@ -395,82 +395,87 @@ bool Internal::ask_external_clause () {
 //
 // Literals of the externally learned clause must be reordered based on the
 // assignment levels of the literals.
-//
+// Returns the best clause idx (except ignore)
+size_t Internal::best_literal_to_watch (int ignore, bool trail_over_level) {
+  size_t lit_position = 0;
+  int lit = 0;
+
+  int lit_level = 0;
+  signed char lit_value = 0;
+  int lit_trail = 0;
+  for (size_t i = 0; i < clause.size (); i++) {
+
+    const int other = clause[i];
+    if (other == ignore)
+      continue;
+    assert (other);
+
+    const int other_level = var (other).level;
+    const signed char other_value = val (other);
+    const int other_trail = var (other).trail;
+
+    if (!lit ||                                         // no candidate yet.
+        lit_value < other_value ||                      // -1 < 0 < 1
+        (lit_value == other_value &&                    // Tie breaker:
+         ((lit_value < 0 &&                             // -1:
+           ((!trail_over_level &&                       // level over trail:
+             (lit_level < other_level ||                // higher level, or
+              (lit_level == other_level &&              // equal level:
+               lit_trail < other_trail))) ||            // higher trail
+            (trail_over_level &&                        // trail over level:
+             lit_trail < other_trail))) ||              // higher trail
+          (lit_value > 0 && lit_level > other_level)))) // 1: lower level
+    {
+      lit = other;
+      lit_position = i;
+      lit_value = other_value;
+      lit_level = other_level;
+      lit_trail = other_trail;
+    }
+  }
+  assert (lit);
+  return lit_position;
+}
+
 void Internal::move_literals_to_watch () {
   if (clause.size () < 2)
     return;
   if (!level)
     return;
 
-  for (int i = 0; i < 2; i++) {
-    int highest_position = i;
-    int highest_literal = clause[i];
+  size_t best1 = best_literal_to_watch (0, false);
+  const int lit = clause[best1];
+  if (best1 != 0)
+    std::swap (clause[0], clause[best1]);
 
-    int highest_level = var (highest_literal).level;
-    int highest_value = val (highest_literal);
-    int highest_trail = var (highest_literal).trail;
+  size_t best2 = best_literal_to_watch (lit, false);
+  // const int other = clause[best2];
 
-    for (size_t j = i + 1; j < clause.size (); j++) {
-      const int other = clause[j];
-      const int other_level = var (other).level;
-      const int other_value = val (other);
-      const int other_trail = var (other).trail;
+  assert (best2 && clause[best2] != lit);
 
-      if (other_value < 0) {
-        if (highest_value >= 0)
-          continue;
-        if (other_level < highest_level)
-          continue;
-        if (other_level == highest_level && other_trail < highest_trail)
-          continue;
-      } else if (other_value > 0) {
-        if (highest_value > 0 && other_level >= highest_level)
-          continue;
-      } else {
-        if (highest_value >= 0)
-          continue;
-      }
-
-      highest_position = j;
-      highest_literal = other;
-      highest_level = other_level;
-      highest_value = other_value;
-      highest_trail = other_trail;
-    }
-#ifndef NDEBUG
-    LOG ("highest position: %d highest level: %d highest value: %d trail "
-         "position: %d",
-         highest_position, highest_level, highest_value,
-         var (highest_literal).trail);
-#endif
-
-    if (highest_position == i)
-      continue;
-    if (highest_position > i) {
-      std::swap (clause[i], clause[highest_position]);
-    }
-  }
+  if (best2 != 1)
+    std::swap (clause[1], clause[best2]);
 }
 
 /*----------------------------------------------------------------------------*/
 //
 // Reads out from the external propagator the lemma/proapgation reason
 // clause literal by literal. In case propagated_elit is 0, it is about an
-// external clause via 'cb_add_external_clause_lit'. Otherwise, it is about
-// learning the reason of 'propagated_elit' via 'cb_add_reason_clause_lit'.
-// The learned clause is simplified by the current root-level assignment
-// (i.e. root-level falsified literals are removed, root satisfied clauses
-// are skipped). Duplicate literals are removed, tauotologies are detected
-// and skipped. It always adds the original (un-simplified) external clause
-// to the proof as an input clause and
-// the simplified version of it (except exceptions below) as a derived
-// clause.
+// external clause via 'cb_add_external_clause_lit'. Otherwise, it is
+// about learning the reason of 'propagated_elit' via
+// 'cb_add_reason_clause_lit'. The learned clause is simplified by the
+// current root-level assignment (i.e. root-level falsified literals are
+// removed, root satisfied clauses are skipped). Duplicate literals are
+// removed, tauotologies are detected and skipped. It always adds the
+// original (un-simplified) external clause to the proof as an input
+// clause and the simplified version of it (except exceptions below) as a
+// derived clause.
 //
 // In case the external clause, after simplifications, is satisfied, no
 // clause is constructed, and the function returns 0. In case the external
-// clause, after simplifications, is empty, no clause is constructed, unsat
-// is set true and the function returns 0. In case the external clause,
-// after simplifications, is unit, no clause is constructed,
+// clause, after simplifications, is empty, no clause is constructed,
+// unsat is set true and the function returns 0. In case the external
+// clause, after simplifications, is unit, no clause is constructed,
 // 'Internal::clause' has the unit literal (without 0) and the function
 // returns 0.
 //
@@ -485,8 +490,8 @@ void Internal::add_external_clause (int propagated_elit,
   if (propagated_elit) {
     // Propagation reason clauses are by default assumed to be forgettable
     // irredundant. In case they would be unforgettably important, the
-    // propagator can add them as an explicit unforgettable external clause
-    // or set 'are_reasons_forgettable' to false.
+    // propagator can add them as an explicit unforgettable external
+    // clause or set 'are_reasons_forgettable' to false.
     ext_clause_forgettable = external->propagator->are_reasons_forgettable;
 #ifndef NDEBUG
     LOG ("add external reason of propagated lit: %d", propagated_elit);
@@ -495,8 +500,8 @@ void Internal::add_external_clause (int propagated_elit,
   } else
     elit = external->propagator->cb_add_external_clause_lit ();
 
-  // we need to be build a new LRAT chain if we are already in the middle of
-  // the analysis (like during failed assumptions)
+  // we need to be build a new LRAT chain if we are already in the middle
+  // of the analysis (like during failed assumptions)
   LOG (lrat_chain, "lrat chain before");
   std::vector<uint64_t> lrat_chain_ext = std::move (lrat_chain);
   lrat_chain.clear ();
@@ -564,18 +569,18 @@ void Internal::explain_reason (int ilit, Clause *reason, int &open) {
 
 /*----------------------------------------------------------------------------*/
 //
-// In case external propagation was used, the reason clauses of the relevant
-// propagations must be learned lazily before/during conflict analysis.
-// While conflict analysis needs to analyze only the current level, lazy
-// clause learning must check every clause on every level that is backward
-// reachable from the conflicting clause to guarantee that the assignment
-// levels of the variables are accurate. So this explanation round is
-// separated from the conflict analysis, thereby guranteeing that the flags
-// and datastructures can be properly used later.
+// In case external propagation was used, the reason clauses of the
+// relevant propagations must be learned lazily before/during conflict
+// analysis. While conflict analysis needs to analyze only the current
+// level, lazy clause learning must check every clause on every level that
+// is backward reachable from the conflicting clause to guarantee that the
+// assignment levels of the variables are accurate. So this explanation
+// round is separated from the conflict analysis, thereby guranteeing that
+// the flags and datastructures can be properly used later.
 //
 // This function must be called before the conflict analysis, in order to
-// guarantee that every relevant reason clause is indeed learned already and
-// to be sure that the levels of assignments are set correctly.
+// guarantee that every relevant reason clause is indeed learned already
+// and to be sure that the levels of assignments are set correctly.
 //
 // Later TODO: experiment with bounded explanation (explain only those
 // literals that are directly used during conflict analysis +
@@ -691,10 +696,10 @@ Clause *Internal::learn_external_reason_clause (int ilit,
 
 #ifndef NDEBUG
   if (!falsified_elit && newest_clause) {
-    // Check if external propagation is correct wrt to the topological order
-    // defined by the trail. In case it is a falsified external propagation
-    // step, the order does not matter, the reason simply supposed to be a
-    // falsified clause.
+    // Check if external propagation is correct wrt to the topological
+    // order defined by the trail. In case it is a falsified external
+    // propagation step, the order does not matter, the reason simply
+    // supposed to be a falsified clause.
     const int propagated_ilit = ilit;
     for (auto const reason_ilit : *newest_clause) {
       assert (var (reason_ilit).trail <= var (propagated_ilit).trail);
@@ -708,11 +713,12 @@ Clause *Internal::learn_external_reason_clause (int ilit,
 
 /*----------------------------------------------------------------------------*/
 //
-// Helper function to be able to call learn_external_reason_clause when the
-// internal clause is already used in the caller side (for example during
-// proof checking). These calls are assumed to be without a falsified elit.
-// Dont use it in general instead of learn_external_reason_clause because it
-// does not support the corner cases where a literal remains in clause.
+// Helper function to be able to call learn_external_reason_clause when
+// the internal clause is already used in the caller side (for example
+// during proof checking). These calls are assumed to be without a
+// falsified elit. Dont use it in general instead of
+// learn_external_reason_clause because it does not support the corner
+// cases where a literal remains in clause.
 //
 Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
   Clause *res;
@@ -740,8 +746,8 @@ Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
 
 /*----------------------------------------------------------------------------*/
 //
-// Checks if the new clause forces backtracking, new assignments or conflict
-// analysis
+// Checks if the new clause forces backtracking, new assignments or
+// conflict analysis
 //
 void Internal::handle_external_clause (Clause *res) {
   if (from_propagator)
@@ -780,30 +786,20 @@ void Internal::handle_external_clause (Clause *res) {
       // assigned
 
       // Find the highest literal based on trail-position of the clause
-      int highest_literal = res->literals[0];
-      assert (val (highest_literal));
 
-      int highest_position = var (highest_literal).trail;
-      int highest_idx = 0;
+      size_t highest_idx = best_literal_to_watch (pos0, true);
+      assert (highest_idx != 0);
+      const int highest_literal = clause[highest_idx];
 
-      for (int i = 1; i < res->size; i++) {
-        const int highest_candidate = res->literals[i];
-        assert (val (highest_candidate));
-        if (var (highest_candidate).trail > highest_position) {
-          highest_position = var (highest_candidate).trail;
-          highest_literal = highest_candidate;
-          highest_idx = i;
-        }
-      }
       Var &m = var (highest_literal);
       assert (l0 >= m.level);
 
       Var &v = var (pos0);
-      if (v.trail > m.trail && opts.chrono && opts.chronoadd > 0 &&
-          (opts.chronoadd > 1 || v.reason)) {
-        // If v.trail == m.trail, then the propagated literal is the maximum
-        // as well, so no need to backtrack
-        // we simply reassign the reason and level of the propagation
+      if (v.trail > m.trail && opts.elevate > 0 &&
+          (opts.elevate > 1 || v.reason)) {
+        // If v.trail == m.trail, then the propagated literal is the
+        // maximum as well, so no need to backtrack we simply reassign the
+        // reason and level of the propagation
         LOG (res,
              "elevate assignment of %d from level %d to level %d with new "
              "reason clause",
@@ -816,14 +812,15 @@ void Internal::handle_external_clause (Clause *res) {
         if (v.trail > out_of_order_trail)
           out_of_order_trail = v.trail;
 
-      } else if (v.trail < m.trail && opts.chrono && opts.chronoadd > 0) {
+      } else if (v.trail < m.trail && opts.elevate > 0) {
         assert (highest_idx);
         if (highest_idx != 1) {
           res->literals[1] = highest_literal;
           res->literals[highest_idx] = pos1;
         }
         LOG (res,
-             "ignore out-of-order missed assignment of %d from level %d to "
+             "ignore out-of-order missed assignment of %d from level %d "
+             "to "
              "level %d with new "
              "reason clause",
              pos0, var (pos0).level, var (pos1).level);
@@ -835,7 +832,7 @@ void Internal::handle_external_clause (Clause *res) {
              pos0, l0, l1);
         assert (!force_no_backtrack);
 
-        if (!opts.chrono || opts.chronoadd == -1)
+        if (opts.elevate == -1)
           backtrack (l1);
         else
           backtrack (l0 - 1);
@@ -849,13 +846,13 @@ void Internal::handle_external_clause (Clause *res) {
       }
     }
   } else if (!val (pos0) && val (pos1) < 0) { // propagating
-    if (!opts.chrono || opts.chronoadd == -1)
+    if (opts.elevate == -1)
       backtrack (l1);
     if (val (pos1) < 0 && !val (pos0))
       search_assign_driving (pos0, res);
   } else if (val (pos0) < 0) { // conflicting
     assert (0 < l1 && l1 <= var (pos0).level);
-    if (!opts.chrono || opts.chronoadd == -1)
+    if (opts.elevate == -1)
       backtrack (l1);
     // its better to backtrack instead of analyze without propagator
     // but analyze with propagaor
@@ -944,8 +941,8 @@ bool Internal::external_check_solution () {
     stats.ext_prop.elearn_call++;
 
     if (has_external_clause)
-      LOG (
-          "Found solution triggered new clauses from external propagator.");
+      LOG ("Found solution triggered new clauses from external "
+           "propagator.");
 
     while (has_external_clause) {
       int level_before = level;
@@ -958,7 +955,8 @@ bool Internal::external_check_solution () {
       //
       // There are many possible scenarios here:
       // - Learned conflicting clause: return to CDCL loop (conflict true)
-      // - Learned conflicting unit clause that after backtrack+BCP leads to
+      // - Learned conflicting unit clause that after backtrack+BCP leads
+      // to
       //   a new complete solution: force the outer loop to check the new
       //   model (trail_changed is true, but (conflict & unsat) is false)
       // - Learned empty clause: return to CDCL loop (unsat true)
@@ -966,10 +964,11 @@ bool Internal::external_check_solution () {
       //   Though it does not invalidate the current solution, the solver
       //   will backtrack to the root level and will repropagate it. The
       //   search will start again (saved phases hopefully make it quick),
-      //   but it is needed in order to guarantee that every fixed variable
-      //   is properly handled+notified (important for incremental use
-      //   cases).
-      // - Otherwise: the solution is considered approved and the CDCL-loop
+      //   but it is needed in order to guarantee that every fixed
+      //   variable is properly handled+notified (important for
+      //   incremental use cases).
+      // - Otherwise: the solution is considered approved and the
+      // CDCL-loop
       //   can return with res = 10.
       //
       if (unsat || conflict || trail_changed)
@@ -1018,8 +1017,8 @@ void Internal::notify_assignments () {
     assert (elit);
     // Fixed variables might get mapped (during compact) to another
     // non-observed but fixed variable.
-    // This happens on root level, so notification about their assignment is
-    // already done.
+    // This happens on root level, so notification about their assignment
+    // is already done.
     assert (external->observed (elit) || fixed (ilit));
     assigned.push_back (elit);
   }
@@ -1185,8 +1184,8 @@ void Internal::check_watched_literal_invariants () {
       for (size_t i = 2; i < clause.size (); i++)
         assert (val (clause[i]) <= 0);
 
-    } else { // Case 3: First satisfied, next falsified -> could have been a
-             // reason of a previous propagation
+    } else { // Case 3: First satisfied, next falsified -> could have been
+             // a reason of a previous propagation
       // Every other literal of the clause is falsified but at a lower
       // decision level
       for (size_t i = 2; i < clause.size (); i++)
@@ -1216,7 +1215,8 @@ void Internal::check_watched_literal_invariants () {
     // They are ordered by higher to lower decision level
     assert (var (clause[0]).level >= var (clause[1]).level);
 
-    // Every other literal of the clause is falsified, but at a lower level
+    // Every other literal of the clause is falsified, but at a lower
+    // level
     for (size_t i = 2; i < clause.size (); i++)
       assert (val (clause[i]) < 0 &&
               (var (clause[1]).level >= var (clause[i]).level));

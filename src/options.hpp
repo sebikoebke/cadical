@@ -41,7 +41,6 @@ OPTION( checkfrozen,       0,  0,  1,0,0,0, "check all frozen semantics") \
 OPTION( checkproof,        3,  0,  3,0,0,0, "1=drat, 2=lrat, 3=both") \
 OPTION( checkwitness,      1,  0,  1,0,0,0, "check witness internally") \
 OPTION( chrono,            1,  0,  2,0,0,1, "chronological backtracking") \
-OPTION( chronoadd,         1, -1,  3,0,0,1, "chronological clause addition") \
 OPTION( chronoalways,      0,  0,  1,0,0,1, "force always chronological") \
 OPTION( chronolevelim,   1e2,  0,2e9,0,0,1, "chronological level limit") \
 OPTION( chronoreusetrail,  1,  0,  1,0,0,1, "reuse trail chronologically") \
@@ -66,6 +65,7 @@ OPTION( decomposerounds,   2,  1, 16,1,0,1, "number of decompose rounds") \
 OPTION( deduplicate,       1,  0,  1,0,1,1, "remove duplicated binaries") \
 OPTION( eagersubsume,      1,  0,  1,0,0,1, "subsume recently learned") \
 OPTION( eagersubsumelim,  20,  1,1e3,0,0,1, "limit on subsumed candidates") \
+OPTION( elevate,           1, -1,  3,0,0,1, "elevate during clause addition") \
 OPTION( elim,              1,  0,  1,0,1,1, "bounded variable elimination") \
 OPTION( elimands,          1,  0,  1,0,0,1, "find AND gates") \
 OPTION( elimaxeff,       2e9,  0,2e9,1,0,1, "maximum elimination efficiency") \

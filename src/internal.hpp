@@ -174,18 +174,18 @@ struct Internal {
   bool did_external_prop;     // true if ext. propagation happened
   bool external_prop_is_lazy; // true if the external propagator is lazy
   bool forced_backt_allowed;  // external propagator can force backtracking
-  bool private_steps;    // no notification of ext. prop during these steps
+  bool private_steps;     // no notification of ext. prop during these steps
   int out_of_order_level; // lowest out-of-order level to fix
   int out_of_order_trail; // highest out-of-order literal on the trail
   char rephased;          // last type of resetting phases
-  Reluctant reluctant;   // restart counter in stable mode
-  size_t vsize;          // actually allocated variable data size
-  int max_var;           // internal maximum variable index
-  uint64_t clause_id;    // last used id for clauses
-  uint64_t original_id;  // ids for original clauses to produce LRAT
-  uint64_t reserved_ids; // number of reserved ids for original clauses
-  uint64_t conflict_id;  // store conflict id for finalize (frat)
-  bool concluded;        // keeps track of conclude
+  Reluctant reluctant;    // restart counter in stable mode
+  size_t vsize;           // actually allocated variable data size
+  int max_var;            // internal maximum variable index
+  uint64_t clause_id;     // last used id for clauses
+  uint64_t original_id;   // ids for original clauses to produce LRAT
+  uint64_t reserved_ids;  // number of reserved ids for original clauses
+  uint64_t conflict_id;   // store conflict id for finalize (frat)
+  bool concluded;         // keeps track of conclude
   vector<uint64_t> conclusion; // store ids of conclusion clauses
   vector<uint64_t>
       unit_clauses_idx;        // keep track of unit_clauses (LRAT/FRAT)
@@ -677,6 +677,7 @@ struct Internal {
   void explain_external_propagations ();
   void explain_reason (int lit, Clause *, int &open);
   void move_literals_to_watch ();
+  size_t best_literal_to_watch (int, bool);
   void handle_external_clause (Clause *);
   void notify_assignments ();
   void notify_decision ();
