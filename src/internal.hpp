@@ -822,6 +822,7 @@ struct Internal {
   void explain_external_propagations ();
   void explain_reason (int lit, Clause *, int &open);
   void move_literals_to_watch ();
+  size_t best_literal_to_watch (int, bool);
   void handle_external_clause (Clause *);
   void notify_assignments ();
   void notify_decision ();

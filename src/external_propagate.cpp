@@ -447,61 +447,66 @@ bool Internal::ask_external_clause () {
 //
 // Literals of the externally learned clause must be reordered based on the
 // assignment levels of the literals.
-//
+// Returns the best clause idx (except ignore)
+size_t Internal::best_literal_to_watch (int ignore, bool trail_over_level) {
+  size_t lit_position = 0;
+  int lit = 0;
+
+  int lit_level = 0;
+  signed char lit_value = 0;
+  int lit_trail = 0;
+  for (size_t i = 0; i < clause.size (); i++) {
+
+    const int other = clause[i];
+    if (other == ignore)
+      continue;
+    assert (other);
+
+    const int other_level = var (other).level;
+    const signed char other_value = val (other);
+    const int other_trail = var (other).trail;
+
+    if (!lit ||                                         // no candidate yet.
+        lit_value < other_value ||                      // -1 < 0 < 1
+        (lit_value == other_value &&                    // Tie breaker:
+         ((lit_value < 0 &&                             // -1:
+           ((!trail_over_level &&                       // level over trail:
+             (lit_level < other_level ||                // higher level, or
+              (lit_level == other_level &&              // equal level:
+               lit_trail < other_trail))) ||            // higher trail
+            (trail_over_level &&                        // trail over level:
+             lit_trail < other_trail))) ||              // higher trail
+          (lit_value > 0 && lit_level > other_level)))) // 1: lower level
+    {
+      lit = other;
+      lit_position = i;
+      lit_value = other_value;
+      lit_level = other_level;
+      lit_trail = other_trail;
+    }
+  }
+  assert (lit);
+  return lit_position;
+}
+
 void Internal::move_literals_to_watch () {
   if (clause.size () < 2)
     return;
   if (!level)
     return;
 
-  for (int i = 0; i < 2; i++) {
-    int highest_position = i;
-    int highest_literal = clause[i];
+  size_t best1 = best_literal_to_watch (0, false);
+  const int lit = clause[best1];
+  if (best1 != 0)
+    std::swap (clause[0], clause[best1]);
 
-    int highest_level = var (highest_literal).level;
-    int highest_value = val (highest_literal);
-    int highest_trail = var (highest_literal).trail;
+  size_t best2 = best_literal_to_watch (lit, false);
+  // const int other = clause[best2];
 
-    for (size_t j = i + 1; j < clause.size (); j++) {
-      const int other = clause[j];
-      const int other_level = var (other).level;
-      const int other_value = val (other);
-      const int other_trail = var (other).trail;
+  assert (best2 && clause[best2] != lit);
 
-      if (other_value < 0) {
-        if (highest_value >= 0)
-          continue;
-        if (other_level < highest_level)
-          continue;
-        if (other_level == highest_level && other_trail < highest_trail)
-          continue;
-      } else if (other_value > 0) {
-        if (highest_value > 0 && other_level >= highest_level)
-          continue;
-      } else {
-        if (highest_value >= 0)
-          continue;
-      }
-
-      highest_position = j;
-      highest_literal = other;
-      highest_level = other_level;
-      highest_value = other_value;
-      highest_trail = other_trail;
-    }
-#ifndef NDEBUG
-    LOG ("highest position: %d highest level: %d highest value: %d trail "
-         "position: %d",
-         highest_position, highest_level, highest_value,
-         var (highest_literal).trail);
-#endif
-
-    if (highest_position == i)
-      continue;
-    if (highest_position > i) {
-      std::swap (clause[i], clause[highest_position]);
-    }
-  }
+  if (best2 != 1)
+    std::swap (clause[1], clause[best2]);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -854,30 +859,20 @@ void Internal::handle_external_clause (Clause *res) {
       // assigned
 
       // Find the highest literal based on trail-position of the clause
-      int highest_literal = res->literals[0];
-      assert (val (highest_literal));
 
-      int highest_position = var (highest_literal).trail;
-      int highest_idx = 0;
+      size_t highest_idx = best_literal_to_watch (pos0, true);
+      assert (highest_idx != 0);
+      const int highest_literal = clause[highest_idx];
 
-      for (int i = 1; i < res->size; i++) {
-        const int highest_candidate = res->literals[i];
-        assert (val (highest_candidate));
-        if (var (highest_candidate).trail > highest_position) {
-          highest_position = var (highest_candidate).trail;
-          highest_literal = highest_candidate;
-          highest_idx = i;
-        }
-      }
       Var &m = var (highest_literal);
       assert (l0 >= m.level);
 
       Var &v = var (pos0);
-      if (v.trail > m.trail && opts.chrono && opts.chronoadd > 0 &&
-          (opts.chronoadd > 1 || v.reason)) {
-        // If v.trail == m.trail, then the propagated literal is the maximum
-        // as well, so no need to backtrack
-        // we simply reassign the reason and level of the propagation
+      if (v.trail > m.trail && opts.elevate > 0 &&
+          (opts.elevate > 1 || v.reason)) {
+        // If v.trail == m.trail, then the propagated literal is the
+        // maximum as well, so no need to backtrack we simply reassign the
+        // reason and level of the propagation
         LOG (res,
              "elevate assignment of %d from level %d to level %d with new "
              "reason clause",
@@ -890,7 +885,7 @@ void Internal::handle_external_clause (Clause *res) {
         if (v.trail > out_of_order_trail)
           out_of_order_trail = v.trail;
 
-      } else if (v.trail < m.trail && opts.chrono && opts.chronoadd > 0) {
+      } else if (v.trail < m.trail && opts.elevate > 0) {
         assert (highest_idx);
         if (highest_idx != 1) {
           res->literals[1] = highest_literal;
@@ -909,7 +904,7 @@ void Internal::handle_external_clause (Clause *res) {
              pos0, l0, l1);
         assert (!force_no_backtrack);
 
-        if (!opts.chrono || opts.chronoadd == -1)
+        if (opts.elevate == -1)
           backtrack (l1);
         else
           backtrack (l0 - 1);
@@ -923,16 +918,14 @@ void Internal::handle_external_clause (Clause *res) {
       }
     }
   } else if (!val (pos0) && val (pos1) < 0) { // propagating
-    if (!opts.chrono || opts.chronoadd == -1) {
+    if (opts.elevate == -1)
       backtrack (l1);
-    }
     if (val (pos1) < 0 && !val (pos0))
       search_assign_driving (pos0, res);
   } else if (val (pos0) < 0) { // conflicting
     assert (0 < l1 && l1 <= var (pos0).level);
-    if (!opts.chrono || opts.chronoadd == -1) {
+    if (opts.elevate == -1)
       backtrack (l1);
-    }
     // its better to backtrack instead of analyze without propagator
     // but analyze with propagaor
     if (val (pos0) && !from_propagator)

@@ -342,7 +342,6 @@ void Internal::mark_garbage (Clause *c) {
 // to learn a new unit clause (which was confusing in log files).
 
 void Internal::assign_original_unit (int64_t id, int lit) {
-  assert (!level || opts.chrono);
   assert (!unsat);
   const int idx = vidx (lit);
   assert (!vals[idx]);
@@ -500,8 +499,8 @@ void Internal::add_new_original_clause (int64_t id) {
         if (lrat || frat)
           unit_clauses (uidx) = new_id;
         mark_fixed (clause[0]);
-      } else if (val (clause[0]) > 0 && opts.chrono && opts.chronoadd > 0 &&
-                 (opts.chronoadd > 1 || var (clause[0]).reason)) {
+      } else if (val (clause[0]) > 0 && opts.elevate > 0 &&
+                 (opts.elevate > 1 || var (clause[0]).reason)) {
         const int idx = vidx (clause[0]);
         assert (val (clause[0]) >= 0);
         assert (!flags (idx).eliminated ());
@@ -533,10 +532,10 @@ void Internal::add_new_original_clause (int64_t id) {
       Clause *c = new_clause (clause_redundancy, glue);
       c->id = new_id;
       clause_id--;
-      clause.clear ();
       original.clear ();
-      handle_external_clause (c);
-      watch_clause (c);
+      handle_external_clause (c); // handle_external_clause uses clause
+      watch_clause (c);           // and may change the watched literal
+      clause.clear ();            // therefore it is cleared afterwards
       newest_clause = c;
     }
   }

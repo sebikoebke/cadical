@@ -572,7 +572,6 @@ inline int Internal::otfs_find_backtrack_level (int &forced) {
 inline int Internal::find_conflict_level (int &forced) {
 
   assert (conflict);
-  assert (opts.chrono || opts.otfs || external_prop);
 
   int res = 0, count = 0;
 
@@ -960,13 +959,13 @@ void Internal::update_decision_rate_average () {
 }
 
 void Internal::fix_trail_levels () {
-  LOG ("fixing all trail levels before backtracking");
   assert (out_of_order_level != -1);
-  if (out_of_order_level > level || opts.chronoadd != 3) {
+  if (out_of_order_level > level || opts.elevate != 3) {
     out_of_order_level = -1;
     out_of_order_trail = -1;
     return;
   }
+  LOG ("fixing all trail levels before backtracking");
   const size_t trix = control[out_of_order_level].trail;
   assert (trix < trail.size ());
   for (size_t i = trix; i < trail.size (); i++) {
@@ -1026,72 +1025,69 @@ void Internal::analyze () {
     explain_external_propagations ();
   }
 
-  if (opts.chrono || external_prop) {
+  int forced;
 
-    int forced;
+  int conflict_level = find_conflict_level (forced);
 
-    int conflict_level = find_conflict_level (forced);
-
-    if (control[conflict_level].trail <= out_of_order_trail) {
-      fix_trail_levels ();
-      conflict_level = find_conflict_level (forced);
-    }
-
-    // In principle we can perform conflict analysis as in non-chronological
-    // backtracking except if there is only one literal with the maximum
-    // assignment level in the clause.  Then standard conflict analysis is
-    // unnecessary and we can use the conflict as a driving clause.  In the
-    // pseudo code of the SAT'18 paper on chronological backtracking this
-    // corresponds to the situation handled in line 4-6 in Alg. 1, except
-    // that the pseudo code in the paper only backtracks while we eagerly
-    // assign the single literal on the highest decision level.
-
-    if (forced) {
-
-      assert (forced);
-      assert (conflict_level > 0);
-      LOG ("single highest level literal %d", forced);
-
-      // The pseudo code in the SAT'18 paper actually backtracks to the
-      // 'second highest decision' level, while their code backtracks
-      // to 'conflict_level-1', which is more in the spirit of chronological
-      // backtracking anyhow and thus we also do the latter.
-      //
-      backtrack (conflict_level - 1);
-
-      // if we are on decision level 0 search assign will learn unit
-      // so we need a valid chain here (of course if we are not on decision
-      // level 0 this will not result in a valid chain).
-      // we can just use build_chain_for_units in propagate
-      //
-      build_chain_for_units (forced, conflict, 0);
-
-      LOG ("forcing %d", forced);
-      search_assign_driving (forced, conflict);
-
-      conflict = 0;
-      if (!opts.chrono)
-        did_external_prop = true;
-      STOP (analyze);
-      return;
-    }
-
-    // Backtracking to the conflict level is in the pseudo code in the
-    // SAT'18 chronological backtracking paper, but not in their actual
-    // implementation.  In principle we do not need to backtrack here.
-    // However, as a side effect of backtracking to the conflict level we
-    // set 'level' to the conflict level which then allows us to reuse the
-    // old 'analyze' code as is.  The alternative (which we also tried but
-    // then abandoned) is to use 'conflict_level' instead of 'level' in the
-    // analysis, which however requires to pass it to the 'analyze_reason'
-    // and 'analyze_literal' functions.
-    //
-    backtrack (conflict_level);
+  if (control[conflict_level].trail <= out_of_order_trail) {
+    fix_trail_levels ();
+    conflict_level = find_conflict_level (forced);
   }
 
-  // Actual conflict on root level, thus formula unsatisfiable.
+  // In principle we can perform conflict analysis as in non-chronological
+  // backtracking except if there is only one literal with the maximum
+  // assignment level in the clause.  Then standard conflict analysis is
+  // unnecessary and we can use the conflict as a driving clause.  In the
+  // pseudo code of the SAT'18 paper on chronological backtracking this
+  // corresponds to the situation handled in line 4-6 in Alg. 1, except
+  // that the pseudo code in the paper only backtracks while we eagerly
+  // assign the single literal on the highest decision level.
+
+  if (forced) {
+
+    assert (forced);
+    assert (conflict_level > 0);
+    LOG ("single highest level literal %d", forced);
+
+    // The pseudo code in the SAT'18 paper actually backtracks to the
+    // 'second highest decision' level, while their code backtracks
+    // to 'conflict_level-1', which is more in the spirit of chronological
+    // backtracking anyhow and thus we also do the latter.
+    //
+    backtrack (conflict_level - 1);
+
+    // if we are on decision level 0 search assign will learn unit
+    // so we need a valid chain here (of course if we are not on decision
+    // level 0 this will not result in a valid chain).
+    // we can just use build_chain_for_units in propagate
+    //
+    build_chain_for_units (forced, conflict, 0);
+
+    LOG ("forcing %d", forced);
+    search_assign_driving (forced, conflict);
+
+    conflict = 0;
+    if (!opts.chrono)
+      did_external_prop = true;
+    STOP (analyze);
+    return;
+  }
+
+  // Backtracking to the conflict level is in the pseudo code in the
+  // SAT'18 chronological backtracking paper, but not in their actual
+  // implementation.  In principle we do not need to backtrack here.
+  // However, as a side effect of backtracking to the conflict level we
+  // set 'level' to the conflict level which then allows us to reuse the
+  // old 'analyze' code as is.  The alternative (which we also tried but
+  // then abandoned) is to use 'conflict_level' instead of 'level' in the
+  // analysis, which however requires to pass it to the 'analyze_reason'
+  // and 'analyze_literal' functions.
   //
-  if (!level) {
+  backtrack (conflict_level);
+
+      // Actual conflict on root level, thus formula unsatisfiable.
+      //
+      if (!level) {
     learn_empty_clause ();
     if (external->learner)
       external->export_learned_empty_clause ();
