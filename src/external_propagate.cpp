@@ -692,6 +692,7 @@ void Internal::explain_external_propagations () {
       Flags &f = flags (lit);
       f.seen = false;
     }
+    seen_lits.clear ();
 #ifndef NDEBUG
     for (auto idx : vars) {
       assert (!flags (idx).seen);
