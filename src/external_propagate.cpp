@@ -414,6 +414,8 @@ size_t Internal::best_literal_to_watch (int ignore, bool trail_over_level) {
     const signed char other_value = val (other);
     const int other_trail = var (other).trail;
 
+    assert (other_value <= 0 || other_level);
+
     if (!lit ||                                         // no candidate yet.
         lit_value < other_value ||                      // -1 < 0 < 1
         (lit_value == other_value &&                    // Tie breaker:
@@ -619,6 +621,7 @@ void Internal::explain_external_propagations () {
       Flags &f = flags (lit);
       f.seen = false;
     }
+    seen_lits.clear ();
 #ifndef NDEBUG
     for (auto idx : vars) {
       assert (!flags (idx).seen);
@@ -797,6 +800,7 @@ void Internal::handle_external_clause (Clause *res) {
       Var &v = var (pos0);
       if (v.trail > m.trail && opts.elevate > 0 &&
           (opts.elevate > 1 || v.reason)) {
+        // elevate=1 elevates reasons only, elevate=2 also decisions
         // If v.trail == m.trail, then the propagated literal is the
         // maximum as well, so no need to backtrack we simply reassign the
         // reason and level of the propagation
@@ -826,17 +830,21 @@ void Internal::handle_external_clause (Clause *res) {
              pos0, var (pos0).level, var (pos1).level);
       } else {
 
-        LOG (res,
-             "backtrack due to missed assignment of %d from level %d to "
-             "level %d with new reason clause",
-             pos0, l0, l1);
         assert (!force_no_backtrack);
 
-        if (opts.elevate == -1)
-          backtrack (l1);
-        else
-          backtrack (l0 - 1);
-
+        if (opts.elevate == -1) {
+          LOG (res,
+               "backjump due to missed assignment of %d from level %d to "
+               "level %d with new reason clause",
+               pos0, l0, l1);
+          backtrack (l1); // backjump
+        } else {
+          LOG (res,
+               "backtrack due to missed assignment of %d from level %d to "
+               "level %d with new reason clause",
+               pos0, l0, l0 - 1);
+          backtrack (l0 - 1); // backtrack chronologically
+        }
         assert (!val (pos0) && val (pos1) < 0);
         search_assign_driving (pos0, res);
 
@@ -844,10 +852,11 @@ void Internal::handle_external_clause (Clause *res) {
         assert (v.level == l1);
         assert (val (pos0) > 0 && val (pos1) < 0);
       }
-    }
+    } // else (l0 <= l1) return;
+
   } else if (!val (pos0) && val (pos1) < 0) { // propagating
     if (opts.elevate == -1)
-      backtrack (l1);
+      backtrack (l1); // backjump
     if (val (pos1) < 0 && !val (pos0))
       search_assign_driving (pos0, res);
   } else if (val (pos0) < 0) { // conflicting
@@ -855,7 +864,7 @@ void Internal::handle_external_clause (Clause *res) {
     if (opts.elevate == -1)
       backtrack (l1);
     // its better to backtrack instead of analyze without propagator
-    // but analyze with propagaor
+    // but analyze with propagator
     if (val (pos0) && !from_propagator)
       backtrack (l0 - 1);
     else if (val (pos0) && from_propagator)
