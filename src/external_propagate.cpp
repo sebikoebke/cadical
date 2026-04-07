@@ -859,16 +859,21 @@ void Internal::handle_external_clause (Clause *res) {
       backtrack (l1); // backjump
     if (val (pos1) < 0 && !val (pos0))
       search_assign_driving (pos0, res);
+
   } else if (val (pos0) < 0) { // conflicting
     assert (0 < l1 && l1 <= var (pos0).level);
+
     if (opts.elevate == -1)
-      backtrack (l1);
+      backtrack (l1); // backjump
     // its better to backtrack instead of analyze without propagator
     // but analyze with propagator
     if (val (pos0) && !from_propagator)
-      backtrack (l0 - 1);
+      backtrack (l0 - 1); // backtrack
+    else if (l0 != l1)
+      backtrack (l0 - 1); // backtrack
     else if (val (pos0) && from_propagator)
       conflict = res;
+
     if (val (pos1) < 0 && !val (pos0))
       search_assign_driving (pos0, res);
   } // else do nothing
