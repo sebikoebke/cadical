@@ -807,21 +807,12 @@ void Internal::handle_external_clause (Clause *res, uint64_t new_id) {
     assert (from_propagator);
     assert (val (pos1) < 0);
     assert (val (pos0) >= 0);
-    size_t highest_idx = best_literal_to_watch (pos0, true);
-    assert (highest_idx != 0);
-    const int highest_literal = clause[highest_idx];
-
-    Var &m = var (highest_literal);
-    assert (l0 >= m.level);
-
-    Var &v = var (pos0);
-    assert (v.level <= m.level);
 
     LOG (res,
          "elevate assignment of %d from level %d to level %d with "
          "lazy reason clause",
-         pos0, var (pos0).level, m.level);
-    v.level = m.level;
+         pos0, l0, l1);
+    var (pos0).level = l1;
     return;
     // TODO: maybe fix levels
   }
