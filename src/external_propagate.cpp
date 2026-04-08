@@ -752,23 +752,49 @@ Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
 // Checks if the new clause forces backtracking, new assignments or
 // conflict analysis
 //
-void Internal::handle_external_clause (Clause *res) {
+void Internal::handle_external_clause (Clause *res, uint64_t new_id) {
   if (from_propagator)
     stats.ext_prop.elearned++;
-  // at level 0 we have to do nothing...
-  if (!level)
+
+  // new unit clause. For now just backtrack.
+  if (!res && (force_no_backtrack ||
+               (val (clause[0]) > 0 && opts.elevate > 0 &&
+                (opts.elevate > 1 || var (clause[0]).reason)))) {
+    if (force_no_backtrack)
+      did_external_prop = true;
+    assert (level);
+    assert (new_id);
+    const int idx = vidx (clause[0]);
+    assert (val (clause[0]) >= 0);
+    assert (!flags (idx).eliminated ());
+    Var &v = var (idx);
+    assert (val (clause[0]));
+    v.level = 0;
+    v.reason = 0;
+    const unsigned uidx = vlit (clause[0]);
+    if (lrat || frat)
+      unit_clauses (uidx) = new_id;
+    mark_fixed (clause[0]);
     return;
+  }
+
   if (!res) {
     if (from_propagator)
       stats.ext_prop.elearn_prop++;
-    // new unit clause. For now just backtrack.
-    assert (!force_no_backtrack);
-    assert (level);
-    backtrack ();
-    return;
+    const int lit = clause[0];
+    assert (!val (lit) || var (lit).level);
+    if (val (lit))
+      backtrack (var (lit).level - 1);
+    if (opts.elevate == -1 && val (lit))
+      backtrack ();
+    assert (!val (lit));
+    assign_original_unit (new_id, lit);
   }
-  if (from_propagator)
-    stats.ext_prop.elearned++;
+
+  // at level 0 we have to do nothing...
+  if (!level)
+    return;
+
   assert (res->size >= 2);
   const int pos0 = res->literals[0];
   const int pos1 = res->literals[1];
