@@ -789,12 +789,14 @@ void Internal::handle_external_clause (Clause *res, uint64_t new_id) {
       backtrack ();
     assert (!val (lit));
     assign_original_unit (new_id, lit);
+    return;
   }
 
   // at level 0 we have to do nothing...
   if (!level)
     return;
 
+  assert (res);
   assert (res->size >= 2);
   const int pos0 = res->literals[0];
   const int pos1 = res->literals[1];
