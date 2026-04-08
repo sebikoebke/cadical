@@ -877,6 +877,12 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
     assert (from_propagator);
     assert (val (pos1) < 0);
     assert (val (pos0) >= 0);
+
+    LOG (res,
+         "elevate assignment of %d from level %d to level %d with lazy "
+         "reason clause",
+         pos0, var (pos0).level, var (pos1).level);
+    var (pos0).level = l1;
     return;
     // TODO: maybe fix levels
   }
