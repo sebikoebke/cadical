@@ -19,6 +19,7 @@ debug=no
 libs=""
 logging=no
 check=no
+checkmissed=no
 closefrom=yes
 competition=no
 coverage=no
@@ -97,6 +98,9 @@ where '<option>' is one of the following
 -p|--pedantic      add '--pedantic' and '-Werror' compilation flag
 -s|--symbols       add '-ggdb3' (even for optimized compilation)
 
+--check-missed     compile with expensive assertion checking for missed
+                   implications (needs '-c')
+
 --coverage         compile with '-ftest-coverage -fprofile-arcs' for 'gcov'
 --profile          compile with '-pg' to profile with 'gprof'
 --memory-fuzzing   compile with '-rdynamic -fno-omit-frame-pointer' and
@@ -168,6 +172,7 @@ do
     --no-contrib) contrib=no;;
     --no-ipasir) ipasir=no;;
 
+    --check-missed) checkmissed=yes;;
     --coverage) coverage=yes;;
     --profile) profile=yes;;
     --memory-fuzzing) memory_fuzzing=yes;;
@@ -226,6 +231,11 @@ elif [ $debug = yes ]
 then
   [ $check = yes ] && die "'-g' subsumes '-c'"
   check=yes
+fi
+
+if [ $checkmissed = yes ]
+then
+  [ $check = no ] && die "'--check-missed' requires assertion checking ('-c')"
 fi
 
 #--------------------------------------------------------------------------#
@@ -374,6 +384,8 @@ fi
 [ $contrib = no ] && CFLAGS="$CFLAGS -DNCONTRIB"
 [ $ipasir = no ] && CFLAGS="$CFLAGS -DNIPASIR"
 [ $shared = yes -a $pic = no ] && CFLAGS="$CFLAGS -fpic"
+
+[ $checkmissed = yes ] && CXXFLAGS="$CXXFLAGS -DCHECKMISSED"
 
 CXXFLAGS="$CXXFLAGS$options"
 CFLAGS="$CFLAGS$options"

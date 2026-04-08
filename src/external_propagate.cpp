@@ -14,7 +14,7 @@ void Internal::add_observed_var (int ilit) {
   if (idx >= (int64_t) relevanttab.size ())
     relevanttab.resize (1 + (size_t) idx, 0);
   unsigned &ref = relevanttab[idx];
-  if (flags (idx).unused())
+  if (flags (idx).unused ())
     declare_variable (idx);
   if (ref < UINT_MAX) {
     ref++;
@@ -450,53 +450,66 @@ bool Internal::ask_external_clause () {
 //
 // Literals of the externally learned clause must be reordered based on the
 // assignment levels of the literals.
-//
+// Returns the best clause idx (except ignore)
+size_t Internal::best_literal_to_watch (int ignore, bool trail_over_level) {
+  size_t lit_position = 0;
+  int lit = 0;
+
+  int lit_level = 0;
+  signed char lit_value = 0;
+  int lit_trail = 0;
+  for (size_t i = 0; i < clause.size (); i++) {
+
+    const int other = clause[i];
+    if (other == ignore)
+      continue;
+    assert (other);
+
+    const int other_level = var (other).level;
+    const signed char other_value = val (other);
+    const int other_trail = var (other).trail;
+
+    if (!lit ||                                         // no candidate yet.
+        lit_value < other_value ||                      // -1 < 0 < 1
+        (lit_value == other_value &&                    // Tie breaker:
+         ((lit_value < 0 &&                             // -1:
+           ((!trail_over_level &&                       // level over trail:
+             (lit_level < other_level ||                // higher level, or
+              (lit_level == other_level &&              // equal level:
+               lit_trail < other_trail))) ||            // higher trail
+            (trail_over_level &&                        // trail over level:
+             lit_trail < other_trail))) ||              // higher trail
+          (lit_value > 0 && lit_level > other_level)))) // 1: lower level
+    {
+      lit = other;
+      lit_position = i;
+      lit_value = other_value;
+      lit_level = other_level;
+      lit_trail = other_trail;
+    }
+  }
+  assert (lit);
+  return lit_position;
+}
+
 void Internal::move_literals_to_watch () {
   if (clause.size () < 2)
     return;
   if (!level)
     return;
 
-  for (int i = 0; i < 2; i++) {
-    int highest_position = i;
-    const int highest_literal = clause[i];
+  size_t best1 = best_literal_to_watch (0, false);
+  const int lit = clause[best1];
+  if (best1 != 0)
+    std::swap (clause[0], clause[best1]);
 
-    int highest_level = var (highest_literal).level;
-    int highest_value = val (highest_literal);
+  size_t best2 = best_literal_to_watch (lit, false);
+  // const int other = clause[best2];
 
-    for (size_t j = i + 1; j < clause.size (); j++) {
-      const int other = clause[j];
-      const int other_level = var (other).level;
-      const int other_value = val (other);
+  assert (best2 && clause[best2] != lit);
 
-      if (other_value < 0) {
-        if (highest_value >= 0)
-          continue;
-        if (other_level <= highest_level)
-          continue;
-      } else if (other_value > 0) {
-        if (highest_value > 0 && other_level >= highest_level)
-          continue;
-      } else {
-        if (highest_value >= 0)
-          continue;
-      }
-
-      highest_position = j;
-      highest_level = other_level;
-      highest_value = other_value;
-    }
-#ifndef NDEBUG
-    LOG ("highest position: %d highest level: %d highest value: %d",
-         highest_position, highest_level, highest_value);
-#endif
-
-    if (highest_position == i)
-      continue;
-    if (highest_position > i) {
-      std::swap (clause[i], clause[highest_position]);
-    }
-  }
+  if (best2 != 1)
+    std::swap (clause[1], clause[best2]);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -682,13 +695,15 @@ void Internal::explain_external_propagations () {
       Flags &f = flags (lit);
       f.seen = false;
     }
+    seen_lits.clear ();
 #ifndef NDEBUG
     for (auto idx : vars) {
       assert (!flags (idx).seen);
     }
 #endif
   } else {
-    assert(external_prop && !external_prop_is_lazy && opts.exteagerreasons && opts.exteagerrecalc);
+    assert (external_prop && !external_prop_is_lazy &&
+            opts.exteagerreasons && opts.exteagerrecalc);
     // Traverse now in the opposite direction (from lower to higher levels)
     // and calculate the actual assignment level for the seen assignments.
     for (auto it = seen_lits.rbegin (); it != seen_lits.rend (); ++it) {
@@ -813,64 +828,154 @@ Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
 // Checks if the new clause forces backtracking, new assignments or conflict
 // analysis
 //
-void Internal::handle_external_clause (Clause *res) {
+void Internal::handle_external_clause (Clause *res, int64_t new_id) {
   if (from_propagator)
     stats.ext_prop.elearned++;
-  // at level 0 we have to do nothing...
-  if (!level)
+
+  // new unit clause. For now just backtrack.
+  if (!res && (force_no_backtrack ||
+               (val (clause[0]) > 0 && opts.elevate > 0 &&
+                (opts.elevate > 1 || var (clause[0]).reason)))) {
+    if (force_no_backtrack)
+      did_external_prop = true;
+    assert (level);
+    assert (new_id);
+    const int idx = vidx (clause[0]);
+    assert (val (clause[0]) >= 0);
+    assert (!flags (idx).eliminated ());
+    Var &v = var (idx);
+    assert (val (clause[0]));
+    v.level = 0;
+    v.reason = 0;
+    const unsigned uidx = vlit (clause[0]);
+    if (lrat || frat)
+      unit_clauses (uidx) = new_id;
+    mark_fixed (clause[0]);
     return;
+  }
+
   if (!res) {
     if (from_propagator)
       stats.ext_prop.elearn_prop++;
-    // new unit clause. For now just backtrack.
-    assert (!force_no_backtrack);
-    assert (level);
-    // if (!opts.chrono) {
-    backtrack_without_updating_phases ();
-    // }
+    const int lit = clause[0];
+    assert (!val (lit) || var (lit).level);
+    if (val (lit))
+      backtrack_without_updating_phases (var (lit).level - 1);
+    if (opts.elevate == -1 && val (lit))
+      backtrack_without_updating_phases ();
+    assert (!val (lit));
+    assign_original_unit (new_id, lit);
     return;
   }
-  if (from_propagator)
-    stats.ext_prop.elearned++;
+
+  // at level 0 we have to do nothing...
+  if (!level)
+    return;
+
+  assert (res);
   assert (res->size >= 2);
   const int pos0 = res->literals[0];
   const int pos1 = res->literals[1];
+  const int l1 = var (pos1).level;
+  const int l0 = var (pos0).level;
   if (force_no_backtrack) {
+    assert (from_propagator);
     assert (val (pos1) < 0);
     assert (val (pos0) >= 0);
+
+    Var &v = var (pos0);
+    LOG (res,
+         "elevate assignment of %d from level %d to level %d with lazy "
+         "reason clause",
+         pos0, l0, l1);
+    v.level = l1;
     return;
     // TODO: maybe fix levels
   }
-  const int l1 = var (pos1).level;
-  if (val (pos0) < 0) { // conflicting or propagating clause
-    assert (0 < l1 && l1 <= var (pos0).level);
-    if (!opts.chrono) {
-      backtrack_without_updating_phases (l1);
-    }
-    if (val (pos0) < 0) {
-      conflict = res;
-      if (!from_propagator) {
-        // its better to backtrack instead of analyze
-        backtrack_without_updating_phases (l1 - 1);
-        conflict = 0;
-        assert (!val (pos0) && !val (pos1));
+  if (val (pos0) > 0 && val (pos1) < 0) {
+    // It is a clause that would have propagated
+
+    if (l0 > l1) {
+      // It would have propagated pos0 on an earlier level than it is
+      // assigned
+
+      // Find the highest literal based on trail-position of the clause
+
+      size_t highest_idx = best_literal_to_watch (pos0, true);
+      assert (highest_idx != 0);
+      const int highest_literal = clause[highest_idx];
+
+      Var &m = var (highest_literal);
+      assert (l0 >= m.level);
+
+      Var &v = var (pos0);
+      if (v.trail > m.trail && opts.elevate > 0 &&
+          (opts.elevate > 1 || v.reason)) {
+        // If v.trail == m.trail, then the propagated literal is the
+        // maximum as well, so no need to backtrack we simply reassign the
+        // reason and level of the propagation
+        LOG (res,
+             "elevate assignment of %d from level %d to level %d with new "
+             "reason clause",
+             pos0, var (pos0).level, var (pos1).level);
+        v.level = l1;
+        v.reason = res;
+
+        if (out_of_order_level == -1 || l1 < out_of_order_level)
+          out_of_order_level = l1;
+        if (v.trail > out_of_order_trail)
+          out_of_order_trail = v.trail;
+
+      } else if (v.trail < m.trail && opts.elevate > 0) {
+        assert (highest_idx);
+        if (highest_idx != 1) {
+          res->literals[1] = highest_literal;
+          res->literals[highest_idx] = pos1;
+        }
+        LOG (res,
+             "ignore out-of-order missed assignment of %d from level %d to "
+             "level %d with new "
+             "reason clause",
+             pos0, var (pos0).level, var (pos1).level);
+      } else {
+
+        LOG (res,
+             "backtrack due to missed assignment of %d from level %d to "
+             "level %d with new reason clause",
+             pos0, l0, l1);
+        assert (!force_no_backtrack);
+
+        if (opts.elevate == -1)
+          backtrack_without_updating_phases (l1);
+        else
+          backtrack_without_updating_phases (l0 - 1);
+
+        assert (!val (pos0) && val (pos1) < 0);
+        search_assign_driving (pos0, res);
+
+        assert (v.trail >= m.trail);
+        assert (v.level == l1);
+        assert (val (pos0) > 0 && val (pos1) < 0);
       }
-    } else {
-      search_assign_driving (pos0, res);
     }
-    if (from_propagator)
-      stats.ext_prop.elearn_conf++;
-    return;
-  }
-  if (val (pos1) < 0 && !val (pos0)) { // propagating clause
-    if (!opts.chrono) {
+  } else if (!val (pos0) && val (pos1) < 0) { // propagating
+    if (opts.elevate == -1)
       backtrack_without_updating_phases (l1);
-    }
-    search_assign_driving (pos0, res);
-    if (from_propagator)
-      stats.ext_prop.elearn_conf++;
-    return;
-  }
+    if (val (pos1) < 0 && !val (pos0))
+      search_assign_driving (pos0, res);
+  } else if (val (pos0) < 0) { // conflicting
+    assert (0 < l1 && l1 <= var (pos0).level);
+    if (opts.elevate == -1)
+      backtrack_without_updating_phases (l1);
+    // its better to backtrack instead of analyze without propagator
+    // but analyze with propagaor
+    if (val (pos0) && !from_propagator)
+      backtrack_without_updating_phases (l0 - 1);
+    else if (val (pos0) && from_propagator)
+      conflict = res;
+    if (val (pos1) < 0 && !val (pos0))
+      search_assign_driving (pos0, res);
+  } // else do nothing
 }
 
 /*----------------------------------------------------------------------------*/
@@ -905,44 +1010,51 @@ bool Internal::external_check_solution () {
 
   bool trail_changed = true;
   bool added_new_clauses = false;
+
   while (trail_changed || added_new_clauses) {
     notify_assignments ();
     if (!satisfied ())
       break;
-    trail_changed = false; // to be on the safe side
-    added_new_clauses = false;
     LOG ("Final check by external propagator is invoked.");
     stats.ext_prop.echeck_call++;
     external->reset_extended ();
     external->extend ();
 
-    assert (!notification_trail.size());
+    assert (!notification_trail.size ());
 
     // Here the variables must be filtered by external->is_observed,
     // because fixed variables are internally not necessarily observed
     // anymore.
-    for (int idx = 1;
-         idx <= std::min ((int) external->is_observed.size () - 1,
-                          external->max_var);
-         idx++) {
-      if (!external->is_observed[idx])
-        continue;
-      const int lit = external->ival (idx);
-      notification_trail.push_back (lit);
+    if (trail_changed) {
+
+      external->reset_extended ();
+      external->extend ();
+      // printf ("trail changed %b\n", trail_changed);
+      for (int idx = 1;
+           idx <= std::min ((int) external->is_observed.size () - 1,
+                            external->max_var);
+           idx++) {
+        if (!external->is_observed[idx])
+          continue;
+        const int lit = external->ival (idx);
+        notification_trail.push_back (lit);
 #ifndef NDEBUG
 #ifdef LOGGING
-      bool p = external->vals[idx];
-      LOG ("evals[%d]: %d ival(%d): %d", idx, p, idx, lit);
+        bool p = external->vals[idx];
+        LOG ("evals[%d]: %d ival(%d): %d", idx, p, idx, lit);
 #endif
 #endif
+      }
     }
 
+    trail_changed = false; // to be on the safe side
+    added_new_clauses = false;
     forced_backt_allowed = true;
     size_t assigned = num_assigned;
     int level_before = level;
     bool is_consistent =
         external->propagator->cb_check_found_model (notification_trail);
-    notification_trail.clear();
+    notification_trail.clear ();
     stats.ext_prop.ext_cb++;
     forced_backt_allowed = false;
 
@@ -965,8 +1077,8 @@ bool Internal::external_check_solution () {
     stats.ext_prop.elearn_call++;
 
     if (has_external_clause)
-      LOG (
-          "Found solution triggered new clauses from external propagator.");
+      LOG ("Found solution triggered new clauses from external "
+           "propagator.");
 
     while (has_external_clause) {
       level_before = level;
@@ -976,10 +1088,13 @@ bool Internal::external_check_solution () {
           (num_assigned != assigned || level != level_before ||
            propagated < trail.size ());
       added_new_clauses = true;
+      // printf ("trail changed %b\n", trail_changed);
+
       //
       // There are many possible scenarios here:
       // - Learned conflicting clause: return to CDCL loop (conflict true)
-      // - Learned conflicting unit clause that after backtrack+BCP leads to
+      // - Learned conflicting unit clause that after backtrack+BCP leads
+      // to
       //   a new complete solution: force the outer loop to check the new
       //   model (trail_changed is true, but (conflict & unsat) is false)
       // - Learned empty clause: return to CDCL loop (unsat true)
@@ -987,10 +1102,11 @@ bool Internal::external_check_solution () {
       //   Though it does not invalidate the current solution, the solver
       //   will backtrack to the root level and will repropagate it. The
       //   search will start again (saved phases hopefully make it quick),
-      //   but it is needed in order to guarantee that every fixed variable
-      //   is properly handled+notified (important for incremental use
-      //   cases).
-      // - Otherwise: the solution is considered approved and the CDCL-loop
+      //   but it is needed in order to guarantee that every fixed
+      //   variable is properly handled+notified (important for
+      //   incremental use cases).
+      // - Otherwise: the solution is considered approved and the
+      // CDCL-loop
       //   can return with res = 10.
       //
       if (unsat || conflict || trail_changed)
@@ -1028,7 +1144,7 @@ void Internal::notify_assignments () {
     return;
 
   LOG ("notify external propagator about new assignments");
-  assert(notification_trail.empty());
+  assert (notification_trail.empty ());
 
   while (notified < end_of_trail) {
     int ilit = trail[notified++];
@@ -1041,15 +1157,15 @@ void Internal::notify_assignments () {
       continue;
     // Fixed variables might get mapped (during compact) to another
     // non-observed but fixed variable.
-    // This happens on root level, so notification about their assignment is
-    // already done.
+    // This happens on root level, so notification about their assignment
+    // is already done.
     assert (external->observed (elit) ||
             (fixed (ilit) && !external->ervars[abs (elit)]));
     notification_trail.push_back (elit);
   }
   if (notification_trail.size ()) {
     external->propagator->notify_assignment (notification_trail);
-    notification_trail.clear();
+    notification_trail.clear ();
   }
   return;
 }
@@ -1212,8 +1328,8 @@ void Internal::check_watched_literal_invariants () {
       for (size_t i = 2; i < clause.size (); i++)
         assert (val (clause[i]) <= 0);
 
-    } else { // Case 3: First satisfied, next falsified -> could have been a
-             // reason of a previous propagation
+    } else { // Case 3: First satisfied, next falsified -> could have been
+             // a reason of a previous propagation
       // Every other literal of the clause is falsified but at a lower
       // decision level
       for (size_t i = 2; i < clause.size (); i++)
@@ -1243,7 +1359,8 @@ void Internal::check_watched_literal_invariants () {
     // They are ordered by higher to lower decision level
     assert (var (clause[0]).level >= var (clause[1]).level);
 
-    // Every other literal of the clause is falsified, but at a lower level
+    // Every other literal of the clause is falsified, but at a lower
+    // level
     for (size_t i = 2; i < clause.size (); i++)
       assert (val (clause[i]) < 0 &&
               (var (clause[1]).level >= var (clause[i]).level));

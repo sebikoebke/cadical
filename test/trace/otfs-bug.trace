@@ -1,0 +1,60 @@
+0 init
+1 set chronolevelim 0
+2 set congruence 0
+3 set fastelim 0
+4 set luckyearly 0
+5 set preprocessinit 0
+6 add 1
+7 add -2
+8 add 0
+9 add -2
+10 add -1
+11 add 0
+12 add -3
+13 add -7
+14 add 0
+15 add 9
+16 add 7
+17 add 0
+18 add 7
+19 add -6
+20 add 8
+21 add 2
+22 add -5
+23 add 0
+24 add 4
+25 add 5
+26 add 0
+27 add -5
+28 add 3
+29 add 0
+30 add -4
+31 add 5
+32 add 0
+33 add -4
+34 add 2
+35 add 7
+36 add 0
+37 add -10
+38 add 6
+39 add 0
+40 add -7
+41 add -10
+42 add 0
+43 add -12
+44 add 8
+45 add -11
+46 add 0
+47 add 6
+48 add -9
+49 add 0
+50 add 11
+51 add -8
+52 add 0
+53 add -8
+54 add -6
+55 add 0
+56 add 10
+57 add -11
+58 add 0
+59 solve 0

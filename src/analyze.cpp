@@ -582,7 +582,6 @@ inline int Internal::otfs_find_backtrack_level (int &forced) {
 inline int Internal::find_conflict_level (int &forced) {
 
   assert (conflict);
-  assert (opts.chrono || opts.otfs || external_prop);
 
   int res = 0, count = 0;
 
@@ -686,7 +685,7 @@ inline int Internal::determine_actual_backtrack_level (int jump) {
     int best_idx = 0, best_pos = 0;
 
     if (use_scores ()) {
-      for (int i = control[jump + 1].trail; i <  get_trail_size (); i++) {
+      for (int i = control[jump + 1].trail; i < get_trail_size (); i++) {
         const int idx = abs (trail[i]);
         if (best_idx && !score_smaller (this) (best_idx, idx))
           continue;
@@ -695,7 +694,7 @@ inline int Internal::determine_actual_backtrack_level (int jump) {
       }
       LOG ("best variable score %g", score (best_idx));
     } else {
-      for (int i = control[jump + 1].trail; i <  get_trail_size (); i++) {
+      for (int i = control[jump + 1].trail; i < get_trail_size (); i++) {
         const int idx = abs (trail[i]);
         if (best_idx && bumped (best_idx) >= bumped (idx))
           continue;
@@ -795,21 +794,52 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
 
   const int old_size = new_conflict->size;
   int new_size = 0;
+  int best = 0;
+  int second_best = 0;
   for (int i = 0; i < old_size; ++i) {
     const int other = lits[i];
     sorted.push_back (other);
     if (var (other).level)
       lits[new_size++] = other;
+    if (other == uip)
+      continue;
+    if (!best || var (other).level > var (best).level) {
+      second_best = best;
+      best = other;
+    } else if (!second_best || var (other).level > var (second_best).level)
+      second_best = other;
   }
 
   LOG (new_conflict, "removing all units in");
 
   assert (lits[0] == uip || lits[1] == uip);
   assert (new_size >= 2);
-  const int other = lits[0] ^ lits[1] ^ uip;
+  int other = lits[0] ^ lits[1] ^ uip;
   lits[0] = other;
   lits[1] = lits[--new_size];
   LOG (new_conflict, "putting uip at pos 1");
+
+  if (lits[0] != best) {
+    const int repl = lits[0];
+    other = lits[0] = best;
+    for (int i = 1; i < new_size; i++) {
+      if (lits[i] != best)
+        continue;
+      lits[i] = repl;
+      break;
+    }
+  }
+  if (lits[1] != second_best) {
+    const int repl = lits[1];
+    lits[1] = second_best;
+    for (int i = 2; i < new_size; i++) {
+      if (lits[i] != second_best)
+        continue;
+      lits[i] = repl;
+      break;
+    }
+  }
+  LOG (new_conflict, "fix watch invariant");
 
   if (other_init != other)
     remove_watch (watches (other_init), new_conflict);
@@ -930,6 +960,42 @@ void Internal::update_decision_rate_average () {
   saved_decisions = current;
 }
 
+void Internal::fix_trail_levels () {
+  assert (out_of_order_level != -1);
+  if (out_of_order_level > level || opts.elevate != 3) {
+    out_of_order_level = -1;
+    out_of_order_trail = -1;
+    return;
+  }
+  LOG ("fixing all trail levels before backtracking");
+  const size_t trix = control[out_of_order_level].trail;
+  assert (trix < trail.size ());
+  for (size_t i = trix; i < trail.size (); i++) {
+    const int lit = trail[i];
+    const Clause *reason = var (lit).reason;
+    if (!reason || reason == external_reason)
+      continue;
+
+    int res = 0;
+
+    for (const auto &other : *reason) {
+      if (other == lit)
+        continue;
+      assert (val (other));
+      int tmp = var (other).level;
+      if (tmp > res)
+        res = tmp;
+    }
+    if (var (lit).level != res)
+      LOG (reason, "update level of %d from %d to %d with", lit,
+           var (lit).level, res);
+
+    var (lit).level = res;
+  }
+  out_of_order_level = -1;
+  out_of_order_trail = -1;
+}
+
 /*------------------------------------------------------------------------*/
 
 // This is the main conflict analysis routine.  It assumes that a conflict
@@ -961,63 +1027,65 @@ void Internal::analyze () {
     explain_external_propagations ();
   }
 
-  if (opts.chrono || external_prop) {
+  int forced;
 
-    int forced;
+  int conflict_level = find_conflict_level (forced);
 
-    const int conflict_level = find_conflict_level (forced);
-
-    // In principle we can perform conflict analysis as in non-chronological
-    // backtracking except if there is only one literal with the maximum
-    // assignment level in the clause.  Then standard conflict analysis is
-    // unnecessary and we can use the conflict as a driving clause.  In the
-    // pseudo code of the SAT'18 paper on chronological backtracking this
-    // corresponds to the situation handled in line 4-6 in Alg. 1, except
-    // that the pseudo code in the paper only backtracks while we eagerly
-    // assign the single literal on the highest decision level.
-
-    if (forced) {
-
-      assert (forced);
-      assert (conflict_level > 0);
-      LOG ("single highest level literal %d", forced);
-
-      // The pseudo code in the SAT'18 paper actually backtracks to the
-      // 'second highest decision' level, while their code backtracks
-      // to 'conflict_level-1', which is more in the spirit of chronological
-      // backtracking anyhow and thus we also do the latter.
-      //
-      backtrack (conflict_level - 1);
-
-      // if we are on decision level 0 search assign will learn unit
-      // so we need a valid chain here (of course if we are not on decision
-      // level 0 this will not result in a valid chain).
-      // we can just use build_chain_for_units in propagate
-      //
-      build_chain_for_units (forced, conflict, 0);
-
-      LOG ("forcing %d", forced);
-      search_assign_driving (forced, conflict);
-
-      conflict = 0;
-      if (!opts.chrono)
-        did_external_prop = true;
-      STOP (analyze);
-      return;
-    }
-
-    // Backtracking to the conflict level is in the pseudo code in the
-    // SAT'18 chronological backtracking paper, but not in their actual
-    // implementation.  In principle we do not need to backtrack here.
-    // However, as a side effect of backtracking to the conflict level we
-    // set 'level' to the conflict level which then allows us to reuse the
-    // old 'analyze' code as is.  The alternative (which we also tried but
-    // then abandoned) is to use 'conflict_level' instead of 'level' in the
-    // analysis, which however requires to pass it to the 'analyze_reason'
-    // and 'analyze_literal' functions.
-    //
-    backtrack (conflict_level);
+  if (control[conflict_level].trail <= out_of_order_trail) {
+    fix_trail_levels ();
+    conflict_level = find_conflict_level (forced);
   }
+
+  // In principle we can perform conflict analysis as in non-chronological
+  // backtracking except if there is only one literal with the maximum
+  // assignment level in the clause.  Then standard conflict analysis is
+  // unnecessary and we can use the conflict as a driving clause.  In the
+  // pseudo code of the SAT'18 paper on chronological backtracking this
+  // corresponds to the situation handled in line 4-6 in Alg. 1, except
+  // that the pseudo code in the paper only backtracks while we eagerly
+  // assign the single literal on the highest decision level.
+
+  if (forced) {
+
+    assert (forced);
+    assert (conflict_level > 0);
+    LOG ("single highest level literal %d", forced);
+
+    // The pseudo code in the SAT'18 paper actually backtracks to the
+    // 'second highest decision' level, while their code backtracks
+    // to 'conflict_level-1', which is more in the spirit of chronological
+    // backtracking anyhow and thus we also do the latter.
+    //
+    backtrack (conflict_level - 1);
+
+    // if we are on decision level 0 search assign will learn unit
+    // so we need a valid chain here (of course if we are not on decision
+    // level 0 this will not result in a valid chain).
+    // we can just use build_chain_for_units in propagate
+    //
+    build_chain_for_units (forced, conflict, 0);
+
+    LOG ("forcing %d", forced);
+    search_assign_driving (forced, conflict);
+
+    conflict = 0;
+    if (!opts.chrono)
+      did_external_prop = true;
+    STOP (analyze);
+    return;
+  }
+
+  // Backtracking to the conflict level is in the pseudo code in the
+  // SAT'18 chronological backtracking paper, but not in their actual
+  // implementation.  In principle we do not need to backtrack here.
+  // However, as a side effect of backtracking to the conflict level we
+  // set 'level' to the conflict level which then allows us to reuse the
+  // old 'analyze' code as is.  The alternative (which we also tried but
+  // then abandoned) is to use 'conflict_level' instead of 'level' in the
+  // analysis, which however requires to pass it to the 'analyze_reason'
+  // and 'analyze_literal' functions.
+  //
+  backtrack (conflict_level);
 
   // Actual conflict on root level, thus formula unsatisfiable.
   //
@@ -1051,13 +1119,13 @@ void Internal::analyze () {
   assert (lrat_chain.empty ());
 
   const auto &t = &trail;
-  int i = (int)t->size ();      // Start at end-of-trail.
-  int open = 0;            // Seen but not processed on this level.
-  int uip = 0;             // The first UIP literal.
-  int resolvent_size = 0;  // without the uip
-  int antecedent_size = 1; // with the uip and without unit literals
-  int conflict_size = 0;   // without the uip and without unit literals
-  int resolved = 0;        // number of resolution (0 = clause in CNF)
+  int i = (int) t->size (); // Start at end-of-trail.
+  int open = 0;             // Seen but not processed on this level.
+  int uip = 0;              // The first UIP literal.
+  int resolvent_size = 0;   // without the uip
+  int antecedent_size = 1;  // with the uip and without unit literals
+  int conflict_size = 0;    // without the uip and without unit literals
+  int resolved = 0;         // number of resolution (0 = clause in CNF)
   const bool otfs = opts.otfs;
 
   for (;;) {
@@ -1330,7 +1398,7 @@ void Internal::lazy_external_propagator_out_of_order_clause (int &uip) {
     clause.clear ();
   } else {
     int jump;
-    const int glue = (int)clause.size () - 1;
+    const int glue = (int) clause.size () - 1;
     conflict = new_driving_clause (glue, jump);
     UPDATE_AVERAGE (averages.current.level, jump);
     backtrack (jump);

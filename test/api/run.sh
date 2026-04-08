@@ -113,6 +113,9 @@ run newdelete
 run unit
 run morenmore
 run ctest
+run cilb
+run cilb_units
+run ilb_model_propagator
 run example
 run example_declare_one_more_variable
 run example_constraint

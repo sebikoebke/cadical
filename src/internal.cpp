@@ -13,8 +13,8 @@ Internal::Internal ()
       searching_lucky_phases (false), stable (false), reported (false),
       external_prop (false), did_external_prop (false),
       external_prop_is_lazy (true), forced_backt_allowed (false),
-
-      private_steps (false), rephased (0), vsize (0), max_var (0),
+      private_steps (false), out_of_order_level (-1),
+      out_of_order_trail (-1), rephased (0), vsize (0), max_var (0),
       clause_id (0), original_id (0), reserved_ids (0), conflict_id (0),
       saved_decisions (0), concluded (false), lrat (false), frat (false),
       new_binary_since_dedup (true), level (0), vals (0), score_inc (1.0),

@@ -1,0 +1,37 @@
+0 init
+1 configure default
+2 set ilb 2
+3 set phase 0
+4 set preprocesslight 0
+5 add 3
+6 add -6
+7 add 0
+8 add -4
+9 add -1
+10 add 0
+11 add 2
+12 add 1
+13 add 0
+14 add 9
+15 add -3
+16 add 0
+17 add -2
+18 add -4
+19 add 0
+20 constrain -4
+21 constrain 8
+22 constrain 5
+23 constrain 0
+24 freeze -11
+25 solve 0
+26 add -7
+27 add -8
+28 add 0
+29 add 4
+30 add 10
+31 add 0
+32 add 7
+33 add 11
+34 add -6
+35 add 0
+36 solve 0

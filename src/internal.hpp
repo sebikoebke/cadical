@@ -192,16 +192,18 @@ struct Internal {
   bool did_external_prop;     // true if ext. propagation happened
   bool external_prop_is_lazy; // true if the external propagator is lazy
   bool forced_backt_allowed;  // external propagator can force backtracking
-  bool private_steps;   // no notification of ext. prop during these steps
-  vector<int> notification_trail; //vector used for notifying assignments
-  char rephased;        // last type of resetting phases
-  Reluctant reluctant;  // restart counter in stable mode
-  size_t vsize;         // actually allocated variable data size
-  int max_var;          // internal maximum variable index
-  int64_t clause_id;    // last used id for clauses
-  int64_t original_id;  // ids for original clauses to produce LRAT
-  int64_t reserved_ids; // number of reserved ids for original clauses
-  int64_t conflict_id;  // store conflict id for finalize (frat)
+  bool private_steps; // no notification of ext. prop during these steps
+  vector<int> notification_trail; // vector used for notifying assignments
+  int out_of_order_level;         // lowest out-of-order level to fix
+  int out_of_order_trail;     // highest out-of-order literal on the trail
+  char rephased;              // last type of resetting phases
+  Reluctant reluctant;        // restart counter in stable mode
+  size_t vsize;               // actually allocated variable data size
+  int max_var;                // internal maximum variable index
+  int64_t clause_id;          // last used id for clauses
+  int64_t original_id;        // ids for original clauses to produce LRAT
+  int64_t reserved_ids;       // number of reserved ids for original clauses
+  int64_t conflict_id;        // store conflict id for finalize (frat)
   int64_t saved_decisions;    // to compute decision rate average
   bool concluded;             // keeps track of conclude
   vector<int64_t> conclusion; // store ids of conclusion clauses
@@ -786,6 +788,7 @@ struct Internal {
   void update_target_and_best ();
   void backtrack (int target_level = 0);
   void backtrack_without_updating_phases (int target_level = 0);
+  void fix_trail_levels ();
 
   // Minimized learned clauses in 'minimize.cpp'.
   //
@@ -840,7 +843,8 @@ struct Internal {
   void explain_external_propagations ();
   void explain_reason (int lit, Clause *, int &open);
   void move_literals_to_watch ();
-  void handle_external_clause (Clause *);
+  size_t best_literal_to_watch (int, bool);
+  void handle_external_clause (Clause *, int64_t new_id = 0);
   void notify_assignments ();
   void notify_decision ();
   void notify_backtrack (size_t new_level);

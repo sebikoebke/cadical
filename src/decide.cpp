@@ -215,7 +215,40 @@ bool Internal::better_decision (int lit, int other) {
     return btab[lit_idx] > btab[other_idx];
 }
 
-// Search for the next decision and assign it to the saved phase.  Requires
+#if defined(CHECKMISSED) && 1
+#define CHECK_MISSED() \
+  do { \
+    for (auto *c : clauses) { \
+      if (c->garbage) \
+        continue; \
+      bool SAT = false; \
+      int PROP = 0; \
+      for (auto &lit : *c) { \
+        if (val (lit) > 0) { \
+          SAT = true; \
+          break; \
+        } else if (val (lit) < 0) { \
+          continue; \
+        } else if (!PROP) { \
+          PROP = lit; \
+        } else { \
+          PROP = 0; \
+          break; \
+        } \
+      } \
+      if (SAT || !PROP) \
+        continue; \
+      LOG (c, "fatal not propagated"); \
+      assert (false); \
+    } \
+  } while (0)
+#else
+#define CHECK_MISSED() \
+  do { \
+  } while (0)
+#endif
+
+// Search for the next decision and assign it to the saved phase. Requires
 // that not all variables are assigned.
 
 int Internal::decide () {
@@ -226,6 +259,7 @@ int Internal::decide () {
   if (!imports.empty ())
     activating_all_new_imported_literals ();
   check_queue ();
+  CHECK_MISSED ();
   int res = 0;
   if ((size_t) level < assumptions.size ()) {
     const int lit = assumptions[level];
