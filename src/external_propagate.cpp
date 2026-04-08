@@ -869,7 +869,7 @@ void Internal::handle_external_clause (Clause *res) {
     // but analyze with propagator
     if (val (pos0) && !from_propagator)
       backtrack (l0 - 1); // backtrack
-    else if (l0 != l1)
+    else if (val (pos0) && l0 != l1)
       backtrack (l0 - 1); // backtrack
     else if (val (pos0) && from_propagator)
       conflict = res;
