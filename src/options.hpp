@@ -86,7 +86,7 @@ OPTION( deduplicate,       1,  0,  1,0,1,1, "remove duplicated binaries") \
 OPTION( deduplicateallinit,0,  0,  1,0,1,1, "remove duplicated clauses once before solving") \
 OPTION( eagersubsume,      1,  0,  1,0,1,1, "subsume recently learned") \
 OPTION( eagersubsumelim,  20,  1,1e3,0,0,1, "limit on subsumed candidates") \
-OPTION( elevate,           1, -1,  3,0,0,1, "elevate during clause addition") \
+OPTION( elevate,           2, -1,  3,0,0,1, "elevate during clause addition") \
 OPTION( elim,              1,  0,  1,0,1,1, "bounded variable elimination") \
 OPTION( elimands,          1,  0,  1,0,0,1, "find AND gates") \
 OPTION( elimbackward,      1,  0,  1,0,0,1, "eager backward subsumption") \
