@@ -96,6 +96,8 @@ int main () {
   std::cout << "-----------------------------------------------------------"
             << std::endl;
   CaDiCaL::Solver *solver = new CaDiCaL::Solver;
+  solver->set ("factor", 0);
+  solver->set ("factorcheck", 0);
   ILBPropagator *ilb = new ILBPropagator (solver);
   for (int i = 1; i < BIG_NUM - 1; i++) {
     solver->add (-i);

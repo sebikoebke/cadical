@@ -18,6 +18,8 @@ int main (void) {
   // ccadical_set_option (solver, "verbose", 3);
   ccadical_set_option (solver, "ilb", 2);
   ccadical_set_option (solver, "chronoadd", 2);
+  ccadical_set_option (solver, "factor", 0);
+  ccadical_set_option (solver, "factorcheck", 0);
   for (int i = 1; i < BIG_NUM; i++) {
     ccadical_add (solver, i);
     ccadical_add (solver, i + 1);

@@ -10,7 +10,6 @@
 9 set checkconstraint 0
 10 set checkfailed 0
 11 set checkproof 1
-12 set chronoadd 1
 13 set chronolevelim 0
 14 set compactlim 0
 15 set condition 1

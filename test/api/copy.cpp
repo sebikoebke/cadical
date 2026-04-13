@@ -22,9 +22,9 @@ static CaDiCaL::Solver solver, solver2;
 
 int main () {
   solver.set ("factor", 1);
-  solver.limit("conflicts", 1000);
+  solver.limit ("conflicts", 1000);
   // resize to the highest possible number
-  solver.resize (ph (n, n-1));
+  solver.resize (ph (n, n - 1));
 
   // Construct a pigeon hole formula for 'n+1' pigeons in 'n' holes.
   //

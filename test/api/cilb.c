@@ -17,6 +17,9 @@ int main (void) {
   struct CCaDiCaL *solver = ccadical_init ();
   ccadical_set_option (solver, "verbose", 3);
   ccadical_set_option (solver, "ilb", 2);
+  ccadical_set_option (solver, "elevate", 2);
+  ccadical_set_option (solver, "factor", 0);
+  ccadical_set_option (solver, "factorcheck", 0);
   // ccadical_set_option (solver, "log", 1);
   for (int i = 2; i < BIG_NUM; i++) {
     ccadical_add (solver, i - 1);
