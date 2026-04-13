@@ -259,6 +259,12 @@ void Stats::print (Internal *internal) {
     PRT ("  propagating:   %15" PRId64 "   %10.2f %%  per learned",
          stats.ext_prop.elearn_prop,
          percent (stats.ext_prop.elearn_prop, stats.ext_prop.elearned));
+    PRT ("  elevating:     %15" PRId64 "   %10.2f %%  per learned",
+         stats.ext_prop.elearn_elevate,
+         percent (stats.ext_prop.elearn_elevate, stats.ext_prop.elearned));
+    PRT ("  out-of-order:  %15" PRId64 "   %10.2f %%  per learned",
+         stats.ext_prop.elearn_ooo,
+         percent (stats.ext_prop.elearn_ooo, stats.ext_prop.elearned));
     PRT ("ext.final check: %15" PRId64 "   %10.2f %%  of queries",
          stats.ext_prop.echeck_call,
          percent (stats.ext_prop.echeck_call, stats.ext_prop.ext_cb));

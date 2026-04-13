@@ -846,6 +846,8 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
     if (lrat || frat)
       unit_clauses (uidx) = new_id;
     mark_fixed (clause[0]);
+    if (from_propagator)
+      stats.ext_prop.elearn_elevate++;
     return;
   }
 
@@ -884,7 +886,6 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
          pos0, var (pos0).level, var (pos1).level);
     var (pos0).level = l1;
     return;
-    // TODO: maybe fix levels
   }
   if (val (pos0) > 0 && val (pos1) < 0) {
     // It is a clause that would have propagated
@@ -919,6 +920,8 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
           out_of_order_level = l1;
         if (v.trail > out_of_order_trail)
           out_of_order_trail = v.trail;
+        if (from_propagator)
+          stats.ext_prop.elearn_elevate++;
 
       } else if (v.trail < m.trail && opts.elevate > 0) {
         assert (highest_idx);
@@ -926,6 +929,8 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
           res->literals[1] = highest_literal;
           res->literals[highest_idx] = pos1;
         }
+        if (from_propagator)
+          stats.ext_prop.elearn_ooo++;
         LOG (res,
              "ignore out-of-order missed assignment of %d from level %d to "
              "level %d with new "
@@ -965,8 +970,11 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
     // but analyze with propagaor
     if (val (pos0) && !from_propagator)
       backtrack (l0 - 1);
-    else if (val (pos0) && from_propagator)
+    else if (val (pos0) && from_propagator) {
+      if (from_propagator)
+        stats.ext_prop.elearn_conf++;
       conflict = res;
+    }
     if (val (pos1) < 0 && !val (pos0))
       search_assign_driving (pos0, res);
   } // else do nothing
