@@ -74,7 +74,8 @@ void External::push_binary_clause_on_extension_stack (int64_t id, int pivot,
 }
 
 /*------------------------------------------------------------------------*/
-
+// the calls to init are used in the copy test, should never trigger during
+// actual solver runtime.
 void External::push_external_clause_and_witness_on_extension_stack (
     const vector<int> &c, const vector<int> &w, int64_t id) {
   assert (id);
@@ -82,7 +83,10 @@ void External::push_external_clause_and_witness_on_extension_stack (
   for (const auto &elit : w) {
     assert (elit != INT_MIN && elit);
     assert (abs (elit) <= max_var);
-    assert (e2i[elit] && e2i[elit] != INT_MIN);
+    int eidx = abs (elit);
+    if (!e2i[eidx])
+      init (eidx);
+    assert (e2i[eidx] && e2i[eidx] != INT_MIN);
     extension.push_back (elit);
     mark (witness, elit);
   }
@@ -95,7 +99,10 @@ void External::push_external_clause_and_witness_on_extension_stack (
   for (const auto &elit : c) {
     assert (elit != INT_MIN);
     assert (abs (elit) <= max_var);
-    assert (e2i[elit] && e2i[elit] != INT_MIN);
+    int eidx = abs (elit);
+    if (!e2i[eidx])
+      init (abs (eidx));
+    assert (e2i[eidx] && e2i[eidx] != INT_MIN);
     extension.push_back (elit);
   }
 }

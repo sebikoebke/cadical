@@ -126,7 +126,7 @@ run learn
 run cfreeze
 run traverse
 run cipasir
-run cipasir2
+#run cipasir2
 run incproof
 run propagate_assumptions
 run example_propagators
