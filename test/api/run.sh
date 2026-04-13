@@ -69,6 +69,10 @@ cmd () {
 }
 
 run () {
+  if [ x"$1" = x ]
+  then
+    die "no argument given"
+  fi
   if test x"$1" = xparcompwrite -a x`uname -o` = xDarwin
   then
     msg "skipping API test ${HILITE}'$1'${NORMAL} on 'Darwin'"
@@ -88,7 +92,7 @@ run () {
     COMPILE="$CXX $CXXFLAGS"
     [ x"$1" = xparcompwrite ] && COMPILE="$COMPILE -pthread"
   else
-    die "can not find '$tests.c' nor '$tests.cpp'"
+    die "can not find '$tests/$1.c' nor '$tests/$1.cpp'"
   fi
   name=$CADICALBUILD/test-api-$1
   rm -f $name.log $name.o $name

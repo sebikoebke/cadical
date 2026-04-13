@@ -890,7 +890,6 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
          pos0, l0, l1);
     v.level = l1;
     return;
-    // TODO: maybe fix levels
   }
   if (val (pos0) > 0 && val (pos1) < 0) {
     // It is a clause that would have propagated
