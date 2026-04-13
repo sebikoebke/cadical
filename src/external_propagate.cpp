@@ -763,6 +763,8 @@ void Internal::handle_external_clause (Clause *res, uint64_t new_id) {
                 (opts.elevate > 1 || var (clause[0]).reason)))) {
     if (force_no_backtrack)
       did_external_prop = true;
+    if (from_propagator)
+      stats.ext_prop.elearn_elevate++;
     assert (level);
     assert (new_id);
     const int idx = vidx (clause[0]);
@@ -814,7 +816,6 @@ void Internal::handle_external_clause (Clause *res, uint64_t new_id) {
          pos0, l0, l1);
     var (pos0).level = l1;
     return;
-    // TODO: maybe fix levels
   }
   if (val (pos0) > 0 && val (pos1) < 0) {
     // It is a clause that would have propagated
@@ -845,6 +846,8 @@ void Internal::handle_external_clause (Clause *res, uint64_t new_id) {
              pos0, var (pos0).level, var (pos1).level);
         v.level = l1;
         v.reason = res;
+        if (from_propagator)
+          stats.ext_prop.elearn_elevate++;
 
         if (out_of_order_level == -1 || l1 < out_of_order_level)
           out_of_order_level = l1;
@@ -857,6 +860,8 @@ void Internal::handle_external_clause (Clause *res, uint64_t new_id) {
           res->literals[1] = highest_literal;
           res->literals[highest_idx] = pos1;
         }
+        if (from_propagator)
+          stats.ext_prop.elearn_ooo++;
         LOG (res,
              "ignore out-of-order missed assignment of %d from level %d "
              "to "
@@ -906,8 +911,10 @@ void Internal::handle_external_clause (Clause *res, uint64_t new_id) {
       backtrack (l0 - 1); // backtrack
     else if (val (pos0) && l0 != l1)
       backtrack (l0 - 1); // backtrack
-    else if (val (pos0) && from_propagator)
+    else if (val (pos0) && from_propagator) {
       conflict = res;
+      stats.ext_prop.elearn_conf++;
+    }
 
     if (val (pos1) < 0 && !val (pos0))
       search_assign_driving (pos0, res);

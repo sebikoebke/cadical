@@ -40,6 +40,10 @@ struct Stats {
         elearn_prop; // number of learned and propagating external clauses
     int64_t
         elearn_conf; // number of learned and conflicting external clauses
+    int64_t elearn_elevate =
+        0; // number of learned and elevating external clauses
+    int64_t elearn_ooo =
+        0; // number of learned and out-of-order external clauses
     int64_t echeck_call; // number of checking found complete solutions
   } ext_prop;
 
