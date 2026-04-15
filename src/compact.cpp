@@ -529,7 +529,7 @@ void Internal::compact () {
   max_var = mapper.new_max_var;
 
   stats.vars_unused = 0;
-  stats.inactive = stats.vars_now_fixed = mapper.first_fixed ? 1 : 0;
+  stats.vars_inactive = stats.vars_now_fixed = mapper.first_fixed ? 1 : 0;
   stats.vars_now_substituted = stats.vars_now_eliminated = stats.vars_now_pure = 0;
 
   check_var_stats ();

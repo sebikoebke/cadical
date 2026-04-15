@@ -454,7 +454,7 @@ void Internal::add_new_original_clause (int64_t id) {
   }
   if (skip) {
     if (from_propagator) {
-      stats.ext_prop.elearn_conf++;
+      stats.propagator_learned_conflict++;
 
       // In case it was a skipped external forgettable, we need to mark it
       // immediately as removed
@@ -491,7 +491,7 @@ void Internal::add_new_original_clause (int64_t id) {
     lrat_chain.clear ();
     if (!size) {
       if (from_propagator)
-        stats.ext_prop.elearn_conf++;
+        stats.propagator_learned_conflict++;
       assert (!unsat);
       if (!original.size ())
         VERBOSE (1, "found empty original clause");
@@ -574,8 +574,8 @@ Clause *Internal::new_hyper_ternary_resolved_clause (bool red) {
 
 Clause *Internal::new_factor_clause (int witness) {
   external->check_learned_clause ();
-  stats.factor_added++;
-  stats.literals_factored += clause.size ();
+  stats.factor_added_clauses++;
+  stats.factor_added_literals += clause.size ();
   Clause *res = new_clause (false, 0);
   if (proof) {
     if (witness)

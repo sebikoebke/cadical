@@ -26,9 +26,9 @@ void Internal::mark_fixed (int lit) {
   assert (f.status == Flags::ACTIVE);
   f.status = Flags::FIXED;
   LOG ("fixed %d", abs (lit));
-  stats.all.fixed++;
+  stats.vars_all_fixed++;
   stats.vars_now_fixed++;
-  stats.inactive++;
+  stats.vars_inactive++;
   assert (stats.vars_active);
   stats.vars_active--;
   assert (!active (lit));
@@ -50,9 +50,9 @@ void Internal::mark_eliminated (int lit) {
   LOG ("eliminated %d", abs (lit));
   if (f.factored)
     stats.factored_eliminated++;
-  stats.all.eliminated++;
+  stats.vars_all_eliminated++;
   stats.vars_now_eliminated++;
-  stats.inactive++;
+  stats.vars_inactive++;
   assert (stats.vars_active);
   stats.vars_active--;
   assert (!active (lit));
@@ -64,9 +64,9 @@ void Internal::mark_pure (int lit) {
   assert (f.status == Flags::ACTIVE);
   f.status = Flags::PURE;
   LOG ("pure %d", abs (lit));
-  stats.all.pure++;
+  stats.vars_all_pure++;
   stats.vars_now_pure++;
-  stats.inactive++;
+  stats.vars_inactive++;
   assert (stats.vars_active);
   stats.vars_active--;
   assert (!active (lit));
@@ -78,9 +78,9 @@ void Internal::mark_substituted (int lit) {
   assert (f.status == Flags::ACTIVE);
   f.status = Flags::SUBSTITUTED;
   LOG ("substituted %d", abs (lit));
-  stats.all.substituted++;
+  stats.vars_all_substituted++;
   stats.vars_now_substituted++;
-  stats.inactive++;
+  stats.vars_inactive++;
   assert (stats.vars_active);
   stats.vars_active--;
   assert (!active (lit));
@@ -92,8 +92,8 @@ void Internal::mark_active (int lit) {
   assert (f.status == Flags::DECLARED);
   f.status = Flags::ACTIVE;
   LOG ("activate %d previously declared", abs (lit));
-  assert (stats.inactive);
-  stats.inactive--;
+  assert (stats.vars_inactive);
+  stats.vars_inactive--;
   assert (stats.vars_declared);
   stats.vars_declared--;
   stats.vars_active++;
@@ -141,8 +141,8 @@ void Internal::reactivate (int lit) {
   f.sweep = false;
   assert (active (lit));
   stats.reactivated++;
-  assert (stats.inactive > 0);
-  stats.inactive--;
+  assert (stats.vars_inactive > 0);
+  stats.vars_inactive--;
   stats.vars_active++;
 }
 

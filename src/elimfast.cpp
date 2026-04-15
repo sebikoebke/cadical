@@ -369,8 +369,8 @@ int Internal::elimfast_round (bool &completed,
 #ifndef QUIET
   const int64_t old_resolutions = stats.elimres;
 #endif
-  const int old_eliminated = stats.all.eliminated;
-  const int old_fixed = stats.all.fixed;
+  const int old_eliminated = stats.vars_all_eliminated;
+  const int old_fixed = stats.vars_all_fixed;
 
   // Limit on garbage literals during variable elimination. If the limit is
   // hit a garbage collection is performed.
@@ -419,8 +419,8 @@ int Internal::elimfast_round (bool &completed,
   if (!unsat)
     mark_redundant_clauses_with_eliminated_variables_as_garbage ();
 
-  int eliminated = stats.all.eliminated - old_eliminated;
-  stats.all.fasteliminated += eliminated;
+  int eliminated = stats.vars_all_eliminated - old_eliminated;
+  stats.vars_all_fasteliminated += eliminated;
 #ifndef QUIET
   int64_t resolutions = stats.elimres - old_resolutions;
   PHASE ("fastelim-round", stats.elimfastrounds,
@@ -428,7 +428,7 @@ int Internal::elimfast_round (bool &completed,
          eliminated, percent (eliminated, scheduled), resolutions);
 #endif
 
-  const int units = stats.all.fixed - old_fixed;
+  const int units = stats.vars_all_fixed - old_fixed;
   report ('e', !opts.reportall && !(eliminated + units));
   STOP_SIMPLIFIER (fastelim, ELIM);
 
@@ -461,7 +461,7 @@ void Internal::elimfast () {
 
 #ifndef QUIET
   int old_active_variables = active ();
-  int old_eliminated = stats.all.eliminated;
+  int old_eliminated = stats.vars_all_eliminated;
 #endif
 
   reset_watches (); // saves lots of memory
@@ -559,7 +559,7 @@ void Internal::elimfast () {
   }
 
 #ifndef QUIET
-  eliminated = stats.all.eliminated - old_eliminated;
+  eliminated = stats.vars_all_eliminated - old_eliminated;
   PHASE ("fastelim-phase", stats.elimphases,
          "eliminated %d variables %.2f%%", eliminated,
          percent (eliminated, old_active_variables));

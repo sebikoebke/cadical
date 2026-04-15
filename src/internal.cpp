@@ -740,7 +740,7 @@ bool Internal::preprocess_round (int round, bool &triggered) {
          " clauses",
          round, before.vars, before.clauses);
   int old_elimbound = lim.elimbound;
-  int old_eliminated = stats.all.eliminated;
+  int old_eliminated = stats.vars_all_eliminated;
 
   if (opts.inprobing)
     inprobe (false);
@@ -765,7 +765,7 @@ bool Internal::preprocess_round (int round, bool &triggered) {
     return true;
   if (old_elimbound < lim.elimbound)
     return true;
-  if (old_eliminated < stats.all.eliminated)
+  if (old_eliminated < stats.vars_all_eliminated)
     return true;
   return false;
 }
@@ -1311,7 +1311,7 @@ void Internal::declare_variable (int ilit) {
   assert ((size_t) ilit < vsize);
   if (ilit >= max_var) {
     stats.vars_unused += (ilit - max_var);
-    stats.inactive += (ilit - max_var);
+    stats.vars_inactive += (ilit - max_var);
     max_var = ilit;
   }
   Flags &f = internal->flags (ilit);

@@ -74,7 +74,7 @@ bool Internal::ineliminating () {
   // Wait until there are new units or new removed variables
   // (in removed or shrunken irredundant clauses and thus marked).
   //
-  if (last.elim.fixed < stats.all.fixed)
+  if (last.elim.fixed < stats.vars_all_fixed)
     return true;
   if (last.elim.marked < stats.mark_elim)
     return true;
@@ -873,8 +873,8 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
 #ifndef QUIET
   const int64_t old_resolutions = stats.elimres;
 #endif
-  const int old_eliminated = stats.all.eliminated;
-  const int old_fixed = stats.all.fixed;
+  const int old_eliminated = stats.vars_all_eliminated;
+  const int old_fixed = stats.vars_all_fixed;
 
   // Limit on garbage literals during variable elimination. If the limit is
   // hit a garbage collection is performed.
@@ -933,7 +933,7 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
   if (!unsat)
     mark_redundant_clauses_with_eliminated_variables_as_garbage ();
 
-  int eliminated = stats.all.eliminated - old_eliminated;
+  int eliminated = stats.vars_all_eliminated - old_eliminated;
 #ifndef QUIET
   int64_t resolutions = stats.elimres - old_resolutions;
   PHASE ("elim-round", stats.elimrounds,
@@ -942,7 +942,7 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
 #endif
 
   last.elim.subsumephases = stats.subsumephases;
-  const int units = stats.all.fixed - old_fixed;
+  const int units = stats.vars_all_fixed - old_fixed;
   report ('e', !opts.reportall && !(eliminated + units));
   STOP_SIMPLIFIER (elim, ELIM);
 
@@ -1038,7 +1038,7 @@ void Internal::elim (bool update_limits) {
 
 #ifndef QUIET
   int old_active_variables = active ();
-  int old_eliminated = stats.all.eliminated;
+  int old_eliminated = stats.vars_all_eliminated;
 #endif
 
   // Make sure there was a complete subsumption phase since last
@@ -1149,7 +1149,7 @@ void Internal::elim (bool update_limits) {
     increase_elimination_bound ();
 
 #ifndef QUIET
-  eliminated = stats.all.eliminated - old_eliminated;
+  eliminated = stats.vars_all_eliminated - old_eliminated;
   PHASE ("elim-phase", stats.elimphases, "eliminated %d variables %.2f%%",
          eliminated, percent (eliminated, old_active_variables));
 #endif
@@ -1169,7 +1169,7 @@ void Internal::elim (bool update_limits) {
          "new limit at %" PRId64 " conflicts after %" PRId64 " conflicts",
          lim.elim, delta);
 
-  last.elim.fixed = stats.all.fixed;
+  last.elim.fixed = stats.vars_all_fixed;
 }
 
 } // namespace CaDiCaL

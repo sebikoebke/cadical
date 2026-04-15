@@ -74,9 +74,9 @@ void Internal::remove_falsified_literals (Clause *c) {
 
 void Internal::mark_satisfied_clauses_as_garbage () {
 
-  if (last.collect.fixed >= stats.all.fixed)
+  if (last.collect.fixed >= stats.vars_all_fixed)
     return;
-  last.collect.fixed = stats.all.fixed;
+  last.collect.fixed = stats.vars_all_fixed;
 
   LOG ("marking satisfied clauses and removing falsified literals");
 

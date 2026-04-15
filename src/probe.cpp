@@ -320,7 +320,7 @@ inline void Internal::probe_assign (int lit, int parent) {
   // probing attempts.  Search for 'propfixed' in 'probe.cpp' for details.
   //
   if (level)
-    propfixed (lit) = stats.all.fixed;
+    propfixed (lit) = stats.vars_all_fixed;
 
   if (parent)
     LOG ("probe assign %d parent %d", lit, parent);
@@ -675,7 +675,7 @@ void Internal::generate_probes () {
 
     // See the discussion where 'propfixed' is used below.
     //
-    if (propfixed (probe) >= stats.all.fixed)
+    if (propfixed (probe) >= stats.vars_all_fixed)
       continue;
 
     LOG ("scheduling probe %d negated occs %" PRIu64 "", probe,
@@ -726,7 +726,7 @@ void Internal::flush_probes () {
     if (have_pos_bin_occs)
       lit = -lit;
     assert (!noccs (lit)), assert (noccs (-lit) > 0);
-    if (propfixed (lit) >= stats.all.fixed)
+    if (propfixed (lit) >= stats.vars_all_fixed)
       continue;
     LOG ("keeping probe %d negated occs %" PRId64 "", lit, noccs (-lit));
     *j++ = lit;
@@ -777,7 +777,7 @@ int Internal::next_probe () {
       // Alg. 4 in his JAIR article from 2002) and it has also been
       // contributed to the thesis work of Yacine Boufkhad.
       //
-      if (propfixed (probe) >= stats.all.fixed)
+      if (propfixed (probe) >= stats.vars_all_fixed)
         continue;
 
       return probe;

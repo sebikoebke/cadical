@@ -117,7 +117,7 @@ void Internal::lookahead_flush_probes () {
     if (have_pos_bin_occs)
       lit = -lit;
     assert (!noccs (lit)), assert (noccs (-lit) > 0);
-    if (propfixed (lit) >= stats.all.fixed)
+    if (propfixed (lit) >= stats.vars_all_fixed)
       continue;
     MSG ("keeping probe %d negated occs %" PRIu64 "", lit, noccs (-lit));
     *j++ = lit;
@@ -176,7 +176,7 @@ void Internal::lookahead_generate_probes () {
 
       // See the discussion where 'propfixed' is used below.
       //
-      if (propfixed (probe) >= stats.all.fixed)
+      if (propfixed (probe) >= stats.vars_all_fixed)
         continue;
 
       MSG ("scheduling probe %d negated occs %" PRIu64 "", probe,
@@ -189,7 +189,7 @@ void Internal::lookahead_generate_probes () {
 
       // See the discussion where 'propfixed' is used below.
       //
-      if (propfixed (probe) >= stats.all.fixed)
+      if (propfixed (probe) >= stats.vars_all_fixed)
         continue;
 
       MSG ("scheduling probe %d negated occs %" PRIu64 "", probe,
@@ -238,7 +238,7 @@ int Internal::lookahead_next_probe () {
       // Alg. 4 in his JAIR article from 2002) and it has also been
       // contributed to the thesis work of Yacine Boufkhad.
       //
-      if (propfixed (probe) >= stats.all.fixed)
+      if (propfixed (probe) >= stats.vars_all_fixed)
         continue;
 
       return probe;

@@ -653,7 +653,7 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
 
   // Remove all fixed variables first (assigned at decision level zero).
   //
-  if (last.collect.fixed < stats.all.fixed)
+  if (last.collect.fixed < stats.vars_all_fixed)
     garbage_collection ();
 
 #ifndef QUIET

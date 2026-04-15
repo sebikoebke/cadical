@@ -33,8 +33,8 @@ void Internal::check_var_stats () {
   assert (stats.vars_now_substituted == substituted);
   assert (stats.vars_now_pure == pure);
   int64_t inactive = unused + declared + fixed + eliminated + substituted + pure;
-  assert (stats.inactive == inactive);
-  assert (max_var == stats.vars_active + stats.inactive);
+  assert (stats.vars_inactive == inactive);
+  assert (max_var == stats.vars_active + stats.vars_inactive);
 #endif
 }
 

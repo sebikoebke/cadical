@@ -124,44 +124,44 @@ void Stats::print (Internal *internal) {
          stats.deduplicate_init,
          percent (stats.deduplicate_init, stats.deduplicate_init));
   }
-  if (all || stats.conditioned) {
+  if (all || stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsitioned) {
     PRT ("conditioned:     %15" PRId64
          "   %10.2f %%  of irredundant clauses",
-         stats.conditioned,
-         percent (stats.conditioned, stats.clauses_added_irredundant));
+         stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsitioned,
+         percent (stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsitioned, stats.clauses_added_irredundant));
     PRT ("  conditionings: %15" PRId64 "   %10.2f    interval",
-         stats.conditionings,
-         relative (stats.conflicts, stats.conditionings));
+         stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_itionings,
+         relative (stats.conflicts, stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_itionings));
     PRT ("  condcands:     %15" PRId64 "   %10.2f    candidate clauses",
-         stats.condition_candidates,
-         relative (stats.condition_candidates, stats.conditionings));
+         stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_candidates,
+         relative (stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_candidates, stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_itionings));
     PRT ("  condassinit:   %17.1f  %9.2f %%  initial assigned",
-         relative (stats.condition_init_assigned, stats.conditionings),
-         percent (stats.condition_init_assigned,
-                  stats.condition_final_assigned));
+         relative (stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_init_assigned, stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_itionings),
+         percent (stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_init_assigned,
+                  stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_final_assigned));
     PRT ("  condcondinit:  %17.1f  %9.2f %%  initial condition",
-         relative (stats.condition_init_conditional, stats.conditionings),
-         percent (stats.condition_init_conditional,
-                  stats.condition_init_assigned));
+         relative (stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_init_conditional, stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_itionings),
+         percent (stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_init_conditional,
+                  stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_init_assigned));
     PRT ("  condautinit:   %17.1f  %9.2f %%  initial autarky",
-         relative (stats.condition_init_autarky, stats.conditionings),
-         percent (stats.condition_init_autarky,
-                  stats.condition_init_assigned));
+         relative (stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_init_autarky, stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_itionings),
+         percent (stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_init_autarky,
+                  stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_init_assigned));
     PRT ("  condassrem:    %17.1f  %9.2f %%  final assigned",
-         relative (stats.condition_final_assigned, stats.conditioned),
-         percent (stats.condition_final_assigned,
-                  stats.condition_final_assigned));
+         relative (stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_final_assigned, stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsitioned),
+         percent (stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_final_assigned,
+                  stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_final_assigned));
     PRT ("  condcondrem:   %19.3f  %7.2f %%  final conditional",
-         relative (stats.condition_final_conditional, stats.conditioned),
-         percent (stats.condition_final_conditional,
-                  stats.condition_final_assigned));
+         relative (stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_final_conditional, stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsitioned),
+         percent (stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_final_conditional,
+                  stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_final_assigned));
     PRT ("  condautrem:    %19.3f  %7.2f %%  final autarky",
-         relative (stats.condition_final_autarky, stats.conditioned),
-         percent (stats.condition_final_autarky,
-                  stats.condition_final_assigned));
+         relative (stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_final_autarky, stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsitioned),
+         percent (stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_final_autarky,
+                  stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_final_assigned));
     PRT ("  condprops:     %15" PRId64 "   %10.2f    per candidate",
          stats.condition_propagated,
-         relative (stats.condition_propagated, stats.condition_candidates));
+         relative (stats.condition_propagated, stats.condition_initial_ition_condinitition_assinitition_iton_propagatedition_condremition_autremition_itioningsition_ition_candidates));
   }
   if (all || stats.cover_total) {
     PRT ("covered:         %15" PRId64
@@ -311,11 +311,11 @@ void Stats::print (Internal *internal) {
     PRT ("  factor:        %15" PRId64 "   %10.2f    conflict interval",
          stats.factorings, relative (stats.conflicts, stats.factorings));
     PRT ("  cls factored:  %15" PRId64 "   %10.2f    per factored",
-         stats.factor_added_clauses,
-         relative (stats.factor_added_clauses, factored));
+         stats.factor_added_clauses_clauses,
+         relative (stats.factor_added_clauses_clauses, factored));
     PRT ("  lits factored: %15" PRId64 "   %10.2f    per factored",
-         stats.literals_factored,
-         relative (stats.literals_factored, factored));
+         stats.factor_added_literals,
+         relative (stats.factor_added_literals, factored));
     PRT ("  cls unfactored:%15" PRId64 "   %10.2f    per factored",
          stats.clauses_unfactored,
          relative (stats.clauses_unfactored, factored));
@@ -853,49 +853,49 @@ void Stats::print (Internal *internal) {
          stats.extended, relative (stats.extended, stats.weakened));
   }
 
-  if (all || stats.congruence.gates) {
+  if (all || stats.congruence_gates) {
     PRT ("congruence:      %15" PRId64 "   %10.2f    interval",
-         stats.congruence.rounds,
-         relative (stats.conflicts, stats.congruence.rounds));
+         stats.congruence_rounds,
+         relative (stats.conflicts, stats.congruence_rounds));
     PRT ("   units:        %15" PRId64 "   %10.2f    per congruent",
-         stats.congruence.units,
-         relative (stats.congruence.units, stats.congruence.congruent));
+         stats.congruence_units,
+         relative (stats.congruence_units, stats.congruence_congruent));
     PRT ("   cong-and:     %15" PRId64 "   %10.2f    per found gates",
-         stats.congruence.ands,
-         relative (stats.congruence.ands, stats.congruence.gates));
+         stats.congruence_ands,
+         relative (stats.congruence_ands, stats.congruence_gates));
     PRT ("   cong-ite:     %15" PRId64 "   %10.2f    per found gates",
-         stats.congruence.ites,
-         relative (stats.congruence.ites, stats.congruence.gates));
+         stats.congruence_ites,
+         relative (stats.congruence_ites, stats.congruence_gates));
     PRT ("   cong-xor:     %15" PRId64 "   %10.2f    per found gates",
-         stats.congruence.xors,
-         relative (stats.congruence.xors, stats.congruence.gates));
+         stats.congruence_xors,
+         relative (stats.congruence_xors, stats.congruence_gates));
     PRT ("   congruent:    %15" PRId64 "   %10.2f    per round",
-         stats.congruence.congruent,
-         relative (stats.congruence.rounds, stats.congruence.congruent));
+         stats.congruence_congruent,
+         relative (stats.congruence_rounds, stats.congruence_congruent));
     PRT ("   unaries:      %15" PRId64 "   %10.2f    per round",
-         stats.congruence.unaries,
-         relative (stats.congruence.rounds, stats.congruence.unaries));
-    int64_t rewritten = stats.congruence.rewritten_ands +
-                        stats.congruence.rewritten_xors +
-                        stats.congruence.rewritten_ites;
+         stats.congruence_unaries,
+         relative (stats.congruence_rounds, stats.congruence_unaries));
+    int64_t rewritten = stats.congruence_rewritten_ands +
+                        stats.congruence_rewritten_xors +
+                        stats.congruence_rewritten_ites;
     PRT ("   rewritten:    %15" PRId64 "   %10.2f    per round", rewritten,
-         percent (rewritten, stats.congruence.rounds));
+         percent (rewritten, stats.congruence_rounds));
     PRT ("   rewri.-ands:  %15" PRId64 "   %10.2f    per rewritten",
-         stats.congruence.rewritten_ands,
-         percent (stats.congruence.rewritten_ands, rewritten));
+         stats.congruence_rewritten_ands,
+         percent (stats.congruence_rewritten_ands, rewritten));
     PRT ("   rewri.-xors:  %15" PRId64 "   %10.2f%%  per rewritten",
-         stats.congruence.rewritten_xors,
-         percent (stats.congruence.rewritten_xors, rewritten));
+         stats.congruence_rewritten_xors,
+         percent (stats.congruence_rewritten_xors, rewritten));
     PRT ("   rewri.-ites:  %15" PRId64 "   %10.2f%%  per rewritten",
-         stats.congruence.rewritten_ites,
-         percent (stats.congruence.rewritten_ites, rewritten));
+         stats.congruence_rewritten_ites,
+         percent (stats.congruence_rewritten_ites, rewritten));
     PRT ("   subsumed:     %15" PRId64 "   %10.2f%%  per round",
-         stats.congruence.subsumed,
-         relative (stats.congruence.subsumed, stats.congruence.rounds));
+         stats.congruence_subsumed,
+         relative (stats.congruence_subsumed, stats.congruence_rounds));
     PRT ("   dummy-ands:   %15" PRId64 "   %10.2f%%  per round",
-         stats.congruence.congruent_dummy_ands,
-         relative (stats.congruence.congruent_dummy_ands,
-                   stats.congruence.rounds));
+         stats.congruence_congruent_dummy_ands,
+         relative (stats.congruence_congruent_dummy_ands,
+                   stats.congruence_rounds));
   }
 
   LINE ();
