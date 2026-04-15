@@ -9,9 +9,9 @@ void Internal::recompute_tier () {
     return;
 
   ++stats.recomputed_tiers;
-  const int64_t delta = stats.clauses_recomputed_glue >= 16
+  const int64_t delta = stats.recomputed_tiers >= 16
                             ? 1u << 16
-                            : (1u << stats.clauses_recomputed_glue);
+                            : (1u << stats.recomputed_tiers);
   lim.recompute_tier = stats.conflicts + delta;
   LOG ("rescheduling in %" PRId64 " at %" PRId64 " (conflicts at %" PRId64
        ")",
