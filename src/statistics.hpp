@@ -4,405 +4,341 @@
 // clang-format off
 
 //           NAME,    VERBOSITY (0-3), PRINTING
-#define COUNTERS_AND_STATISTICS \
+#define CADICAL_STATISTICS \
 \
-  STATISTIC (vars, 2, PCNT_RESIDENT_SET, "%", "resident set") \
-  STATISTIC (clauses_restored, 1, PER_SEARCH, "", "per solved") \
-  STATISTIC (kitten_flip, 1, NO_SECONDARY, 0, 0) \
-  \
-  STATISTIC (vars,                            2, NO_SECONDARY,        0,                     0) \
-  STATISTIC (conflicts,                       0, PER_SECOND,         "",          "per second") \
-  STATISTIC (decisions,                       0, PER_SECOND,         "",          "per second") \
-  STATISTIC (searches,                        2, NO_SECONDARY,        0,                     0) \
-  STATISTIC (propagations,                    0, PER_SECOND,         "",          "per second") \
-  STATISTIC (propagations_backbone,           2, PCNT_PROPAGATIONS, "%",        "propagations") \
-  STATISTIC (propagations_cover,              2, PCNT_PROPAGATIONS, "%",        "propagations") \
-  STATISTIC (propagations_instatiate,         2, PCNT_PROPAGATIONS, "%",        "propagations") \
-  STATISTIC (propagations_probe,              2, PCNT_PROPAGATIONS, "%",        "propagations") \
-  STATISTIC (propagations_search,             2, PCNT_PROPAGATIONS, "%",        "propagations") \
-  STATISTIC (propagations_transred,           2, PCNT_PROPAGATIONS, "%",        "propagations") \
-  STATISTIC (propagations_vivify,             2, PCNT_PROPAGATIONS, "%",        "propagations") \
-  STATISTIC (ticks,                           0, PER_PROPAGATION,    "",         "propagation") \
-  STATISTIC (ticks_search_stable,             2, PCNT_TICKS,        "%",               "ticks") \
-  STATISTIC (ticks_search_unstable,           2, PCNT_TICKS,        "%",               "ticks") \
-  STATISTIC (ticks_factor,                    2, PCNT_TICKS,        "%",               "ticks") \
-  STATISTIC (ticks_probe,                     2, PCNT_TICKS,        "%",               "ticks") \
-  STATISTIC (ticks_sweep,                     2, PCNT_TICKS,        "%",               "ticks") \
-  STATISTIC (ticks_ternary,                   2, PCNT_TICKS,        "%",               "ticks") \
-  STATISTIC (ticks_vivify,                    2, PCNT_TICKS,        "%",               "ticks") \
-  STATISTIC (ticks_walk,                      2, PCNT_TICKS,        "%",               "ticks") \
-  STATISTIC (ticks_walk_flip,                 2, PCNT_TICKS_WALK,   "%",          "walk ticks") \
-  STATISTIC (ticks_walk_flip_broken,          2, PCNT_TICKS_WALK,   "%",          "walk ticks") \
-  STATISTIC (ticks_walk_flip_WL,              2, PCNT_TICKS_WALK,   "%",          "walk ticks") \
-  STATISTIC (ticks_walk_break,                2, PCNT_TICKS_WALK,   "%",          "walk ticks") \
-  STATISTIC (ticks_walk_pick,                 2, PCNT_TICKS_WALK,   "%",          "walk ticks") \
-  STATISTIC (propagator_cb,                   1, NO_SECONDARY,        0,                     0) \
-  STATISTIC (propagator_cb_add,               1, PCNT_EXT_CB,       "%",           "callbacks") \
-  STATISTIC (propagator_cb_check_model,       1, PCNT_EXT_CB,       "%",           "callbacks") \
-  STATISTIC (propagator_cb_propagate,         1, PCNT_EXT_CB,       "%",           "callbacks") \
-  STATISTIC (propagator_cb_propagate_assign,  2, PCNT_EXT_CB_PROP,  "%", "propagate callbacks") \
-  STATISTIC (propagator_cb_propagate_clash,   2, PCNT_EXT_CB_PROP,  "%", "propagate callbacks") \
-  STATISTIC (propagator_cb_propagate_explain, 2, PCNT_EXT_CB_PROP,  "%", "propagate callbacks") \
-  STATISTIC (propagator_learned,              1, NO_SECONDARY,        0,                     0) \
-  STATISTIC (propagator_learned_propagating,  2, PCNT_EXT_LEARNED,  "%",  "propagator clauses") \
-  STATISTIC (propagator_learned_elevating,    2, PCNT_EXT_LEARNED,  "%",  "propagator clauses") \
-  STATISTIC (propagator_learned_conflict,     2, PCNT_EXT_LEARNED,  "%",  "propagator clauses") \
-  STATISTIC (propagator_learned_unit,         2, PCNT_EXT_LEARNED,  "%",  "propagator clauses") \
+  STATISTIC (backbone_phases,                      1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (backbone_probes,                      1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (backbone_rounds,                      1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (backbone_units,                       1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (backtracked,                          3, NO_SECONDARY,       "",                    "") \
+  STATISTIC (blocked,                              1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (blocked_candidates,                   1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (blocked_pure,                         1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (blocked_pure_literals,                1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (blocked_resolutions,                  1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (blockings,                            1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (clauses_added_irredundant,            3, NO_SECONDARY,        0,                     0) \
+  STATISTIC (clauses_added_redundant,              3, NO_SECONDARY,        0,                     0) \
+  STATISTIC (clauses_added_total,                  3, NO_SECONDARY,        0,                     0) \
+  STATISTIC (clauses_current_irredundant,          3, NO_SECONDARY,        0,                     0) \
+  STATISTIC (clauses_current_redundant,            3, NO_SECONDARY,        0,                     0) \
+  STATISTIC (clauses_current_total,                3, NO_SECONDARY,        0,                     0) \
+  STATISTIC (clauses_improved_glue,                3, NO_SECONDARY,       "",                    "") \
+  STATISTIC (clauses_promoted_tier1,               3, NO_SECONDARY,       "",                    "") \
+  STATISTIC (clauses_promoted_tier2,               3, NO_SECONDARY,       "",                    "") \
+  STATISTIC (clauses_recomputed_glue,              3, NO_SECONDARY,       "",                    "") \
+  STATISTIC (collected,                            1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (collections,                          1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (compacts,                             1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (condition_candidates,                 2, PER_CONDITIONING,   "",    "per conditioning") \
+  STATISTIC (conditioned,                          1, PER_CONDITIONING,   "",    "per conditioning") \
+  STATISTIC (condition_final_assigned,             2, PER_CONDITIONING,   "",    "per conditioning") \
+  STATISTIC (condition_final_autarky,              2, PER_CONDITIONING,   "",    "per conditioning") \
+  STATISTIC (condition_final_conditional,          2, PER_CONDITIONING,   "",    "per conditioning") \
+  STATISTIC (conditionings,                        2, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (condition_init_assigned,              2, PER_CONDITIONING,   "",    "per conditioning") \
+  STATISTIC (condition_init_autarky,               2, PER_CONDITIONING,   "",    "per conditioning") \
+  STATISTIC (condition_init_conditional,           2, PER_CONDITIONING,   "",    "per conditioning") \
+  STATISTIC (condition_propagated,                 2, PER_CONDITIONING,   "",    "per conditioning") \
+  STATISTIC (conflicts,                            0, PER_SECOND,         "",          "per second") \
+  STATISTIC (conflicts_chrono,                     3, NO_SECONDARY,       "",                    "") \
+  STATISTIC (congruence,                           1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_ands,                      1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_dummy_ands,                1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_gates,                     1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_gates_and,                 1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_gates_ite,                 1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_gates_xor,                 1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_ites,                      1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_rewritted_ands,            1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_rewritted_ites,            1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_rewritted_xors,            1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_rounds,                    1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_simplified,                1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_simplified_ands,           1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_simplified_ites,           1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_simplified_xors,           1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_subsumed,                  1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_trivial_ite,               1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_unary,                     1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_unary_and,                 1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_unary_ite,                 1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_units,                     1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_xors,                      1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruent,                            1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (cover_asymmetric,                     2, PER_COVERING,       "",        "per covering") \
+  STATISTIC (cover_blocked,                        2, PER_COVERING,       "",        "per covering") \
+  STATISTIC (covered,                              1, PER_COVERING,       "",        "per covering") \
+  STATISTIC (coverings,                            2, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (cover_total,                          2, PER_COVERING,       "",        "per covering") \
+  STATISTIC (decisions,                            0, PER_SECOND,         "",          "per second") \
+  STATISTIC (decisions_random,                     1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (decisions_random_phases,              1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (decisions_searched,                   0, PER_SECOND,         "",          "per second") \
+  STATISTIC (decompositions,                       1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (deduplicated,                         1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (deduplicate_init,                     1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (deduplicate_init_rounds,              1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (deduplications,                       1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eager_subsumed,                       1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eager_subsumtions,                    1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_and,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_complete,                   1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminated,                           1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminated_and,                       1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminated_defs,                      1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_defs_checked,               1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_defs_extracted,             1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_defs_ticks,                 1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_defs_unit,                  1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminated_equivalence,               1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminated_ite,                       1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminated_xor,                       1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_equivalence,                1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_fast_phases,                1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_fast_rounds,                1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_gates,                      1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_ite,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_otfs,                       1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_phases,                     1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_resolved,                   1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_resolve_tried,              1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_strengthened_bw,            1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_substituted,                1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_subsumed_bw,                1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_tried,                      1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_xor,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminations,                         1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (extended,                             1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (extensions,                           1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (factor_added_clauses,                 1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (factor_added_literals,                1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (factor_added_variables,               1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (factored,                             1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (factored_and,                         1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (factored_eliminated,                  1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (factored_ite,                         1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (factored_xor,                         1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (factorings,                           1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (factor_removed_clauses,               1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (factor_removed_literals,              1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (factor_removed_redundant,             1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (flushed,                              1, PCNT_CONFLICTS,    "%",           "conflicts") \
+  STATISTIC (flush_hyper,                          2, PCNT_CONFLICTS,    "%",           "conflicts") \
+  STATISTIC (flushings,                            2, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (flush_learned,                        2, PCNT_CONFLICTS,    "%",           "conflicts") \
+  STATISTIC (garbage_bytes,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (garbage_clauses,                      1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (garbage_literals,                     1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (hbr_redundant,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (hbrs,                                 1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (hbr_sizes,                            1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (hbr_subsuming,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (ilb_reused_assumptions,               1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (ilb_reused_levels,                    1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (ilb_reused_literals,                  1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (ilb_success,                          1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (ilb_triggers,                         1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (incremental_decay,                    1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (inprobingphases,                      1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (inprobingsuccess,                     1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (instantiated,                         1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (instantiate_rounds,                   1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (instantiations,                       1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (irredundant_literals,                 1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (learned_binaries,                     1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (learned_clauses,                      1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (learned_literals,                     1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (learned_units,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (lucky,                                1, PCNT_SEARCH,       "%",              "search") \
+  STATISTIC (lucky_backward_one,                   2, CONFLICT_INTERVAL, "%",              "search") \
+  STATISTIC (lucky_backward_zero,                  2, CONFLICT_INTERVAL, "%",              "search") \
+  STATISTIC (lucky_constant_one,                   2, CONFLICT_INTERVAL, "%",              "search") \
+  STATISTIC (lucky_constant_zero,                  2, CONFLICT_INTERVAL, "%",              "search") \
+  STATISTIC (lucky_forward_one,                    2, CONFLICT_INTERVAL, "%",              "search") \
+  STATISTIC (lucky_forward_zero,                   2, CONFLICT_INTERVAL, "%",              "search") \
+  STATISTIC (lucky_horn_negative,                  2, CONFLICT_INTERVAL, "%",              "search") \
+  STATISTIC (lucky_horn_positive,                  2, CONFLICT_INTERVAL, "%",              "search") \
+  STATISTIC (lucky_random,                         2, CONFLICT_INTERVAL, "%",              "search") \
+  STATISTIC (lucky_tried,                          2, CONFLICT_INTERVAL, "%",              "search") \
+  STATISTIC (lucky_units,                          2, CONFLICT_INTERVAL, "%",              "search") \
+  STATISTIC (mark_block,                           3, NO_SECONDARY,        0,                     0) \
+  STATISTIC (mark_elim,                            3, NO_SECONDARY,        0,                     0) \
+  STATISTIC (mark_factor,                          3, NO_SECONDARY,        0,                     0) \
+  STATISTIC (mark_subsume,                         3, NO_SECONDARY,        0,                     0) \
+  STATISTIC (mark_ternary,                         3, NO_SECONDARY,        0,                     0) \
+  STATISTIC (minimized,                            1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (otfs_strengthened,                    1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (otfs_subsumed,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (preprocessings,                       1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (probed,                               1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (probe_failed_literals,                1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (probe_hyper_unary,                    1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (probingrounds,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (propagations,                         0, PER_SECOND,         "",          "per second") \
+  STATISTIC (propagations_backbone,                2, PCNT_PROPAGATIONS, "%",        "propagations") \
+  STATISTIC (propagations_cover,                   2, PCNT_PROPAGATIONS, "%",        "propagations") \
+  STATISTIC (propagations_instatiate,              2, PCNT_PROPAGATIONS, "%",        "propagations") \
+  STATISTIC (propagations_probe,                   2, PCNT_PROPAGATIONS, "%",        "propagations") \
+  STATISTIC (propagations_search,                  2, PCNT_PROPAGATIONS, "%",        "propagations") \
+  STATISTIC (propagations_transred,                2, PCNT_PROPAGATIONS, "%",        "propagations") \
+  STATISTIC (propagations_vivify,                  2, PCNT_PROPAGATIONS, "%",        "propagations") \
+  STATISTIC (propagator_cb,                        1, NO_SECONDARY,        0,                     0) \
+  STATISTIC (propagator_cb_add,                    1, PCNT_EXT_CB,       "%",           "callbacks") \
+  STATISTIC (propagator_cb_check_model,            1, PCNT_EXT_CB,       "%",           "callbacks") \
+  STATISTIC (propagator_cb_propagate,              1, PCNT_EXT_CB,       "%",           "callbacks") \
+  STATISTIC (propagator_cb_propagate_assign,       2, PCNT_EXT_CB_PROP,  "%", "propagate callbacks") \
+  STATISTIC (propagator_cb_propagate_clash,        2, PCNT_EXT_CB_PROP,  "%", "propagate callbacks") \
+  STATISTIC (propagator_cb_propagate_explain,      2, PCNT_EXT_CB_PROP,  "%", "propagate callbacks") \
+  STATISTIC (propagator_learned,                   1, NO_SECONDARY,        0,                     0) \
+  STATISTIC (propagator_learned_conflict,          2, PCNT_EXT_LEARNED,  "%",  "propagator clauses") \
+  STATISTIC (propagator_learned_elevating,         2, PCNT_EXT_LEARNED,  "%",  "propagator clauses") \
+  STATISTIC (propagator_learned_propagating,       2, PCNT_EXT_LEARNED,  "%",  "propagator clauses") \
+  STATISTIC (propagator_learned_unit,              2, PCNT_EXT_LEARNED,  "%",  "propagator clauses") \
+  STATISTIC (reactivated_clauses,                  1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (recomputed_tiers,                     1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (reduced,                              1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (reduce_prct,                          1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (reduce_sqrt,                          1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (reductions,                           1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (rephased,                             1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (rephased_best,                        2, PCNT_REPHASED,     "%",            "rephased") \
+  STATISTIC (rephased_flipped,                     2, PCNT_REPHASED,     "%",            "rephased") \
+  STATISTIC (rephased_inverted,                    2, PCNT_REPHASED,     "%",            "rephased") \
+  STATISTIC (rephased_original,                    2, PCNT_REPHASED,     "%",            "rephased") \
+  STATISTIC (rephased_random,                      2, PCNT_REPHASED,     "%",            "rephased") \
+  STATISTIC (rephased_walk,                        2, PCNT_REPHASED,     "%",            "rephased") \
+  STATISTIC (restart,                              1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (restart_levels,                       3, CONFLICT_INTERVAL,  "",                    "") \
+  STATISTIC (restart_stable,                       3, CONFLICT_INTERVAL,  "",                    "") \
+  STATISTIC (restorations,                         1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (restored_clauses,                     1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (restored_literals,                    1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (reused,                               1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (reused_levels,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (reused_stable,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (scores_rescored,                      1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (scores_shuffled,                      1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (searches,                             2, NO_SECONDARY,        0,                     0) \
+  STATISTIC (sections,                             3, NO_SECONDARY,       "",                    "") \
+  STATISTIC (shrunken,                             1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (shrunken_minimize,                    1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (stable_conflicts,                     2, PCNT_CONFLICTS,    "%",           "conflicts") \
+  STATISTIC (stable_phases_incremental,            2, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (stable_phases_total,                  1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (strengthened,                         1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (subsume_checks,                       1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (subsume_checks_binary,                1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (subsumed,                             1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (subsumed_irredundant,                 1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (subsumed_redundant,                   1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (subsume_phases,                       1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (subsume_rounds,                       1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (subsume_tried,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep,                                1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_backbone_fixed,                 1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_backbone_flip,                  1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_backbone_flipped,               1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_backbone_solved,                1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_backbone_solved_sat,            1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_backbone_solved_unknown,        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_backbone_solved_unsat,          1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_clauses,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_completed,                      1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_depth,                          1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_environment,                    1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_equivalences,                   1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_equivalences_fixed,             1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_equivalences_flip,              1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_equivalences_flipped,           1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_equivalences_solved,            1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_equivalences_solved_sat,        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_equivalences_solved_unknown,    1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_equivalences_solved_unsat,      1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_solved,                         1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_solved_sat,                     1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_solved_unsat,                   1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_units,                          1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (sweep_variables,                      1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (ternary,                              1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (ternary_htrs,                         1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (ternary_htrs_binary,                  1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (ternary_htrs_ternary,                 1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (ternary_resolutions,                  1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (ticks,                                0, PER_PROPAGATION,    "",         "propagation") \
+  STATISTIC (ticks_backbone,                       2, PCNT_TICKS,        "%",               "ticks") \
+  STATISTIC (ticks_factor,                         2, PCNT_TICKS,        "%",               "ticks") \
+  STATISTIC (ticks_probe,                          2, PCNT_TICKS,        "%",               "ticks") \
+  STATISTIC (ticks_search_stable,                  2, PCNT_TICKS,        "%",               "ticks") \
+  STATISTIC (ticks_search_unstable,                2, PCNT_TICKS,        "%",               "ticks") \
+  STATISTIC (ticks_sweep,                          2, PCNT_TICKS,        "%",               "ticks") \
+  STATISTIC (ticks_ternary,                        2, PCNT_TICKS,        "%",               "ticks") \
+  STATISTIC (ticks_vivify,                         2, PCNT_TICKS,        "%",               "ticks") \
+  STATISTIC (ticks_walk,                           2, PCNT_TICKS,        "%",               "ticks") \
+  STATISTIC (ticks_walk_break,                     2, PCNT_TICKS_WALK,   "%",          "walk ticks") \
+  STATISTIC (ticks_walk_flip,                      2, PCNT_TICKS_WALK,   "%",          "walk ticks") \
+  STATISTIC (ticks_walk_flip_broken,               2, PCNT_TICKS_WALK,   "%",          "walk ticks") \
+  STATISTIC (ticks_walk_flip_wl,                   2, PCNT_TICKS_WALK,   "%",          "walk ticks") \
+  STATISTIC (ticks_walk_pick,                      2, PCNT_TICKS_WALK,   "%",          "walk ticks") \
+  STATISTIC (transitive,                           1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (transitive_reduced,                   1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (transitive_units,                     1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (variables_extension,                  1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (variables_original,                   1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vars,                                 2, NO_SECONDARY,        0,                     0) \
+  STATISTIC (vars_active,                          1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vars_all_eliminated,                  1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vars_all_eliminated_fast,             1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vars_all_fixed,                       1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vars_all_pure,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vars_all_substituted,                 1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vars_bumped,                          3, NO_SECONDARY,       "",                    "") \
+  STATISTIC (vars_declared,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vars_inactive,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vars_now_eliminated,                  1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vars_now_eliminated_fast,             1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vars_now_fixed,                       1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vars_now_pure,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vars_now_substituted,                 1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vars_unused,                          1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivifications,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivified,                             1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivified_irredundant,                 1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivified_redundant_tier1,             1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivified_redundant_tier2,             1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivified_redundant_tier3,             1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivify_checks,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivify_decisions,                     1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivify_demote,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivify_implied,                       1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivify_instantiated,                  1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivify_reused,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivify_scheduled,                     1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivify_strengthened,                  1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivify_strengthened_irredundant,      1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivify_strengthened_redundant_tier1,  1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivify_strengthened_redundant_tier2,  1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivify_strengthened_redundant_tier3,  1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivify_subsumed,                      1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivify_subsumed_irredundant,          1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivify_subsumed_redundant,            1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivify_units,                         1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (walk,                                 1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (walk_broken,                          2, CONFLICT_INTERVAL,  "",                    "") \
+  STATISTIC (walk_flips,                           2, CONFLICT_INTERVAL,  "",                    "") \
+  STATISTIC (walk_improved,                        2, CONFLICT_INTERVAL,  "",                    "") \
+  STATISTIC (walk_minimum,                         2, CONFLICT_INTERVAL,  "",                    "") \
+  STATISTIC (walk_sideways,                        2, CONFLICT_INTERVAL,  "",                    "") \
+  STATISTIC (walk_warmup,                          2, CONFLICT_INTERVAL,  "",                    "") \
+  STATISTIC (walk_warmup_conflicts,                2, CONFLICT_INTERVAL,  "",                    "") \
+  STATISTIC (walk_warmup_decision,                 2, CONFLICT_INTERVAL,  "",                    "") \
+  STATISTIC (walk_warmup_decision_dummy,           2, CONFLICT_INTERVAL,  "",                    "") \
+  STATISTIC (walk_warmup_propagated,               2, CONFLICT_INTERVAL,  "",                    "") \
+  STATISTIC (walk_weight_reducing,                 2, CONFLICT_INTERVAL,  "",                    "") \
+  STATISTIC (walk_weight_transfer,                 2, CONFLICT_INTERVAL,  "",                    "") \
+  STATISTIC (weakened,                             1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (weakened_lengths,                     1, CONFLICT_INTERVAL,  "",            "interval")
 
-  int64_t condassinit = 0; // initial assigned literals
-  int64_t condassirem = 0; // initial assigned literals for blocked
-  int64_t condassrem = 0;  // remaining assigned literals for blocked
-  int64_t condassvars = 0; // sum of active variables at initial assignment
-  int64_t condautinit = 0; // initial literals in autarky part
-  int64_t condautrem = 0;  // remaining literals in autarky part for blocked
-  int64_t condcands = 0;   // globally blocked candidate clauses
-  int64_t condcondinit = 0; // initial literals in conditional part
-  int64_t condcondrem =
-      0; // remaining literals in conditional part for blocked
-  int64_t conditioned = 0;   // globally blocked clauses eliminated
-  int64_t conditionings = 0; // globally blocked clause eliminations
-  int64_t condprops = 0;     // propagated unassigned literals
-
-  struct {
-    int64_t block = 0;   // block marked literals
-    int64_t elim = 0;    // elim marked variables
-    int64_t subsume = 0; // subsume marked variables
-    int64_t ternary = 0; // ternary marked variables
-    int64_t factor = 0;
-  } mark;
-
-  struct {
-    int64_t total = 0;
-    int64_t redundant = 0;
-    int64_t irredundant = 0;
-  } current, added; // Clauses.
-
-  struct {
-    double process = 0, real = 0;
-  } time;
-
-  struct {
-    int64_t count = 0;      // number of covered clause elimination rounds
-    int64_t asymmetric = 0; // number of asymmetric tautologies in CCE
-    int64_t blocked = 0;    // number of blocked covered tautologies
-    int64_t total = 0;      // total number of eliminated clauses
-  } cover;
-
-  struct {
-    int64_t tried = 0;
-    int64_t succeeded = 0;
-    struct {
-      int64_t one = 0, zero = 0;
-    } constant, forward, backward;
-    struct {
-      int64_t positive = 0, negative = 0;
-    } horn;
-    int64_t random = 0;
-    int64_t units = 0;
-  } lucky;
-
-  struct {
-    int64_t total = 0;    // total number of happened rephases
-    int64_t best = 0;     // how often reset to best phases
-    int64_t flipped = 0;  // how often reset phases by flipping
-    int64_t inverted = 0; // how often reset to inverted phases
-    int64_t original = 0; // how often reset to original phases
-    int64_t random = 0;   // how often randomly reset phases
-    int64_t walk = 0;     // phases improved through random walked
-  } rephased;
-
-  struct {
-    int64_t decision = 0;
-    int64_t dummydecision = 0;
-    int64_t conflicts = 0;
-    int64_t propagated = 0;
-    int64_t count = 0;
-  } warmup;
-
-  struct {
-    int64_t count = 0;
-    int64_t broken = 0;
-    int64_t flips = 0;
-    size_t minimum = 0;
-    int64_t improved = 0;
-    int64_t weight_reducing_var = 0;
-    int64_t sideways = 0;
-    int64_t weight_transfer = 0;
-  } walk;
-
-  struct {
-    int64_t count = 0;   // flushings of learned clauses counter
-    int64_t learned = 0; // flushed learned clauses
-    int64_t hyper = 0;   // flushed hyper binary/ternary clauses
-  } flush;
-
-  int64_t compacts = 0;      // number of compactifications
-  int64_t shuffled = 0;      // shuffled queues and scores
-  int64_t restarts = 0;      // actual number of happened restarts
-  int64_t restartlevels = 0; // levels at restart
-  int64_t restartstable = 0; // actual number of happened restarts
-  int64_t stabphases = 0;    // number of stabilization phases
-  int64_t nowstabphases = 0;     // number of stabilization since last incremental call
-  int64_t stabconflicts =
-      0;                    // number of search conflicts during stabilizing
-  int64_t rescored = 0;     // number of times scores were rescored
-  int64_t reused = 0;       // number of reused trails
-  int64_t reusedlevels = 0; // reused levels at restart
-  int64_t reusedstable = 0; // number of reused trails during stabilizing
-  int64_t sections = 0;     // 'section' counter
-  int64_t chrono = 0;       // chronological backtracks
-  int64_t backtracks = 0;   // number of backtracks
-  int64_t improvedglue = 0; // improved glue during bumping
-  int64_t promoted1 = 0;    // promoted clauses to tier one
-  int64_t promoted2 = 0;    // promoted clauses to tier two
-  int64_t bumped = 0;       // seen and bumped variables in 'analyze'
-  int64_t recomputed = 0;   // recomputed glues 'recompute_glue'
-  int64_t searched = 0;     // searched decisions in 'decide'
-  int64_t reductions = 0;   // 'reduce' counter
-  int64_t reduced = 0;      // number of reduced clauses
-  int64_t reduced_sqrt = 0;
-  int64_t reduced_prct = 0;
-  int64_t collected = 0;    // number of collected bytes
-  int64_t collections = 0;  // number of garbage collections
-  int64_t hbrs = 0;         // hyper binary resolvents
-  int64_t hbrsizes = 0;     // sum of hyper resolved base clauses
-  int64_t hbreds = 0;       // redundant hyper binary resolvents
-  int64_t hbrsubs = 0;      // subsuming hyper binary resolvents
-  int64_t instried = 0;     // number of tried instantiations
-  int64_t instantiated = 0; // number of successful instantiations
-  int64_t instrounds = 0;   // number of instantiation rounds
-  int64_t subsumed = 0;     // number of subsumed clauses
-  int64_t deduplicated = 0; // number of removed duplicated binary clauses
-  int64_t deduplicatedinit =
-      0; // number of removed binary clauses initially
-  int64_t deduplicatedinitrounds =
-      0;                      // number of removed binary clauses initially
-  int64_t deduplications = 0; // number of deduplication phases
-  int64_t strengthened = 0;   // number of strengthened clauses
-
-  int64_t eliminated_equi =
-      0; // number of successful equivalence eliminations
-  int64_t eliminated_and = 0; // number of successful AND gate eliminations
-  int64_t eliminated_ite = 0; // number of successful ITE gate eliminations
-  int64_t eliminated_xor = 0; // number of successful XOR gate eliminations
-  int64_t eliminated_def =
-      0; // number of successful definition eliminations
-
-  int64_t definitions_checked = 0;
-  int64_t definitions_extracted = 0;
-  int64_t definition_units = 0;
-  int64_t definition_ticks = 0;
-
-  int64_t factor = 0;
-  int64_t factored = 0;
-  int64_t factored_and = 0;
-  int64_t factored_xor = 0;
-  int64_t factored_ite = 0;
-  int64_t factored_eliminated = 0;
-  int64_t factor_added = 0;
-  int64_t variables_extension = 0;
-  int64_t variables_original = 0;
-  int64_t literals_factored = 0;
-  int64_t clauses_unfactored = 0;
-  int64_t clauses_unfactored_redundant = 0;
-  int64_t literals_unfactored = 0;
-
-  int64_t elimotfstr =
-      0; // number of on-the-fly strengthened during elimination
-  int64_t subirr = 0;     // number of subsumed irredundant clauses
-  int64_t subred = 0;     // number of subsumed redundant clauses
-  int64_t subtried = 0;   // number of tried subsumptions
-  int64_t subchecks = 0;  // number of pair-wise subsumption checks
-  int64_t subchecks2 = 0; // same but restricted to binary clauses
-  int64_t elimotfsub =
-      0; // number of on-the-fly subsumed during elimination
-  int64_t subsumerounds = 0; // number of subsumption rounds
-  int64_t subsumephases = 0; // number of scheduled subsumption phases
-  int64_t eagertried = 0; // number of traversed eager subsumed candidates
-  int64_t eagersub =
-      0; // number of eagerly subsumed recently learned clauses
-  int64_t elimres = 0;        // number of resolved clauses in BVE
-  int64_t elimrestried = 0;   // number of tried resolved clauses in BVE
-  int64_t elimfastrounds = 0; // number of elimination rounds
-  int64_t elimrounds = 0;     // number of elimination rounds
-  int64_t elimphases = 0;     // number of scheduled elimination phases
-  int64_t elimfastphases = 0; // number of scheduled elimination phases
-  int64_t elimcompleted = 0;  // number complete elimination procedures
-  int64_t elimtried = 0;      // number of variable elimination attempts
-  int64_t elimsubst = 0;  // number of eliminations through substitutions
-  int64_t elimgates = 0;  // number of gates found during elimination
-  int64_t elimequivs = 0; // number of equivalences found during elimination
-  int64_t elimands = 0;   // number of AND gates found during elimination
-  int64_t elimites = 0;   // number of ITE gates found during elimination
-  int64_t elimxors = 0;   // number of XOR gates found during elimination
-  int64_t elimbwsub = 0;  // number of eager backward subsumed clauses
-  int64_t elimbwstr = 0;  // number of eager backward strengthened clauses
-  int64_t ternary = 0;    // number of ternary resolution phases
-  int64_t ternres = 0;    // number of ternary resolutions
-  int64_t htrs = 0;       // number of hyper ternary resolvents
-  int64_t htrs2 = 0;      // number of binary hyper ternary resolvents
-  int64_t htrs3 = 0;      // number of ternary hyper ternary resolvents
-  int64_t decompositions = 0; // number of SCC + ELS
-  int64_t vivifications = 0;  // number of vivifications
-  int64_t vivifychecks = 0;   // checked clauses during vivification
-  int64_t vivifiedirred =
-      0; // irredundant vivified clauses during vivification
-  int64_t vivifiedtier1 = 0; // tier-1 vivified clauses during vivification
-  int64_t vivifiedtier2 = 0; // tier-2 vivified clauses during vivification
-  int64_t vivifiedtier3 = 0; // tier-3 vivified clauses during vivification
-  int64_t vivifydecs = 0;    // vivification decisions
-  int64_t vivifyflushed =
-      0; // subsumed clauses during sorting in vivification
-  int64_t vivifyreused = 0;  // reused vivification decisions
-  int64_t vivifysched = 0;   // scheduled clauses for vivification
-  int64_t vivifysubs = 0;    // subsumed clauses during vivification
-  int64_t vivifysubred = 0;  // subsumed clauses during vivification
-  int64_t vivifysubirr = 0;  // subsumed clauses during vivification
-  int64_t vivifystrs = 0;    // strengthened clauses during vivification
-  int64_t vivifystrirr = 0;  // strengthened irredundant clause
-  int64_t vivifystred1 = 0;  // strengthened redundant clause (1)
-  int64_t vivifystred2 = 0;  // strengthened redundant clause (2)
-  int64_t vivifystred3 = 0;  // strengthened redundant clause (3)
-  int64_t vivifyunits = 0;   // units during vivification
-  int64_t vivifyimplied = 0; // implied during vivification
-  int64_t vivifyinst = 0;    // instantiation during vivification
-  int64_t vivifydemote = 0;  // demoting during vivification
-  int64_t transreds = 0;
-  int64_t transitive = 0;
-  struct {
-    int64_t literals = 0;
-    int64_t clauses = 0;
-  } learned;
-  int64_t minimized = 0;    // minimized literals
-  int64_t shrunken = 0;     // shrunken literals
-  int64_t minishrunken = 0; // shrunken during minimization literals
-
-  int64_t irrlits = 0; // literals in irredundant clauses
-  struct {
-    int64_t bytes = 0;
-    int64_t clauses = 0;
-    int64_t literals = 0;
-  } garbage;
-
-  int64_t sweep_units = 0;
-  int64_t sweep_flip_backbone = 0;
-  int64_t sweep_fixed_backbone = 0;
-  int64_t sweep_flipped_backbone = 0;
-  int64_t sweep_solved_backbone = 0;
-  int64_t sweep_sat_backbone = 0;
-  int64_t sweep_unsat_backbone = 0;
-  int64_t sweep_unknown_backbone = 0;
-  int64_t sweep_flip_equivalences = 0;
-  int64_t sweep_flipped_equivalences = 0;
-  int64_t sweep_sat_equivalences = 0;
-  int64_t sweep_unsat_equivalences = 0;
-  int64_t sweep_unknown_equivalences = 0;
-  int64_t sweep_solved_equivalences = 0;
-  int64_t sweep_equivalences = 0;
-  int64_t sweep_variables = 0;
-  int64_t sweep_completed = 0;
-  int64_t sweep_solved = 0;
-  int64_t sweep_sat = 0;
-  int64_t sweep_unsat = 0;
-  int64_t sweep_depth = 0;
-  int64_t sweep_environment = 0;
-  int64_t sweep_clauses = 0;
-  int64_t sweep = 0;
-
-  int64_t units = 0;           // learned unit clauses
-  int64_t binaries = 0;        // learned binary clauses
-  int64_t inprobingphases = 0; // number of scheduled probing phases
-  int64_t probingrounds = 0;   // number of probing rounds
-  int64_t inprobesuccess = 0;  // number successful probing phases
-  int64_t probed = 0;          // number of probed literals
-  int64_t failed = 0;          // number of failed literals
-  int64_t hyperunary = 0;      // hyper unary resolved unit clauses
-  int64_t probefailed = 0;     // failed literals from probing
-  int64_t transredunits = 0;   // units derived in transitive reduction
-  int64_t blockings = 0;       // number of blocked clause eliminations
-  int64_t blocked = 0;         // number of actually blocked clauses
-  int64_t blockres = 0;        // number of resolutions during blocking
-  int64_t blockcands = 0;      // number of clause / pivot pairs tried
-  int64_t blockpured = 0; // number of clauses blocked through pure literals
-  int64_t blockpurelits = 0; // number of pure literals
-  int64_t extensions = 0;    // number of extended witnesses
-  int64_t extended = 0;      // number of flipped literals during extension
-  int64_t weakened = 0;      // number of clauses pushed to extension stack
-  int64_t weakenedlen = 0;   // lengths of weakened clauses
-  int64_t restorations = 0;  // number of restore calls
-  int64_t restored = 0;      // number of restored clauses
-  int64_t reactivated = 0;   // number of reactivated clauses
-  int64_t restoredlits = 0;  // number of restored literals
-
-  int64_t preprocessings = 0;
-
-  int64_t ilbtriggers = 0;
-  int64_t ilbsuccess = 0;
-  int64_t levelsreused = 0;
-  int64_t literalsreused = 0;
-  int64_t assumptionsreused = 0;
-  int64_t tierecomputed = 0; // number of tier recomputation;
-
-  struct {
-    int64_t fixed = 0;          // number of top level assigned variables
-    int64_t eliminated = 0;     // number of eliminated variables
-    int64_t fasteliminated = 0; // number of fast eliminated variables only
-    int64_t substituted = 0;    // number of substituted variables
-    int64_t pure = 0;           // number of pure literals
-  } all, now;
-
-  struct {
-    int64_t strengthened = 0; // number of clauses strengthened during OTFS
-    int64_t subsumed = 0;     // number of clauses subsumed by OTFS
-  } otfs;
-
-  int64_t unused = 0;   // number of unused variables
-  int64_t declared = 0; // number of declared variables
-  int64_t active = 0;   // number of active variables
-  int64_t inactive = 0; // number of inactive variables
-
-  int64_t incremental_decay = 0;
-  struct {
-    int64_t random_decisions = 0; // number of random decisions
-    int64_t random_decision_phases =
-        0; // number of phases of random decision
-  } randec;
-
-  uint64_t bump_used[2] = {0, 0};
-  std::vector<uint64_t> used[2] = {{}, {}}; // used clauses in focused mode
-
-  struct {
-    int64_t gates = 0;
-    int64_t and_gates = 0;
-    int64_t ands = 0;
-    int64_t ite_gates = 0;
-    int64_t ites = 0;
-    int64_t xor_gates = 0;
-    int64_t xors = 0;
-    int64_t units = 0;
-    int64_t congruent = 0;
-    int64_t rounds = 0;
-    int64_t unary_and = 0;
-    int64_t unaries = 0;
-    int64_t rewritten_ands = 0;
-    int64_t rewritten_xors = 0;
-    int64_t rewritten_ites = 0;
-    int64_t simplified = 0;
-    int64_t simplified_ands = 0;
-    int64_t simplified_xors = 0;
-    int64_t simplified_ites = 0;
-    int64_t subsumed = 0;
-    int64_t trivial_ite = 0;
-    int64_t unary_ites = 0;
-    int64_t congruent_dummy_ands = 0;
-  } congruence;
-
-  struct {
-    int64_t rounds = 0;
-    int64_t units = 0;
-    int64_t phases = 0;
-    int64_t probes = 0;
-  } backbone;
 // clang-format on
 
 #endif
