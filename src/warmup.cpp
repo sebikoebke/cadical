@@ -331,7 +331,7 @@ void Internal::warmup_decide () {
   stats.walk_warmup_decision++;
   int idx = next_decision_variable ();
   if (flags (idx).eliminated ())
-    ++stats.walk_warmup_dummy_decision;
+    ++stats.walk_warmup_decision_dummy;
   int decision = decide_phase (idx, target);
   new_trail_level (decision);
   warmup_assign (decision, decision_reason);
@@ -409,7 +409,7 @@ int Internal::warmup () {
 #ifndef QUIET
   const int64_t warmup_propagated = stats.walk_warmup_propagated;
   const int64_t decision = stats.walk_warmup_decision;
-  const int64_t dummydecision = stats.walk_warmup_dummy_decision;
+  const int64_t dummydecision = stats.walk_warmup_decision_dummy;
 #endif
   LOG ("starting warmup");
 
@@ -458,7 +458,7 @@ int Internal::warmup () {
            " decisions (with %" PRIu64 " dummy ones)",
            stats.walk_warmup_propagated - warmup_propagated,
            stats.walk_warmup_decision - decision,
-           stats.walk_warmup_dummy_decision - dummydecision);
+           stats.walk_warmup_decision_dummy - dummydecision);
 #endif
 
   // now we backtrack, notifying only if there was something to

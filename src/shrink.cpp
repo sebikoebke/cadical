@@ -243,7 +243,7 @@ unsigned inline Internal::shrink_along_reason (int uip, int blevel,
   assert (v.reason);
 
   if (opts.minimizeticks)
-    stats.ticks_search[stable]++;
+    stable ? stats.ticks_search_stable++ : stats.ticks_search_unstable++;
 
   if (resolve_large_clauses || v.reason->size == 2) {
     const Clause &c = *v.reason;
@@ -491,7 +491,7 @@ void Internal::shrink_and_minimize_clause () {
        old_size - clause.size (), total_minimized);
 
   stats.shrunken += total_shrunken;
-  stats.minishrunken += total_minimized;
+  stats.shrunken_minimize += total_minimized;
   STOP (shrink);
 
   START (minimize);

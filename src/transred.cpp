@@ -15,7 +15,8 @@ void Internal::transred () {
     return;
   if (terminated_asynchronously ())
     return;
-  if (!stats.clauses_current_redundant && !stats.clauses_current_irredundant)
+  if (!stats.clauses_current_redundant &&
+      !stats.clauses_current_irredundant)
     return;
 
   assert (opts.transred);
@@ -227,7 +228,7 @@ void Internal::transred () {
     } else if (failed) {
       units++;
       LOG ("found failed literal %d during transitive reduction", src);
-      stats.failed++;
+      stats.failed_literals++;
       stats.transitive_units++;
       assign_unit (-src);
       if (!propagate ()) {

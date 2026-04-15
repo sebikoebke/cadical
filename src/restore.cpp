@@ -67,7 +67,7 @@ void External::restore_clause (const vector<int>::const_iterator &begin,
       }
     }
     int ilit = internalize (*p);
-    internal->add_original_lit (ilit), internal->stats.restoredlits++;
+    internal->add_original_lit (ilit), internal->stats.restored_literals++;
   }
   if (internal->proof && internal->lrat) {
     for (const auto &elit : eclause) {
@@ -76,7 +76,7 @@ void External::restore_clause (const vector<int>::const_iterator &begin,
   }
   internal->finish_added_clause_with_id (id, true);
   eclause.clear ();
-  internal->stats.restored++;
+  internal->stats.restored_clauses++;
 }
 
 /*------------------------------------------------------------------------*/
@@ -142,7 +142,7 @@ void External::restore_clauses () {
     }
 
     // now copy the id of the clause
-    const int64_t id = ((int64_t) (*p) << 32) + (int64_t) * (p + 1);
+    const int64_t id = ((int64_t) (*p) << 32) + (int64_t) *(p + 1);
     LOG ("id is %" PRId64, id);
     *q++ = *p++;
     *q++ = *p++;

@@ -68,7 +68,7 @@ void Internal::shuffle_queue () {
     return;
   if (!opts.shufflequeue)
     return;
-  stats.shuffled++;
+  stats.scores_shuffled++;
   LOG ("shuffling queue");
   vector<int> shuffle;
   if (opts.shufflerandom) {
@@ -76,7 +76,7 @@ void Internal::shuffle_queue () {
       if (!flags (idx).unused ())
 	shuffle.push_back (idx);
     Random random (opts.seed); // global seed
-    random += stats.shuffled;  // different every time
+    random += stats.scores_shuffled;  // different every time
     const int highest_var = shuffle.size ();
     for (int i = 0; i <= highest_var - 2; i++) {
       const int j = random.pick_int (i, highest_var - 1);

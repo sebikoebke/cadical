@@ -85,7 +85,7 @@ inline int Internal::subsume_check (Clause *subsuming, Clause *subsumed) {
 
   stats.subsume_checks++;
   if (subsuming->size == 2)
-    stats.subsume_checks2++;
+    stats.subsume_checks_binary++;
 
   int flipped = 0, prev = 0;
   bool failed = false;
@@ -172,10 +172,10 @@ void Internal::strengthen_clause_and_remove_units (Clause *c, int lit) {
   LOG (c, "removing %d and units in", lit);
   std::vector<int> clause;
   int j = 0;
-  for (int i = 0; i < c->size; ) {
+  for (int i = 0; i < c->size;) {
     int other = c->literals[i++];
     c->literals[j++] = other;
-    clause.push_back(other);
+    clause.push_back (other);
     if (other == lit) {
       --j;
       continue;
@@ -188,7 +188,7 @@ void Internal::strengthen_clause_and_remove_units (Clause *c, int lit) {
   shrink_clause (c, j);
   if (proof) {
     LOG (lrat_chain, "strengthening clause with chain");
-    proof->otfs_strengthen_clause(c, clause, lrat_chain);
+    proof->otfs_strengthen_clause (c, clause, lrat_chain);
   }
   if (!c->redundant)
     mark_removed (lit);
@@ -371,7 +371,8 @@ bool Internal::subsume_round () {
     return false;
   if (terminated_asynchronously ())
     return false;
-  if (!stats.clauses_current_redundant && !stats.clauses_current_irredundant)
+  if (!stats.clauses_current_redundant &&
+      !stats.clauses_current_irredundant)
     return false;
 
   START_SIMPLIFIER (subsume, SUBSUME);
@@ -464,7 +465,8 @@ bool Internal::subsume_round () {
 
 #ifndef QUIET
   int64_t scheduled = schedule.size ();
-  int64_t total = stats.clauses_current_irredundant + stats.clauses_current_redundant;
+  int64_t total =
+      stats.clauses_current_irredundant + stats.clauses_current_redundant;
   PHASE ("subsume-round", stats.subsume_rounds,
          "scheduled %" PRId64 " clauses %.0f%% out of %" PRId64 " clauses",
          scheduled, percent (scheduled, total), total);
@@ -636,7 +638,8 @@ bool Internal::subsume_round () {
 
 void Internal::subsume () {
 
-  if (!stats.clauses_current_redundant && !stats.clauses_current_irredundant)
+  if (!stats.clauses_current_redundant &&
+      !stats.clauses_current_irredundant)
     return;
 
   if (unsat)

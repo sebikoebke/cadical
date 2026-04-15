@@ -25,7 +25,7 @@ bool Internal::rephasing () {
     return false;
   if (opts.rephase == 2) {
     if (stable)
-      return stats.stabconflicts > lim.rephase;
+      return stats.stable_conflicts > lim.rephase;
     else
       return false;
   }
@@ -120,7 +120,7 @@ void Internal::rephase () {
   PHASE ("rephase", stats.rephased,
          "reached rephase limit %" PRId64 " after %" PRId64 " conflicts",
          lim.rephase,
-         opts.rephase == 2 ? stats.stabconflicts : stats.conflicts);
+         opts.rephase == 2 ? stats.stable_conflicts : stats.conflicts);
 
   // Report current 'target' and 'best' and then set 'rephased' below, which
   // will trigger reporting the new 'target' and 'best' after updating it in
@@ -381,7 +381,7 @@ void Internal::rephase () {
 
   int64_t delta = opts.rephaseint * (stats.rephased + 1);
   lim.rephase =
-      (opts.rephase == 2 ? stats.stabconflicts : stats.conflicts) + delta;
+      (opts.rephase == 2 ? stats.stable_conflicts : stats.conflicts) + delta;
 
   PHASE ("rephase", stats.rephased,
          "new rephase limit %" PRId64 " after %" PRId64 " conflicts",

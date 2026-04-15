@@ -217,7 +217,7 @@ void Internal::reduce () {
 
   bool flush = flushing ();
   if (flush)
-    stats.flush_count++;
+    stats.flushings++;
 
   if (!propagate_out_of_order_units ())
     goto DONE;
@@ -258,11 +258,11 @@ void Internal::reduce () {
   }
 
   if (flush) {
-    PHASE ("flush", stats.flush_count, "new flush increment %" PRId64 "",
+    PHASE ("flush", stats.flushings, "new flush increment %" PRId64 "",
            inc.flush);
     inc.flush *= opts.flushfactor;
     lim.flush = stats.conflicts + inc.flush;
-    PHASE ("flush", stats.flush_count, "new flush limit %" PRId64 "",
+    PHASE ("flush", stats.flushings, "new flush limit %" PRId64 "",
            lim.flush);
   }
 

@@ -708,7 +708,7 @@ inline void Internal::walk_save_minimum (Walker &walker) {
   size_t broken = walker.broken.size ();
   if (broken >= walker.minimum)
     return;
-  if (broken <= stats.walk_minimum) {
+  if (broken <= (unsigned) stats.walk_minimum) {
     stats.walk_minimum = broken;
     VERBOSE (3, "new global minimum %zd", broken);
   } else {

@@ -46,7 +46,7 @@ bool Internal::stabilizing () {
   const char *current_mode = stable ? "stable" : "unstable";
   const char *next_mode = stable ? "unstable" : "stable";
 #endif
-  PHASE ("stabilizing", stats.stable_phases,
+  PHASE ("stabilizing", stats.stable_phases_total,
          "reached %s stabilization limit %" PRId64 " after %" PRId64
          " conflicts and %" PRId64 " ticks at %" PRId64
          " conflicts and %" PRId64 " ticks",
@@ -63,12 +63,16 @@ bool Internal::stabilizing () {
   int64_t stabphases = stats.stable_phases_incremental + 1;
   next_delta_ticks *= stabphases * stabphases;
 
-  const bool next_stable = !stable;
-  lim.stabilize = stats.ticks_search[next_stable] + next_delta_ticks;
-  last.stabilize.ticks = stats.ticks_search[next_stable];
-  if (lim.stabilize <= stats.ticks_search[next_stable])
-    lim.stabilize = stats.ticks_search[next_stable] + 1;
-  PHASE ("stabilizing", stats.stable_phases,
+  lim.stabilize = next_delta_ticks;
+  lim.stabilize +=
+      !stable ? stats.ticks_search_stable : stats.ticks_search_unstable;
+  last.stabilize.ticks =
+      !stable ? stats.ticks_search_stable : stats.ticks_search_unstable;
+  if (lim.stabilize <= !stable ? stats.ticks_search_stable
+                               : stats.ticks_search_unstable)
+    lim.stabilize = !stable ? stats.ticks_search_stable
+                            : stats.ticks_search_unstable + 1;
+  PHASE ("stabilizing", stats.stable_phases_total,
          "next %s stabilization limit %" PRId64
          " at ticks interval %" PRId64,
          next_mode, lim.stabilize, next_delta_ticks);
@@ -76,7 +80,7 @@ bool Internal::stabilizing () {
   stable = !stable; // Switch!!!!!
 
   if (stable)
-    ++stats.stable_phases, ++stats.stable_phases_incremental;
+    ++stats.stable_phases_total, ++stats.stable_phases_incremental;
 
   swap_averages ();
   report (stable ? '[' : '{');
@@ -165,7 +169,7 @@ int Internal::reuse_trail () {
 void Internal::restart () {
   START (restart);
   stats.restart++;
-  stats.restartlevels += level;
+  stats.restart_levels += level;
   if (stable)
     stats.restart_stable++;
   LOG ("restart %" PRId64 "", stats.restart);

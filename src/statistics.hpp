@@ -314,6 +314,7 @@
   STATISTIC (vivify_checks,                        1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (vivify_decisions,                     1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (vivify_demote,                        1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vivify_flushed,                       1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (vivify_implied,                       1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (vivify_instantiated,                  1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (vivify_reused,                        1, CONFLICT_INTERVAL,  "",            "interval") \

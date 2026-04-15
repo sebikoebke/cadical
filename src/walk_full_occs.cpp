@@ -50,7 +50,7 @@ struct WalkerFO {
   std::vector<int>
       flips; // remember the flips compared to the last best saved model
   int best_trail_pos;
-  size_t minimum = (size_t)-1;
+  size_t minimum = (size_t) -1;
   std::vector<signed char> best_values; // best model found so far
   double score (unsigned);              // compute score from break count
 
@@ -602,7 +602,7 @@ inline void Internal::walk_full_occs_save_minimum (WalkerFO &walker) {
   size_t broken = walker.broken.size ();
   if (broken >= walker.minimum)
     return;
-  if (broken <= stats.walk_minimum) {
+  if (broken <= (unsigned) stats.walk_minimum) {
     stats.walk_minimum = broken;
     VERBOSE (3, "new global minimum %zd", broken);
   } else {
@@ -702,7 +702,7 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
     LOG ("assigning assumptions to their forced phase first");
     std::vector<int> propagated;
     for (auto lit : trail)
-    propagated.push_back(lit);
+      propagated.push_back (lit);
 
     for (const auto lit : propagated) {
       signed char tmp = val (lit);
@@ -833,7 +833,7 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
            stats.clauses_current_irredundant);
 
     walk_full_occs_save_minimum (walker);
-    assert (stats.walk_minimum <= walker.minimum);
+    assert ((unsigned) stats.walk_minimum <= walker.minimum);
 
     size_t minimum = broken;
 #ifndef QUIET
@@ -856,8 +856,8 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
       if (broken >= minimum)
         continue;
       minimum = broken;
-      VERBOSE (3, "new phase minimum %zd after %" PRId64 " flips",
-               minimum, flips);
+      VERBOSE (3, "new phase minimum %zd after %" PRId64 " flips", minimum,
+               flips);
       walk_full_occs_save_minimum (walker);
     }
 
@@ -892,8 +892,7 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
     }
 
     if (minimum > 0) {
-      LOG ("minimum %zd non-zero thus potentially continue",
-           minimum);
+      LOG ("minimum %zd non-zero thus potentially continue", minimum);
       res = 0;
     } else {
       LOG ("minimum is zero thus stop local search");
@@ -904,8 +903,7 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
 
     res = 20;
 
-    PHASE ("walk", stats.walk,
-           "aborted due to inconsistent assumptions");
+    PHASE ("walk", stats.walk, "aborted due to inconsistent assumptions");
   }
 
   for (auto idx : vars)
@@ -947,7 +945,8 @@ void Internal::walk_full_occs () {
     STOP_INNER_WALK ();
     return;
   }
-  const int64_t ticks = stats.ticks_search_unstable + stats.ticks_search_stable;
+  const int64_t ticks =
+      stats.ticks_search_unstable + stats.ticks_search_stable;
   int64_t limit = ticks - last.walk.ticks;
   VERBOSE (2,
            "walk scheduling: last %" PRId64 " current %" PRId64

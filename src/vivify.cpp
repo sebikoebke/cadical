@@ -94,10 +94,10 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming,
   }
   if (subsumed->redundant) {
     stats.subsumed_redundant++;
-    ++stats.vivify_subred;
+    ++stats.vivify_subsumed_redundant;
   } else {
     stats.subsumed_irredundant++;
-    ++stats.vivify_subirr;
+    ++stats.vivify_subsumed_irredundant;
   }
   if (subsuming->garbage) {
     assert (subsuming->size == 2);
@@ -810,13 +810,13 @@ bool Internal::vivify_shrinkable (const std::vector<int> &sorted,
 inline void Internal::vivify_increment_stats (const Vivifier &vivifier) {
   switch (vivifier.tier) {
   case Vivify_Mode::TIER1:
-    ++stats.vivify_stred1;
+    ++stats.vivify_strengthened_redundant_tier1;
     break;
   case Vivify_Mode::TIER2:
-    ++stats.vivify_stred2;
+    ++stats.vivify_strengthened_redundant_tier2;
     break;
   case Vivify_Mode::TIER3:
-    ++stats.vivify_stred3;
+    ++stats.vivify_strengthened_redundant_tier3;
     break;
   case Vivify_Mode::IRREDUNDANT:
     ++stats.vivify_strengthened_irredundant;
@@ -1178,7 +1178,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   if (res) {
     switch (vivifier.tier) {
     case Vivify_Mode::IRREDUNDANT:
-      ++stats.vivifiedirred;
+      ++stats.vivified_irredundant;
       break;
     case Vivify_Mode::TIER1:
       ++stats.vivified_redundant_tier1;
