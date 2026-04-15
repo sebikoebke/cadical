@@ -24,7 +24,7 @@ bool Internal::stabilizing () {
     assert (!stable);
     if (stats.conflicts <= lim.stabilize)
       return false;
-  } else if (stats.ticks.search[stable] <= lim.stabilize)
+  } else if (stats.ticks_search[stable] <= lim.stabilize)
     return stable;
   report (stable ? ']' : '}');
   if (stable)
@@ -35,9 +35,9 @@ bool Internal::stabilizing () {
   assert (last.stabilize.ticks >= 0);
   assert (last.stabilize.conflicts >= 0 &&
           last.stabilize.conflicts <= stats.conflicts);
-  assert (last.stabilize.ticks <= stats.ticks.search[stable]);
+  assert (last.stabilize.ticks <= stats.ticks_search[stable]);
   const int64_t delta_ticks =
-      stats.ticks.search[stable] - last.stabilize.ticks;
+      stats.ticks_search[stable] - last.stabilize.ticks;
 #ifndef QUIET
   const int64_t delta_conflicts =
       stats.conflicts - last.stabilize.conflicts;
@@ -49,7 +49,7 @@ bool Internal::stabilizing () {
          " conflicts and %" PRId64 " ticks at %" PRId64
          " conflicts and %" PRId64 " ticks",
          current_mode, lim.stabilize, delta_conflicts, delta_ticks,
-         stats.conflicts, stats.ticks.search[stable]);
+         stats.conflicts, stats.ticks_search[stable]);
   if (!inc.stabilize)
     inc.stabilize = delta_ticks;
   if (!inc.stabilize) // rare occurence in incremental calls requiring no
@@ -61,10 +61,10 @@ bool Internal::stabilizing () {
   next_delta_ticks *= stabphases * stabphases;
 
   const bool next_stable = !stable;
-  lim.stabilize = stats.ticks.search[next_stable] + next_delta_ticks;
-  last.stabilize.ticks = stats.ticks.search[next_stable];
-  if (lim.stabilize <= stats.ticks.search[next_stable])
-    lim.stabilize = stats.ticks.search[next_stable] + 1;
+  lim.stabilize = stats.ticks_search[next_stable] + next_delta_ticks;
+  last.stabilize.ticks = stats.ticks_search[next_stable];
+  if (lim.stabilize <= stats.ticks_search[next_stable])
+    lim.stabilize = stats.ticks_search[next_stable] + 1;
   PHASE ("stabilizing", stats.stabphases,
          "next %s stabilization limit %" PRId64
          " at ticks interval %" PRId64,

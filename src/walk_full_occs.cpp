@@ -358,7 +358,7 @@ unsigned WalkerFO::walk_full_occs_break_value (int lit) {
     res += (tclauses[ref].count == 1);
   }
 
-  internal->stats.ticks.walkbreak += ticks - old;
+  internal->stats.ticks_walkbreak += ticks - old;
   STOP (walkbreak);
   return res;
 }
@@ -425,7 +425,7 @@ int WalkerFO::walk_full_occs_pick_lit (Clause *c) {
   }
   scores.clear ();
   LOG ("picking literal %d by break-count", res);
-  internal->stats.ticks.walkpick += ticks - old;
+  internal->stats.ticks_walkpick += ticks - old;
   STOP (walkpick);
   return res;
 }
@@ -534,7 +534,7 @@ void WalkerFO::make_clauses (int lit) {
   //   make_clauses_along_unsatisfied(lit);
   // else
   make_clauses_along_occurrences (lit);
-  internal->stats.ticks.walkflipWL += ticks - old;
+  internal->stats.ticks_walkflipWL += ticks - old;
   STOP (walkflipWL);
 }
 
@@ -568,7 +568,7 @@ void WalkerFO::break_clauses (int lit) {
 #endif
   }
   LOG ("broken %zd clauses by flipping %d", broken, lit);
-  internal->stats.ticks.walkflipbroken += ticks - old;
+  internal->stats.ticks_walkflipbroken += ticks - old;
   STOP (walkflipbroken);
 }
 
@@ -591,7 +591,7 @@ void WalkerFO::walk_full_occs_flip_lit (int lit) {
 
   if (!broken.empty ())
     check_all ();
-  internal->stats.ticks.walkflip += ticks - old;
+  internal->stats.ticks_walkflip += ticks - old;
 }
 
 /*------------------------------------------------------------------------*/
@@ -924,7 +924,7 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
     force_phase_messages = false;
   }
 #endif
-  stats.ticks.walk += walker.ticks;
+  stats.ticks_walk += walker.ticks;
   return res;
 }
 
@@ -947,7 +947,7 @@ void Internal::walk_full_occs () {
     STOP_INNER_WALK ();
     return;
   }
-  const int64_t ticks = stats.ticks.search[0] + stats.ticks.search[1];
+  const int64_t ticks = stats.ticks_search[0] + stats.ticks_search[1];
   int64_t limit = ticks - last.walk.ticks;
   VERBOSE (2,
            "walk scheduling: last %" PRId64 " current %" PRId64

@@ -383,7 +383,7 @@ inline void Internal::probe_lrat_for_units (int lit) {
 
 inline void Internal::probe_propagate2 () {
   require_mode (PROBE);
-  int64_t &ticks = stats.ticks.probe;
+  int64_t &ticks = stats.ticks_probe;
   while (propagated2 != trail.size ()) {
     const int lit = -trail[propagated2++];
     LOG ("probe propagating %d over binary clauses", -lit);
@@ -415,7 +415,7 @@ bool Internal::probe_propagate () {
   assert (!unsat);
   START (propagate);
   const size_t before = propagated2 = propagated;
-  int64_t &ticks = stats.ticks.probe;
+  int64_t &ticks = stats.ticks_probe;
   while (!conflict) {
     if (propagated2 != trail.size ())
       probe_propagate2 ();
@@ -500,7 +500,7 @@ bool Internal::probe_propagate () {
       break;
   }
   int64_t delta = (int64_t)propagated2 - before;
-  stats.propagations.probe += delta;
+  stats.propagations_probe += delta;
   if (conflict)
     LOG (conflict, "conflict");
   STOP (propagate);
@@ -635,7 +635,7 @@ void Internal::generate_probes () {
 
   assert (probes.empty ());
 
-  int64_t &ticks = stats.ticks.probe;
+  int64_t &ticks = stats.ticks_probe;
 
   // First determine all the literals which occur in binary clauses. It is
   // way faster to go over the clauses once, instead of walking the watch
@@ -699,7 +699,7 @@ void Internal::generate_probes () {
 void Internal::flush_probes () {
 
   assert (!probes.empty ());
-  int64_t &ticks = stats.ticks.probe;
+  int64_t &ticks = stats.ticks_probe;
 
   init_noccs ();
   ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
@@ -830,7 +830,7 @@ bool Internal::probe () {
   int probe;
   init_probehbr_lrat ();
   while (!unsat && !terminated_asynchronously () &&
-         stats.ticks.probe < limit && (probe = next_probe ())) {
+         stats.ticks_probe < limit && (probe = next_probe ())) {
     stats.probed++;
     LOG ("probing %d", probe);
     probe_assign_decision (probe);

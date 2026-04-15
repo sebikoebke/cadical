@@ -536,7 +536,7 @@ void Checker::add_clause (const char *type) {
   } else if (unit != INT_MIN) {
     LOG ("CHECKER added and checked %s unit clause %d", type, unit);
     assign (unit);
-    stats.units++;
+    stats.learned_units++;
     if (!propagate ()) {
       LOG ("CHECKER inconsistent after propagating %s unit", type);
       inconsistent = true;

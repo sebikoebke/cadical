@@ -54,7 +54,7 @@ void Internal::factor_mode (bool redundant_only) {
     enlarge_zero (largecount, max_lit);
 
   vector<Clause *> candidates;
-  int64_t &ticks = stats.ticks.factor;
+  int64_t &ticks = stats.ticks_factor;
   ticks += 1 + cache_lines (clauses.size (), sizeof (Clause *));
 
   // push binary clauses on the occurrence stack.
@@ -233,7 +233,7 @@ size_t Internal::first_factor (Factoring &factoring, int factor) {
   LOG ("quotient[0] factor %d size %zu", factor, res);
   // This invariant can of course be broken by previous factorings
   // assert (res > 1);
-  stats.ticks.factor += ticks;
+  stats.ticks_factor += ticks;
   return res;
 }
 
@@ -286,7 +286,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
   // a clause d (containing -first_factor).
   // The two clauses should coincide except on one literal.
   const int64_t limit = factoring.limit;
-  int64_t ticks = stats.ticks.factor;
+  int64_t ticks = stats.ticks_factor;
   ticks += cache_lines (occs (first_factor).size (), sizeof (Clause *));
   for (auto *c : occs (first_factor)) {
     ticks++;
@@ -427,7 +427,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
     }
   }
 
-  stats.ticks.factor = ticks;
+  stats.ticks_factor = ticks;
   // Remove all clauses except for the best.
   // Ensure that no clause is kept multiple times (due to duplicated
   // matching clause) with the "swept" flag.
@@ -599,15 +599,15 @@ int Internal::next_factor (Factoring &factoring, unsigned *next_count_ptr) {
     for (const auto &other : *c)
       if (getfact (other, QUOTIENT))
         unmarkfact (other, QUOTIENT);
-    stats.ticks.factor += ticks;
+    stats.ticks_factor += ticks;
     ticks = 0;
-    if (stats.ticks.factor > factoring.limit)
+    if (stats.ticks_factor > factoring.limit)
       break;
   }
   clear_flauses (flauses);
   unsigned next_count = 0;
   int next = 0;
-  if (stats.ticks.factor <= factoring.limit) {
+  if (stats.ticks_factor <= factoring.limit) {
     unsigned ties = 0;
     for (const auto &lit : counted) {
       const unsigned lit_count = count[vlit (lit)];
@@ -731,7 +731,7 @@ void Internal::factorize_next (Factoring &factoring, int next,
     i++;
   }
   clear_flauses (flauses);
-  stats.ticks.factor += ticks;
+  stats.ticks_factor += ticks;
 
   assert (expected_next_count <= next_clauses.size ());
   (void) expected_next_count;
@@ -1300,7 +1300,7 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
       bumped (lit) = ++queue.bumped;
       lit = links[lit].next;
     }
-    stats.bumped = queue.bumped;
+    stats.vars_bumped = queue.bumped;
     update_queue_unassigned (queue.last);
 
   } else if (opts.factorbumpqueue == 1) {
@@ -1356,7 +1356,7 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
       bumped (lit) = ++queue.bumped;
       lit = links[lit].next;
     }
-    stats.bumped = queue.bumped;
+    stats.vars_bumped = queue.bumped;
     update_queue_unassigned (queue.last);
 
   } // else if (opts.factorbumpqueue == 2)
@@ -1396,7 +1396,7 @@ bool Internal::run_factorization (int64_t limit) {
 #ifndef QUIET
   unsigned factored = 0;
 #endif
-  int64_t *ticks = &stats.ticks.factor;
+  int64_t *ticks = &stats.ticks_factor;
   VERBOSE (3, "factorization limit of %" PRIu64 " ticks", limit - *ticks);
 
   while (!unsat && !done && !factoring.schedule.empty ()) {
@@ -1554,7 +1554,7 @@ bool Internal::factor () {
     int64_t variables, clauses, ticks;
   } before, after, delta;
   before.variables = stats.variables_extension + stats.variables_original;
-  before.ticks = stats.ticks.factor;
+  before.ticks = stats.ticks_factor;
   before.clauses = stats.current.irredundant;
 #endif
 
@@ -1571,7 +1571,7 @@ bool Internal::factor () {
 #ifndef QUIET
   after.variables = stats.variables_extension + stats.variables_original;
   after.clauses = stats.current.irredundant;
-  after.ticks = stats.ticks.factor;
+  after.ticks = stats.ticks_factor;
   delta.variables = after.variables - before.variables;
   delta.clauses = before.clauses - after.clauses;
   delta.ticks = after.ticks - before.ticks;

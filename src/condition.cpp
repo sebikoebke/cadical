@@ -905,7 +905,7 @@ void Internal::condition (bool update_limits) {
   // tried candidate clauses after giving up, such that next time we run
   // 'condition' we can try them.
   //
-  long limit = stats.propagations.search;
+  long limit = stats.propagations_search;
   limit *= opts.conditioneffort;
   limit /= 1000;
   if (limit < opts.conditionmineff)

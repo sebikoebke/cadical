@@ -100,7 +100,7 @@ inline void Internal::asymmetric_literal_addition (int lit,
 bool Internal::cover_propagate_asymmetric (int lit, Clause *ignore,
                                            Coveror &coveror) {
   require_mode (COVER);
-  stats.propagations.cover++;
+  stats.propagations_cover++;
   assert (val (lit) < 0);
   bool subsumed = false;
   LOG ("asymmetric literal propagation of %d", lit);
@@ -187,7 +187,7 @@ bool Internal::cover_propagate_covered (int lit, Coveror &coveror) {
     return false;
   }
 
-  stats.propagations.cover++;
+  stats.propagations_cover++;
 
   LOG ("covered propagation of %d", lit);
   assert (coveror.intersection.empty ());
@@ -484,7 +484,7 @@ int64_t Internal::cover_round () {
   init_watches ();
   connect_watches (true); // irredundant watches only is enough
 
-  int64_t delta = stats.propagations.search;
+  int64_t delta = stats.propagations_search;
   delta *= 1e-3 * opts.covereffort;
   if (delta < opts.covermineff)
     delta = opts.covermineff;
@@ -496,7 +496,7 @@ int64_t Internal::cover_round () {
          "covered clause elimination limit of %" PRId64 " propagations",
          delta);
 
-  int64_t limit = stats.propagations.cover + delta;
+  int64_t limit = stats.propagations_cover + delta;
 
   init_occs ();
 
@@ -613,7 +613,7 @@ int64_t Internal::cover_round () {
   int64_t covered = 0;
   //
   while (!terminated_asynchronously () && !schedule.empty () &&
-         stats.propagations.cover < limit) {
+         stats.propagations_cover < limit) {
     Clause *c = schedule.back ();
     schedule.pop_back ();
     c->covered = true;

@@ -336,7 +336,7 @@ unsigned Internal::walk_break_value (int lit, int64_t &ticks) {
     }
     res++; // Literal 'lit' single satisfies clause 'c'.
   }
-  stats.ticks.walkbreak += (ticks - oldticks);
+  stats.ticks_walkbreak += (ticks - oldticks);
   STOP (walkbreak);
 
   return res;
@@ -404,7 +404,7 @@ int Internal::walk_pick_lit (Walker &walker, Clause *c) {
   }
   walker.scores.clear ();
   LOG ("picking literal %d by break-count", res);
-  stats.ticks.walkpick += walker.ticks - old;
+  stats.ticks_walkpick += walker.ticks - old;
   return res;
 }
 
@@ -466,7 +466,7 @@ int Internal::walk_pick_lit (Walker &walker, const TaggedBinary c) {
   assert (res);
   walker.scores.clear ();
   LOG ("picking literal %d by break-count", res);
-  stats.ticks.walkpick += walker.ticks - old;
+  stats.ticks_walkpick += walker.ticks - old;
   return res;
 }
 
@@ -608,7 +608,7 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
     }
   }
 
-  stats.ticks.walkflipbroken += walker.ticks - old;
+  stats.ticks_walkflipbroken += walker.ticks - old;
 
   const int64_t old_after_broken = walker.ticks;
 
@@ -697,8 +697,8 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
     ws.clear ();
   }
   STOP (walkflip);
-  stats.ticks.walkflipWL += walker.ticks - old_after_broken;
-  stats.ticks.walkflip += walker.ticks - old;
+  stats.ticks_walkflipWL += walker.ticks - old_after_broken;
+  stats.ticks_walkflip += walker.ticks - old;
   return true;
 }
 
@@ -1056,7 +1056,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
     force_phase_messages = false;
   }
 #endif
-  stats.ticks.walk += walker.ticks;
+  stats.ticks_walk += walker.ticks;
   return res;
 }
 
@@ -1079,7 +1079,7 @@ void Internal::walk () {
     STOP_INNER_WALK ();
     return;
   }
-  const int64_t ticks = stats.ticks.search[0] + stats.ticks.search[1];
+  const int64_t ticks = stats.ticks_search[0] + stats.ticks_search[1];
   int64_t limit = ticks - last.walk.ticks;
 
   last.walk.ticks = ticks;

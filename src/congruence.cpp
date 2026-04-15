@@ -5131,9 +5131,9 @@ void Closure::subsume_clause (Clause *subsuming, Clause *subsumed) {
   assert (subsuming->size <= subsumed->size);
   LOG (subsumed, "subsumed");
   if (subsumed->redundant)
-    stats.subred++;
+    stats.subsumed_redundant++;
   else
-    stats.subirr++;
+    stats.subsumed_irredundant++;
   if (subsumed->redundant || !subsuming->redundant) {
     internal->mark_garbage (subsumed);
     return;

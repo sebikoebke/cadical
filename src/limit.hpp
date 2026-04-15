@@ -136,8 +136,8 @@ struct Inc {
 #define SET_EFFORT_LIMIT(LIMIT, NAME, THRESHHOLD) \
   int64_t LIMIT; \
   do { \
-    const int64_t OLD_LIMIT = stats.ticks.NAME; \
-    const int64_t TICKS = stats.ticks.search[0] + stats.ticks.search[1]; \
+    const int64_t OLD_LIMIT = stats.ticks_NAME; \
+    const int64_t TICKS = stats.ticks_search[0] + stats.ticks_search[1]; \
     const int64_t LAST = last.NAME.ticks; \
     int64_t REFERENCE = TICKS - LAST; \
     if (!REFERENCE || !stats.conflicts) { \

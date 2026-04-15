@@ -780,7 +780,7 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
   int64_t resolution_limit;
 
   if (opts.elimlimited) {
-    int64_t delta = stats.propagations.search;
+    int64_t delta = stats.propagations_search;
     delta *= 1e-3 * opts.elimeffort;
     if (delta < opts.elimmineff)
       delta = opts.elimmineff;

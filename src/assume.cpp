@@ -609,8 +609,8 @@ void Internal::sort_and_reuse_assumptions () {
     backtrack_without_updating_phases (target);
   LOG ("assumptions allow for reuse of trail up to level %d", level);
   if ((size_t) level > assumptions.size ())
-    stats.assumptionsreused += assumptions.size ();
+    stats.ilb_reused_assumptions += assumptions.size ();
   else
-    stats.assumptionsreused += level;
+    stats.ilb_reused_assumptions += level;
 }
 } // namespace CaDiCaL

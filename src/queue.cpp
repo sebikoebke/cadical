@@ -21,7 +21,7 @@ void Internal::init_enqueue (int idx) {
       queue.last = idx;
       btab[idx] = 0;
     }
-    assert (btab[idx] <= stats.bumped);
+    assert (btab[idx] <= stats.vars_bumped);
     l.next = queue.first;
     queue.first = idx;
     LOG ("enqueueing %s at the beginning, next: %d, last: %d", LOGLIT(idx), l.next, queue.last);
@@ -38,7 +38,7 @@ void Internal::init_enqueue (int idx) {
       assert (!queue.first);
       queue.first = idx;
     }
-    btab[idx] = ++stats.bumped;
+    btab[idx] = ++stats.vars_bumped;
     l.prev = queue.last;
     queue.last = idx;
     update_queue_unassigned (queue.last);

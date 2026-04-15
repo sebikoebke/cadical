@@ -243,7 +243,7 @@ unsigned inline Internal::shrink_along_reason (int uip, int blevel,
   assert (v.reason);
 
   if (opts.minimizeticks)
-    stats.ticks.search[stable]++;
+    stats.ticks_search[stable]++;
 
   if (resolve_large_clauses || v.reason->size == 2) {
     const Clause &c = *v.reason;

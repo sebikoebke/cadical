@@ -618,7 +618,7 @@ void Internal::init_search_limits () {
   inc.stabilize = 0;
   last.stabilize.conflicts = stats.conflicts;
   lim.stabilize = stats.conflicts + opts.stabilizeinit;
-  last.stabilize.ticks = stats.ticks.search[0];
+  last.stabilize.ticks = stats.ticks_search[0];
   stats.nowstabphases = 0;
   LOG ("new ticks-based stabilize limit %" PRId64 " after %d conflicts",
        lim.stabilize, (int) opts.stabilizeinit);
@@ -658,7 +658,7 @@ void Internal::init_search_limits () {
     lim.ticks = -1;
     LOG ("no limit on ticks");
   } else {
-    lim.ticks = stats.ticks.search[0] + stats.ticks.search[1] + inc.ticks;
+    lim.ticks = stats.ticks_search[0] + stats.ticks_search[1] + inc.ticks;
     LOG ("ticks limit after %" PRId64 " ticks at %" PRId64 " ticks",
          inc.ticks, lim.ticks);
   }

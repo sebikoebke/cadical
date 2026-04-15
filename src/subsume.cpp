@@ -127,9 +127,9 @@ inline void Internal::subsume_clause (Clause *subsuming, Clause *subsumed) {
   assert (subsuming->size <= subsumed->size);
   LOG (subsumed, "subsumed");
   if (subsumed->redundant)
-    stats.subred++;
+    stats.subsumed_redundant++;
   else
-    stats.subirr++;
+    stats.subsumed_irredundant++;
   if (subsumed->redundant || !subsuming->redundant) {
     mark_garbage (subsumed);
     return;
@@ -379,7 +379,7 @@ bool Internal::subsume_round () {
 
   int64_t check_limit;
   if (opts.subsumelimited) {
-    int64_t delta = stats.propagations.search;
+    int64_t delta = stats.propagations_search;
     delta *= 1e-3 * opts.subsumeeffort;
     if (delta < opts.subsumemineff)
       delta = opts.subsumemineff;

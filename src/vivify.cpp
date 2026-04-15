@@ -93,10 +93,10 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming,
     promote_clause (subsuming, subsumed->glue);
   }
   if (subsumed->redundant) {
-    stats.subred++;
+    stats.subsumed_redundant++;
     ++stats.vivifysubred;
   } else {
-    stats.subirr++;
+    stats.subsumed_irredundant++;
     ++stats.vivifysubirr;
   }
   if (subsuming->garbage) {
@@ -297,7 +297,7 @@ bool Internal::vivify_propagate (int64_t &ticks) {
       break;
   }
   const size_t delta = propagated2 - before;
-  stats.propagations.vivify += static_cast<int64_t> (delta);
+  stats.propagations_vivify += static_cast<int64_t> (delta);
   if (conflict)
     LOG (conflict, "conflict");
   STOP (propagate);
@@ -1596,7 +1596,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
 
   // Limit the number of propagations during vivification as in 'probe'.
   //
-  const int64_t limit = ticks_limit - stats.ticks.vivify;
+  const int64_t limit = ticks_limit - stats.ticks_vivify;
   assert (limit >= 0);
 
   // the clauses might still contain set literals, so propagation since the
@@ -1704,7 +1704,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
 
   stats.subsumed += subsumed;
   stats.strengthened += strengthened;
-  stats.ticks.vivify += vivifier.ticks;
+  stats.ticks_vivify += vivifier.ticks;
 
   const bool unsuccessful = !(subsumed + strengthened + units);
   report (vivifier.tag, unsuccessful);
@@ -1777,7 +1777,7 @@ bool Internal::vivify () {
     tier1effort = tier2effort = tier3effort = 0;
   if (!sumeffort)
     sumeffort = irreffort = 1;
-  int64_t total = totallimit - stats.ticks.vivify;
+  int64_t total = totallimit - stats.ticks_vivify;
 
   PHASE ("vivify", stats.vivifications,
          "vivification limit of %" PRId64 " ticks", total);
@@ -1805,18 +1805,18 @@ bool Internal::vivify () {
   // TODO: count against ticks.vivify directly instead of this unholy
   // shifting.
   vivify_initialize (vivifier, init_ticks);
-  stats.ticks.vivify += init_ticks;
-  int64_t limit = stats.ticks.vivify;
+  stats.ticks_vivify += init_ticks;
+  int64_t limit = stats.ticks_vivify;
   const int64_t shared_effort = (double) init_ticks / 4.0;
   if (opts.vivifytier1) {
     set_vivifier_mode (vivifier, Vivify_Mode::TIER1);
-    if (limit < stats.ticks.vivify)
-      limit = stats.ticks.vivify;
+    if (limit < stats.ticks_vivify)
+      limit = stats.ticks_vivify;
     const int64_t effort = (total * tier1effort) / sumeffort;
     assert (std::numeric_limits<int64_t>::max () - (int64_t) effort >=
             limit);
     limit += effort;
-    if (limit - shared_effort > stats.ticks.vivify) {
+    if (limit - shared_effort > stats.ticks_vivify) {
       limit -= shared_effort;
       assert (limit >= 0);
       vivify_round (vivifier, limit);
@@ -1830,13 +1830,13 @@ bool Internal::vivify () {
     // save memory (well, not really as we
     // already reached the peak memory)
     erase_vector (vivifier.schedule_tier1 ());
-    if (limit < stats.ticks.vivify)
-      limit = stats.ticks.vivify;
+    if (limit < stats.ticks_vivify)
+      limit = stats.ticks_vivify;
     const int64_t effort = (total * tier2effort) / sumeffort;
     assert (std::numeric_limits<int64_t>::max () - (int64_t) effort >=
             limit);
     limit += effort;
-    if (limit - shared_effort > stats.ticks.vivify) {
+    if (limit - shared_effort > stats.ticks_vivify) {
       limit -= shared_effort;
       assert (limit >= 0);
       set_vivifier_mode (vivifier, Vivify_Mode::TIER2);
@@ -1849,13 +1849,13 @@ bool Internal::vivify () {
 
   if (!unsat && tier3effort) {
     erase_vector (vivifier.schedule_tier2 ());
-    if (limit < stats.ticks.vivify)
-      limit = stats.ticks.vivify;
+    if (limit < stats.ticks_vivify)
+      limit = stats.ticks_vivify;
     const int64_t effort = (total * tier3effort) / sumeffort;
     assert (std::numeric_limits<int64_t>::max () - (int64_t) effort >=
             limit);
     limit += effort;
-    if (limit - shared_effort > stats.ticks.vivify) {
+    if (limit - shared_effort > stats.ticks_vivify) {
       limit -= shared_effort;
       assert (limit >= 0);
       set_vivifier_mode (vivifier, Vivify_Mode::TIER3);
@@ -1868,13 +1868,13 @@ bool Internal::vivify () {
 
   if (!unsat && irreffort) {
     erase_vector (vivifier.schedule_tier3 ());
-    if (limit < stats.ticks.vivify)
-      limit = stats.ticks.vivify;
+    if (limit < stats.ticks_vivify)
+      limit = stats.ticks_vivify;
     const int64_t effort = (total * irreffort) / sumeffort;
     assert (std::numeric_limits<int64_t>::max () - (int64_t) effort >=
             limit);
     limit += effort;
-    if (limit - shared_effort > stats.ticks.vivify) {
+    if (limit - shared_effort > stats.ticks_vivify) {
       limit -= shared_effort;
       assert (limit >= 0);
       set_vivifier_mode (vivifier, Vivify_Mode::IRREDUNDANT);

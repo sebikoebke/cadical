@@ -288,7 +288,7 @@ void Internal::release_sweeper (Sweeper &sweeper) {
 
   kitten_release (citten);
   citten = 0;
-  stats.ticks.sweep += sweeper.current_ticks;
+  stats.ticks_sweep += sweeper.current_ticks;
   sweep_sparse_mode ();
   return;
 }
@@ -1885,7 +1885,7 @@ bool Internal::sweep () {
   if (terminated_asynchronously ())
     return false;
   if (delaying_sweep.bumpreasons.delay ()) { // TODO need to fix Delay
-    last.sweep.ticks = stats.ticks.search[0] + stats.ticks.search[1];
+    last.sweep.ticks = stats.ticks_search[0] + stats.ticks_search[1];
     return false;
   }
   delaying_sweep.bumpreasons.bypass_delay ();
@@ -1901,7 +1901,7 @@ bool Internal::sweep () {
   if (opts.sweepcomplete)
     sweeper.limit.ticks = INT64_MAX;
   else
-    sweeper.limit.ticks = tickslimit - stats.ticks.sweep;
+    sweeper.limit.ticks = tickslimit - stats.ticks_sweep;
   sweep_set_kitten_ticks_limit (sweeper);
   const unsigned scheduled = schedule_sweeping (sweeper);
   uint64_t swept = 0, limit = 10;

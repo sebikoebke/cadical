@@ -389,8 +389,8 @@ bool Internal::ternary () {
 
   // approximation of ternary ticks.
   // TODO: count with ternary.ticks directly.
-  int64_t steps_limit = limit - stats.ticks.ternary;
-  stats.ticks.ternary = limit;
+  int64_t steps_limit = limit - stats.ticks_ternary;
+  stats.ticks_ternary = limit;
 
   // With 'stats.ternary' we actually count the number of calls to
   // 'ternary_round' and not the number of calls to 'ternary'. But before

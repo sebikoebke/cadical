@@ -629,7 +629,7 @@ void Walker_DDFW::make_clauses (int lit) {
   //   make_clauses_along_unsatisfied(lit);
   // else
   make_clauses_along_occurrences (lit);
-  internal->stats.ticks.walkflipWL += ticks - old;
+  internal->stats.ticks_walkflipWL += ticks - old;
   STOP (walkflipWL);
 }
 
@@ -687,7 +687,7 @@ void Walker_DDFW::break_clauses (int lit) {
 #endif
   }
   LOG ("broken %zd clauses by flipping %d", broken, lit);
-  internal->stats.ticks.walkflipbroken += ticks - old;
+  internal->stats.ticks_walkflipbroken += ticks - old;
   STOP (walkflipbroken);
 }
 
@@ -709,7 +709,7 @@ void Walker_DDFW::walk_ddfw_flip_lit (int lit) {
   make_clauses (lit);
   break_clauses (-lit);
 
-  internal->stats.ticks.walkflip += ticks - old;
+  internal->stats.ticks_walkflip += ticks - old;
   STOP (walkflip);
 }
 
@@ -1375,7 +1375,7 @@ int Internal::walk_ddfw_round (int64_t limit, bool prev) {
     force_phase_messages = false;
   }
 #endif
-  stats.ticks.walk += walker.ticks;
+  stats.ticks_walk += walker.ticks;
   return res;
 }
 
@@ -1398,7 +1398,7 @@ void Internal::walk_ddfw () {
     STOP_INNER_WALK ();
     return;
   }
-  const int64_t ticks = stats.ticks.search[0] + stats.ticks.search[1];
+  const int64_t ticks = stats.ticks_search[0] + stats.ticks_search[1];
   int64_t limit = ticks - last.walk.ticks;
   VERBOSE (2,
            "walk scheduling: last %" PRId64 " current %" PRId64

@@ -66,8 +66,8 @@ void Internal::bump_queue (int lit) {
     return;
   queue.dequeue (links, idx);
   queue.enqueue (links, idx);
-  assert (stats.bumped != INT64_MAX);
-  btab[idx] = ++stats.bumped;
+  assert (stats.vars_bumped != INT64_MAX);
+  btab[idx] = ++stats.vars_bumped;
   LOG ("moved to front variable %d and bumped to %" PRId64 "", idx,
        btab[idx]);
   if (!vals[idx])
@@ -93,21 +93,21 @@ static inline bool evsids_limit_hit (double score) {
 // Classical exponential VSIDS as pioneered by MiniSAT.
 
 void Internal::rescale_variable_scores () {
-  stats.rescored++;
+  stats.scores_rescored++;
   double divider = score_inc;
   for (auto idx : vars) {
     const double tmp = stab[idx];
     if (tmp > divider)
       divider = tmp;
   }
-  PHASE ("rescore", stats.rescored, "rescoring %d variable scores by 1/%g",
+  PHASE ("rescore", stats.scores_rescored, "rescoring %d variable scores by 1/%g",
          max_var, divider);
   assert (divider > 0);
   double factor = 1.0 / divider;
   for (auto idx : vars)
     stab[idx] *= factor;
   score_inc *= factor;
-  PHASE ("rescore", stats.rescored,
+  PHASE ("rescore", stats.scores_rescored,
          "new score increment %g after %" PRId64 " conflicts", score_inc,
          stats.conflicts);
 }
@@ -377,7 +377,7 @@ inline void Internal::bump_also_reason_literals (int lit, int depth_limit,
   Clause *reason = v.reason;
   if (!reason || reason == external_reason)
     return;
-  stats.ticks.search[stable]++;
+  stats.ticks_search[stable]++;
   for (const auto &other : *reason) {
     if (other == lit)
       continue;
@@ -665,7 +665,7 @@ inline int Internal::determine_actual_backtrack_level (int jump) {
     res = jump;
     LOG ("chronological backtracking disabled using jump level %d", res);
   } else if (opts.chronoalways) {
-    stats.chrono++;
+    stats.conflicts_chrono++;
     res = level - 1;
     LOG ("forced chronological backtracking to level %d", res);
   } else if (jump >= level - 1) {
@@ -676,7 +676,7 @@ inline int Internal::determine_actual_backtrack_level (int jump) {
     LOG ("using jump level %d since it is lower than assumption level %zd",
          res, assumptions.size ());
   } else if (level - jump > opts.chronolevelim) {
-    stats.chrono++;
+    stats.conflicts_chrono++;
     res = level - 1;
     LOG ("back-jumping over %d > %d levels prohibited"
          "thus backtracking chronologically to level %d",
@@ -720,7 +720,7 @@ inline int Internal::determine_actual_backtrack_level (int jump) {
     if (res == jump)
       LOG ("default non-chronological back-jumping to level %d", res);
     else {
-      stats.chrono++;
+      stats.conflicts_chrono++;
       LOG ("chronological backtracking to level %d to reuse trail", res);
     }
 
@@ -738,13 +738,13 @@ void Internal::eagerly_subsume_recently_learned_clauses (Clause *c) {
   assert (opts.eagersubsume);
   LOG (c, "trying eager subsumption with");
   mark (c);
-  int64_t lim = stats.eagertried + opts.eagersubsumelim;
+  int64_t lim = stats.eager_subsumtions + opts.eagersubsumelim;
   const auto begin = clauses.begin ();
   auto it = clauses.end ();
 #ifdef LOGGING
-  int64_t before = stats.eagersub;
+  int64_t before = stats.eager_subsumed;
 #endif
-  while (it != begin && stats.eagertried++ <= lim) {
+  while (it != begin && stats.eager_subsumtions++ <= lim) {
     Clause *d = *--it;
     if (c == d)
       continue;
@@ -762,13 +762,13 @@ void Internal::eagerly_subsume_recently_learned_clauses (Clause *c) {
     if (needed)
       continue;
     LOG (d, "eager subsumed");
-    stats.eagersub++;
+    stats.eager_subsumed++;
     stats.subsumed++;
     mark_garbage (d);
   }
   unmark (c);
 #ifdef LOGGING
-  uint64_t subsumed = stats.eagersub - before;
+  uint64_t subsumed = stats.eager_subsumed - before;
   if (subsumed)
     LOG ("eagerly subsumed %" PRIu64 " clauses", subsumed);
 #endif
@@ -912,9 +912,9 @@ inline void Internal::otfs_subsume_clause (Clause *subsuming,
   assert (subsuming->size <= subsumed->size);
   LOG (subsumed, "subsumed");
   if (subsumed->redundant)
-    stats.subred++;
+    stats.subsumed_redundant++;
   else
-    stats.subirr++;
+    stats.subsumed_irredundant++;
   if (subsumed->redundant || !subsuming->redundant) {
     mark_garbage (subsumed);
     return;
@@ -1170,7 +1170,7 @@ void Internal::analyze () {
         LOG (reason, "changing conflict to");
         --conflict_size;
         assert (conflict_size == reason->size);
-        ++stats.otfs.subsumed;
+        ++stats.otfs_subsumed;
         ++stats.subsumed;
       }
 
@@ -1264,8 +1264,8 @@ void Internal::analyze () {
   LOG (clause, "1st UIP size %d and glue %d clause", size, glue);
   UPDATE_AVERAGE (averages.current.glue.fast, glue);
   UPDATE_AVERAGE (averages.current.glue.slow, glue);
-  stats.learned.literals += size;
-  stats.learned.clauses++;
+  stats.learned_literals += size;
+  stats.learned_clauses++;
   assert (glue < size);
 
   // up to this point lrat_chain contains the proof for current clause in
@@ -1300,8 +1300,8 @@ void Internal::analyze () {
 
   // Update actual size statistics.
   //
-  stats.units += (size == 1);
-  stats.binaries += (size == 2);
+  stats.learned_units += (size == 1);
+  stats.learned_binaries += (size == 2);
   UPDATE_AVERAGE (averages.current.size, size);
 
   // reverse lrat_chain. We could probably work with reversed iterators

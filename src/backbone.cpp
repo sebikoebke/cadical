@@ -130,7 +130,7 @@ inline bool Internal::backbone_propagate (int64_t &ticks) {
       break;
   }
   int64_t delta = propagated2 - before;
-  stats.propagations.backbone += delta;
+  stats.propagations_backbone += delta;
   if (conflict)
     LOG (conflict, "conflict");
   STOP (propagate);
@@ -166,7 +166,7 @@ inline void Internal::backbone_propagate2 (int64_t &ticks) {
   }
 
   int64_t delta = propagated2 - before;
-  stats.propagations.backbone += delta;
+  stats.propagations_backbone += delta;
 }
 
 void Internal::schedule_backbone_cands (std::vector<int> &candidates) {
@@ -405,7 +405,7 @@ unsigned Internal::compute_backbone_round (std::vector<int> &candidates,
     int uip = backbone_analyze (conflict, ticks);
     backtrack_without_updating_phases (level - 1);
     backbone_unit_assign (uip);
-    ++stats.units;
+    ++stats.learned_units;
     assert (!conflict);
     if (external->learner)
       external->export_learned_unit_clause (uip);
@@ -544,7 +544,7 @@ unsigned Internal::compute_backbone () {
     round_limit = max_rounds;
 
   SET_EFFORT_LIMIT (totalticks, backbone, false);
-  int64_t ticks_limit = totalticks - stats.ticks.backbone;
+  int64_t ticks_limit = totalticks - stats.ticks_backbone;
   PHASE ("backbone", stats.backbone.phases,
          "backbone limit of %" PRId64 " ticks", ticks_limit);
   size_t rounds = 0;
@@ -596,7 +596,7 @@ unsigned Internal::compute_backbone () {
       learn_empty_clause ();
     }
   }
-  stats.ticks.backbone += ticks;
+  stats.ticks_backbone += ticks;
   return failed;
 }
 

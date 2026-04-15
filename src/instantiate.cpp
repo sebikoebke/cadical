@@ -163,7 +163,7 @@ bool Internal::inst_propagate () { // Adapted from 'propagate'.
     }
   }
   int64_t delta = propagated - before;
-  stats.propagations.instantiate += delta;
+  stats.propagations_instantiate += delta;
   STOP (propagate);
   return ok;
 }

@@ -106,7 +106,7 @@ void Internal::backtrack_without_updating_phases (int new_level) {
   if (new_level == level)
     return;
 
-  stats.backtracks++;
+  stats.backtracked++;
 
   assert (num_assigned == trail.size ());
 
