@@ -114,7 +114,7 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
           elim_update_removed_clause (eliminator, d);
           mark_garbage (d);
           stats.subsumed++;
-          stats.elimbwsub++;
+          stats.eliminate_subsumed_bw++;
         } else {
           int unit = 0;
           assert (minimize_chain.empty ());
@@ -197,7 +197,7 @@ void Internal::elim_backward_clause (Eliminator &eliminator, Clause *c) {
             strengthen_clause (d, negated);
             remove_occs (occs (negated), d);
             elim_update_removed_lit (eliminator, negated);
-            stats.elimbwstr++;
+            stats.eliminate_strengthened_bw++;
             assert (negated != best);
             eliminator.enqueue (d);
           }

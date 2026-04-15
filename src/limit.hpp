@@ -38,7 +38,7 @@ struct Limit {
 
   // How often rephased during (1) or out (0) of stabilization.
   //
-  int64_t rephased[2] = {0,0};
+  int64_t rephased[2] = {0, 0};
 
   // Current elimination bound per eliminated variable.
   //
@@ -136,8 +136,9 @@ struct Inc {
 #define SET_EFFORT_LIMIT(LIMIT, NAME, THRESHHOLD) \
   int64_t LIMIT; \
   do { \
-    const int64_t OLD_LIMIT = stats.ticks_NAME; \
-    const int64_t TICKS = stats.ticks_search[0] + stats.ticks_search[1]; \
+    const int64_t OLD_LIMIT = stats.ticks_##NAME; \
+    const int64_t TICKS = \
+        stats.ticks_search_unstable + stats.ticks_search_stable; \
     const int64_t LAST = last.NAME.ticks; \
     int64_t REFERENCE = TICKS - LAST; \
     if (!REFERENCE || !stats.conflicts) { \

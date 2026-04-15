@@ -506,7 +506,7 @@ void Internal::init_preprocessing_limits () {
     mode = "keeping";
   else {
     double delta =
-        stats.added.irredundant ? log10 (stats.added.irredundant) : 100;
+        stats.clauses_added_irredundant ? log10 (stats.clauses_added_irredundant) : 100;
     delta = delta * delta;
     lim.inprobe = stats.conflicts + opts.inprobeint * delta;
     mode = "initial";
@@ -618,7 +618,7 @@ void Internal::init_search_limits () {
   inc.stabilize = 0;
   last.stabilize.conflicts = stats.conflicts;
   lim.stabilize = stats.conflicts + opts.stabilizeinit;
-  last.stabilize.ticks = stats.ticks_search[0];
+  last.stabilize.ticks = stats.ticks_search_unstable;
   stats.nowstabphases = 0;
   LOG ("new ticks-based stabilize limit %" PRId64 " after %d conflicts",
        lim.stabilize, (int) opts.stabilizeinit);
@@ -658,7 +658,7 @@ void Internal::init_search_limits () {
     lim.ticks = -1;
     LOG ("no limit on ticks");
   } else {
-    lim.ticks = stats.ticks_search[0] + stats.ticks_search[1] + inc.ticks;
+    lim.ticks = stats.ticks_search_unstable + stats.ticks_search_stable + inc.ticks;
     LOG ("ticks limit after %" PRId64 " ticks at %" PRId64 " ticks",
          inc.ticks, lim.ticks);
   }
@@ -731,7 +731,7 @@ bool Internal::preprocess_round (int round, bool &triggered) {
     int64_t vars, clauses;
   } before, after;
   before.vars = active ();
-  before.clauses = stats.current.irredundant;
+  before.clauses = stats.clauses_current_irredundant;
   stats.preprocessings++;
   assert (!preprocessing);
   preprocessing = true;
@@ -750,7 +750,7 @@ bool Internal::preprocess_round (int round, bool &triggered) {
     condition (false);
 
   after.vars = active ();
-  after.clauses = stats.current.irredundant;
+  after.clauses = stats.clauses_current_irredundant;
   assert (preprocessing);
   preprocessing = false;
   PHASE ("preprocessing", stats.preprocessings,
@@ -786,7 +786,7 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
     int64_t vars, clauses;
   } before, after;
   before.vars = active ();
-  before.clauses = stats.current.irredundant;
+  before.clauses = stats.clauses_current_irredundant;
 #endif
   // stats.preprocessings++;
   assert (!preprocessing);
@@ -816,7 +816,7 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
   // condition (false);
 #ifndef QUIET
   after.vars = active ();
-  after.clauses = stats.current.irredundant;
+  after.clauses = stats.clauses_current_irredundant;
 #endif
   assert (preprocessing);
   preprocessing = false;
@@ -1310,7 +1310,7 @@ void Internal::declare_variable (int ilit) {
   reserve_vars (ilit);
   assert ((size_t) ilit < vsize);
   if (ilit >= max_var) {
-    stats.unused += (ilit - max_var);
+    stats.vars_unused += (ilit - max_var);
     stats.inactive += (ilit - max_var);
     max_var = ilit;
   }

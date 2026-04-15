@@ -197,13 +197,13 @@ bool Internal::satisfied () {
   LOG ("checking satisfied");
   if ((size_t) level < assumptions.size () + (!!constraint.size ()))
     return false;
-  if (num_assigned + stats.unused < (size_t) max_var)
+  if (num_assigned + stats.vars_unused < (size_t) max_var)
     return false;
-  assert (num_assigned + stats.unused == (size_t) max_var);
+  assert (num_assigned + stats.vars_unused == (size_t) max_var);
   if (propagated < trail.size ())
     return false;
   size_t assigned = num_assigned;
-  return (assigned + stats.unused == (size_t) max_var);
+  return (assigned + stats.vars_unused == (size_t) max_var);
 }
 
 bool Internal::better_decision (int lit, int other) {

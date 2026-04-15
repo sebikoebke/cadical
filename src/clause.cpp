@@ -122,16 +122,16 @@ Clause *Internal::new_clause (bool red, int glue) {
   //
   assert (c->bytes () == bytes);
 
-  stats.current.total++;
-  stats.added.total++;
+  stats.clauses_current_total++;
+  stats.clauses_added_total++;
 
   if (red) {
-    stats.current.redundant++;
-    stats.added.redundant++;
+    stats.clauses_current_redundant++;
+    stats.clauses_added_redundant++;
   } else {
-    stats.irrlits += size;
-    stats.current.irredundant++;
-    stats.added.irredundant++;
+    stats.irredundant_literals += size;
+    stats.clauses_current_irredundant++;
+    stats.clauses_added_irredundant++;
   }
   if (size == 2)
     new_binary_since_dedup = true;
@@ -163,15 +163,15 @@ void Internal::promote_clause (Clause *c, int new_glue) {
   c->used = max_used;
   if (old_glue > tier1limit && new_glue <= tier1limit) {
     LOG (c, "promoting with new glue %d to tier1", new_glue);
-    stats.promoted1++;
+    stats.clauses_promoted_tier1++;
   } else if (old_glue > tier2limit && new_glue <= tier2limit) {
     LOG (c, "promoting with new glue %d to tier2", new_glue);
-    stats.promoted2++;
+    stats.clauses_promoted_tier2++;
   } else if (old_glue <= tier2limit)
     LOG (c, "keeping with new glue %d in tier2", new_glue);
   else
     LOG (c, "keeping with new glue %d in tier3", new_glue);
-  stats.improvedglue++;
+  stats.clauses_improved_glue++;
   c->glue = new_glue;
 }
 /*------------------------------------------------------------------------*/
@@ -188,15 +188,15 @@ void Internal::promote_clause_glue_only (Clause *c, int new_glue) {
     return;
   if (new_glue <= tier1limit) {
     LOG (c, "promoting with new glue %d to tier1", new_glue);
-    stats.promoted1++;
+    stats.clauses_promoted_tier1++;
   } else if (old_glue > tier2limit && new_glue <= tier2limit) {
     LOG (c, "promoting with new glue %d to tier2", new_glue);
-    stats.promoted2++;
+    stats.clauses_promoted_tier2++;
   } else if (old_glue <= tier2limit)
     LOG (c, "keeping with new glue %d in tier2", new_glue);
   else
     LOG (c, "keeping with new glue %d in tier3", new_glue);
-  stats.improvedglue++;
+  stats.clauses_improved_glue++;
   c->glue = new_glue;
 }
 
@@ -233,8 +233,8 @@ size_t Internal::shrink_clause (Clause *c, int new_size) {
     promote_clause_glue_only (c, min (c->size - 1, c->glue));
   else {
     int delta_size = old_size - new_size;
-    assert (stats.irrlits >= delta_size);
-    stats.irrlits -= delta_size;
+    assert (stats.irredundant_literals >= delta_size);
+    stats.irredundant_literals -= delta_size;
   }
 
   if (likely_to_be_kept_clause (c))
@@ -251,14 +251,14 @@ void Internal::make_irredundant (Clause *subsuming) {
   subsuming->redundant = false;
   if (proof)
     proof->strengthen (subsuming->id);
-  stats.current.irredundant++;
-  stats.added.irredundant++;
-  stats.irrlits += subsuming->size;
-  assert (stats.current.redundant > 0);
-  stats.current.redundant--;
-  assert (stats.added.redundant > 0);
-  stats.added.redundant--;
-  // ... and keep 'stats.added.total'.
+  stats.clauses_current_irredundant++;
+  stats.clauses_added_irredundant++;
+  stats.irredundant_literals += subsuming->size;
+  assert (stats.clauses_current_redundant > 0);
+  stats.clauses_current_redundant--;
+  assert (stats.clauses_added_redundant > 0);
+  stats.clauses_added_redundant--;
+  // ... and keep 'stats.clauses_added_total'.
 }
 
 // This is the 'raw' deallocation of a clause.  If the clause is in the
@@ -278,12 +278,12 @@ void Internal::delete_clause (Clause *c) {
   size_t bytes = c->bytes ();
   stats.collected += bytes;
   if (c->garbage) {
-    assert (stats.garbage.bytes >= (int64_t) bytes);
-    stats.garbage.bytes -= bytes;
-    assert (stats.garbage.clauses > 0);
-    stats.garbage.clauses--;
-    assert (stats.garbage.literals >= c->size);
-    stats.garbage.literals -= c->size;
+    assert (stats.garbage_bytes >= (int64_t) bytes);
+    stats.garbage_bytes -= bytes;
+    assert (stats.garbage_clauses > 0);
+    stats.garbage_clauses--;
+    assert (stats.garbage_literals >= c->size);
+    stats.garbage_literals -= c->size;
 
     // See the discussion in 'propagate' on avoiding to eagerly trace binary
     // clauses as deleted (produce 'd ...' lines) as soon they are marked
@@ -334,23 +334,23 @@ void Internal::mark_garbage (Clause *c) {
   if (opts.check && is_external_forgettable (c->id))
     mark_garbage_external_forgettable (c->id);
 
-  assert (stats.current.total > 0);
-  stats.current.total--;
+  assert (stats.clauses_current_total > 0);
+  stats.clauses_current_total--;
 
   size_t bytes = c->bytes ();
   if (c->redundant) {
-    assert (stats.current.redundant > 0);
-    stats.current.redundant--;
+    assert (stats.clauses_current_redundant > 0);
+    stats.clauses_current_redundant--;
   } else {
-    assert (stats.current.irredundant > 0);
-    stats.current.irredundant--;
-    assert (stats.irrlits >= c->size);
-    stats.irrlits -= c->size;
+    assert (stats.clauses_current_irredundant > 0);
+    stats.clauses_current_irredundant--;
+    assert (stats.irredundant_literals >= c->size);
+    stats.irredundant_literals -= c->size;
     mark_removed (c);
   }
-  stats.garbage.bytes += bytes;
-  stats.garbage.clauses++;
-  stats.garbage.literals += c->size;
+  stats.garbage_bytes += bytes;
+  stats.garbage_clauses++;
+  stats.garbage_literals += c->size;
   c->garbage = true;
   c->used = 0;
 

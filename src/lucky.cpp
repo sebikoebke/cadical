@@ -464,7 +464,7 @@ int Internal::lucky_phases () {
   int64_t units =0;
   int res = 0, rounds = 0;
 #ifndef QUIET
-  const int64_t active_initially = stats.active;
+  const int64_t active_initially = stats.vars_active;
 #endif
 
   constexpr int schedule_size = 6;
@@ -528,10 +528,10 @@ int Internal::lucky_phases () {
     }
   }
 
-  const int64_t old_active = stats.active;
+  const int64_t old_active = stats.vars_active;
   if (!res)
     do {
-      const int64_t active_before = stats.active;
+      const int64_t active_before = stats.vars_active;
 
       for (auto &luck : schedule) {
         res = luck ();
@@ -547,16 +547,16 @@ int Internal::lucky_phases () {
       assert (res || !level);
       assert (res || propagated == trail.size ());
 
-      units = active_before - stats.active;
+      units = active_before - stats.vars_active;
       stats.lucky.units += units;
 
       if (!res && units)
         VERBOSE (3, "lucky-%" PRId64 " in round %d found %" PRId64 " units", stats.lucky.tried, rounds, units);
     } while (units && !res && ++rounds < opts.luckyrounds);
 
-  report ('l', !res && (old_active == stats.active));
+  report ('l', !res && (old_active == stats.vars_active));
   searching_lucky_phases = false;
-  PHASE ("lucky", stats.lucky.tried, " produced %" PRId64 " units after %d rounds", active_initially - stats.active, rounds);
+  PHASE ("lucky", stats.lucky.tried, " produced %" PRId64 " units after %d rounds", active_initially - stats.vars_active, rounds);
 
   STOP (lucky);
   STOP (search);

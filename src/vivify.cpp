@@ -105,13 +105,13 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming,
          "binary subsuming clause was already deleted, so undeleting");
     subsuming->garbage = false;
     subsuming->glue = 1;
-    ++stats.current.total;
+    ++stats.clauses_current_total;
     if (subsuming->redundant)
-      stats.current.redundant++;
+      stats.clauses_current_redundant++;
     else
-      stats.current.irredundant++, stats.irrlits += subsuming->size;
-    stats.garbage.literals -= subsuming->size;
-    --stats.garbage.clauses;
+      stats.clauses_current_irredundant++, stats.irredundant_literals += subsuming->size;
+    stats.garbage_literals -= subsuming->size;
+    --stats.garbage_clauses;
   }
   if (subsumed->redundant || !subsuming->redundant) {
     mark_garbage (subsumed);
@@ -131,15 +131,15 @@ inline void Internal::demote_clause (Clause *c) {
   assert (!c->redundant);
   mark_removed (c);
   c->redundant = true;
-  assert (stats.current.irredundant > 0);
-  stats.current.irredundant--;
-  assert (stats.added.irredundant > 0);
-  stats.added.irredundant--;
-  stats.irrlits -= c->size;
-  stats.current.redundant++;
-  stats.added.redundant++;
+  assert (stats.clauses_current_irredundant > 0);
+  stats.clauses_current_irredundant--;
+  assert (stats.clauses_added_irredundant > 0);
+  stats.clauses_added_irredundant--;
+  stats.irredundant_literals -= c->size;
+  stats.clauses_current_redundant++;
+  stats.clauses_added_redundant++;
   c->glue = c->size - 1;
-  // ... and keep 'stats.added.total'.
+  // ... and keep 'stats.clauses_added_total'.
 }
 
 /*------------------------------------------------------------------------*/
@@ -1592,7 +1592,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
 
   PHASE ("vivify", stats.vivifications,
          "scheduled %" PRId64 " clauses to be vivified %.0f%%", scheduled,
-         percent (scheduled, stats.current.irredundant));
+         percent (scheduled, stats.clauses_current_irredundant));
 
   // Limit the number of propagations during vivification as in 'probe'.
   //
@@ -1749,7 +1749,7 @@ bool Internal::vivify () {
     return false;
   if (!opts.vivify)
     return false;
-  if (!stats.current.irredundant)
+  if (!stats.clauses_current_irredundant)
     return false;
   if (level)
     backtrack ();
@@ -1773,7 +1773,7 @@ bool Internal::vivify () {
           ? 0
           : (double) opts.vivifyirredeff;
   double sumeffort = tier1effort + tier2effort + tier3effort + irreffort;
-  if (!stats.current.redundant)
+  if (!stats.clauses_current_redundant)
     tier1effort = tier2effort = tier3effort = 0;
   if (!sumeffort)
     sumeffort = irreffort = 1;

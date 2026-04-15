@@ -371,7 +371,7 @@ bool Internal::subsume_round () {
     return false;
   if (terminated_asynchronously ())
     return false;
-  if (!stats.current.redundant && !stats.current.irredundant)
+  if (!stats.clauses_current_redundant && !stats.clauses_current_irredundant)
     return false;
 
   START_SIMPLIFIER (subsume, SUBSUME);
@@ -397,7 +397,7 @@ bool Internal::subsume_round () {
     check_limit = LONG_MAX;
   }
 
-  int old_marked_candidate_variables_for_elimination = stats.mark.elim;
+  int old_marked_candidate_variables_for_elimination = stats.mark_elim;
 
   assert (!level);
 
@@ -464,7 +464,7 @@ bool Internal::subsume_round () {
 
 #ifndef QUIET
   int64_t scheduled = schedule.size ();
-  int64_t total = stats.current.irredundant + stats.current.redundant;
+  int64_t total = stats.clauses_current_irredundant + stats.clauses_current_redundant;
   PHASE ("subsume-round", stats.subsumerounds,
          "scheduled %" PRId64 " clauses %.0f%% out of %" PRId64 " clauses",
          scheduled, percent (scheduled, total), total);
@@ -629,14 +629,14 @@ bool Internal::subsume_round () {
 
   STOP_SIMPLIFIER (subsume, SUBSUME);
 
-  return old_marked_candidate_variables_for_elimination < stats.mark.elim;
+  return old_marked_candidate_variables_for_elimination < stats.mark_elim;
 }
 
 /*------------------------------------------------------------------------*/
 
 void Internal::subsume () {
 
-  if (!stats.current.redundant && !stats.current.irredundant)
+  if (!stats.clauses_current_redundant && !stats.clauses_current_irredundant)
     return;
 
   if (unsat)

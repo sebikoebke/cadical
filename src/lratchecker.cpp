@@ -456,7 +456,7 @@ void LratChecker::add_original_clause (int64_t id, bool,
   LOG (c, "LRAT CHECKER addition of original clause[%" PRId64 "]", id);
   if (restore)
     restore_clause (id, c);
-  stats.added++;
+  stats.clauses_added_+;
   stats.original++;
   import_clause (c);
   last_id = id;
@@ -487,7 +487,7 @@ void LratChecker::add_derived_clause (int64_t id, bool, int w,
   assert (!w || c[0] == w);
   if (w)
     stats.rat++;
-  stats.added++;
+  stats.clauses_added_+;
   stats.derived++;
   import_clause (c);
   last_id = id;

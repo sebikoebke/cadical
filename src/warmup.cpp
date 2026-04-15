@@ -442,13 +442,13 @@ int Internal::warmup () {
   private_steps = true;
 
   LOG ("propagating beyond conflicts to warm-up walk");
-  while (!res && num_assigned < (size_t) max_var - stats.unused) {
+  while (!res && num_assigned < (size_t) max_var - stats.vars_unused) {
     assert (propagated == trail.size ());
     warmup_decide ();
     warmup_propagate_beyond_conflict ();
     LOG (lrat_chain, "during warmup with lrat chain:");
   }
-  assert (res || num_assigned + stats.unused == (size_t) max_var);
+  assert (res || num_assigned + stats.vars_unused == (size_t) max_var);
 #ifndef QUIET
   // constrains with empty levels break this
   // assert (res || stats.warmup.propagated - warmup_propagated ==

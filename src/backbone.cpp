@@ -355,7 +355,7 @@ unsigned Internal::compute_backbone_round (std::vector<int> &candidates,
   auto q = p;
   const auto end = std::end (candidates);
   size_t failed = 0;
-  ++stats.backbone.rounds;
+  ++stats.backbone_rounds;
 
   LOG (candidates, "candidates: ");
   ticks += 1 + cache_lines (candidates.size (),
@@ -365,7 +365,7 @@ unsigned Internal::compute_backbone_round (std::vector<int> &candidates,
     assert (q <= p);
     assert (!conflict);
     const int probe = (*q = *p);
-    ++stats.backbone.probes;
+    ++stats.backbone_probes;
 
     ++p, ++q;
     const signed char v = val (probe);
@@ -401,7 +401,7 @@ unsigned Internal::compute_backbone_round (std::vector<int> &candidates,
     }
 
     ++failed;
-    ++stats.backbone.units;
+    ++stats.backbone_units;
     int uip = backbone_analyze (conflict, ticks);
     backtrack_without_updating_phases (level - 1);
     backbone_unit_assign (uip);
@@ -534,18 +534,18 @@ unsigned Internal::compute_backbone () {
   unsigned inconsistent = 0;
   assert (!conflict);
 
-  ++stats.backbone.phases;
+  ++stats.backbone_phases;
   schedule_backbone_cands (candidates);
 
   const size_t max_rounds = opts.backbonemaxrounds;
   size_t round_limit = opts.backbonerounds;
-  round_limit *= stats.backbone.phases;
+  round_limit *= stats.backbone_phases;
   if (round_limit > max_rounds)
     round_limit = max_rounds;
 
   SET_EFFORT_LIMIT (totalticks, backbone, false);
   int64_t ticks_limit = totalticks - stats.ticks_backbone;
-  PHASE ("backbone", stats.backbone.phases,
+  PHASE ("backbone", stats.backbone_phases,
          "backbone limit of %" PRId64 " ticks", ticks_limit);
   size_t rounds = 0;
   for (; ++rounds;) {
@@ -581,10 +581,10 @@ unsigned Internal::compute_backbone () {
     learn_empty_clause ();
   }
   if (unsat) {
-    PHASE ("backbone", stats.backbone.phases,
+    PHASE ("backbone", stats.backbone_phases,
            "inconsistent binary clauses");
   } else {
-    PHASE ("backbone", stats.backbone.phases,
+    PHASE ("backbone", stats.backbone_phases,
            "found %zu backbone literals %zu round in %" PRId64 " ticks",
            failed, rounds, ticks);
   }

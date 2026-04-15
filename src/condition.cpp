@@ -52,12 +52,12 @@ bool Internal::conditioning () {
   if (level <= averages.current.jump)
     return false; // Main heuristic.
 
-  if (!stats.current.irredundant)
+  if (!stats.clauses_current_irredundant)
     return false;
   double remain = active ();
   if (!remain)
     return false;
-  double ratio = stats.current.irredundant / remain;
+  double ratio = stats.clauses_current_irredundant / remain;
   return ratio <= opts.conditionmaxrat;
 }
 
@@ -895,7 +895,7 @@ void Internal::condition (bool update_limits) {
 
   if (unsat)
     return;
-  if (!stats.current.irredundant)
+  if (!stats.clauses_current_irredundant)
     return;
 
   START_SIMPLIFIER (condition, CONDITION);
@@ -912,8 +912,8 @@ void Internal::condition (bool update_limits) {
     limit = opts.conditionmineff;
   if (limit > opts.conditionmaxeff)
     limit = opts.conditionmaxeff;
-  assert (stats.current.irredundant);
-  limit *= 2.0 * active () / (double) stats.current.irredundant;
+  assert (stats.clauses_current_irredundant);
+  limit *= 2.0 * active () / (double) stats.clauses_current_irredundant;
   limit = max (limit, 2l * active ());
 
   PHASE ("condition", stats.conditionings,

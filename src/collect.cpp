@@ -464,12 +464,12 @@ void Internal::check_clause_stats () {
       irrlits += c->size;
     total++;
   }
-  assert (stats.current.irredundant == irredundant);
-  assert (stats.current.redundant == redundant);
-  assert (stats.current.total == total);
-  assert (stats.irrlits == irrlits);
-  assert (stats.garbage.literals == garbagelits);
-  assert (stats.garbage.clauses == garbagecls);
+  assert (stats.clauses_current_irredundant == irredundant);
+  assert (stats.clauses_current_redundant == redundant);
+  assert (stats.clauses_current_total == total);
+  assert (stats.irredundant_literals == irrlits);
+  assert (stats.garbage_literals == garbagelits);
+  assert (stats.garbage_clauses == garbagecls);
 #endif
 }
 

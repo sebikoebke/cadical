@@ -365,7 +365,7 @@ bool Internal::ternary () {
 
   // No new ternary clauses added since last time?
   //
-  if (last.ternary.marked == stats.mark.ternary)
+  if (last.ternary.marked == stats.mark_ternary)
     return false;
 
   SET_EFFORT_LIMIT (limit, ternary, true);
@@ -383,7 +383,7 @@ bool Internal::ternary () {
   // substantially, particularly for random formulas.  Thus we limit the
   // number of added clauses too (actually the number of 'htrs').
   //
-  int64_t htrs_limit = stats.current.redundant + stats.current.irredundant;
+  int64_t htrs_limit = stats.clauses_current_redundant + stats.clauses_current_irredundant;
   htrs_limit *= opts.ternarymaxadd;
   htrs_limit /= 100;
 
@@ -440,7 +440,7 @@ bool Internal::ternary () {
   }
 
   if (completed)
-    last.ternary.marked = stats.mark.ternary;
+    last.ternary.marked = stats.mark_ternary;
 
   STOP_SIMPLIFIER (ternary, TERNARY);
 

@@ -100,8 +100,8 @@ void Internal::rescale_variable_scores () {
     if (tmp > divider)
       divider = tmp;
   }
-  PHASE ("rescore", stats.scores_rescored, "rescoring %d variable scores by 1/%g",
-         max_var, divider);
+  PHASE ("rescore", stats.scores_rescored,
+         "rescoring %d variable scores by 1/%g", max_var, divider);
   assert (divider > 0);
   double factor = 1.0 / divider;
   for (auto idx : vars)
@@ -215,7 +215,7 @@ void Internal::bump_variables () {
 
 int Internal::recompute_glue (Clause *c) {
   int res = 0;
-  const int64_t stamp = ++stats.recomputed;
+  const int64_t stamp = ++stats.clauses_recomputed_glue;
   for (const auto &lit : *c) {
     assert (val (lit));
     int level = var (lit).level;
@@ -377,7 +377,7 @@ inline void Internal::bump_also_reason_literals (int lit, int depth_limit,
   Clause *reason = v.reason;
   if (!reason || reason == external_reason)
     return;
-  stats.ticks_search[stable]++;
+  stable ? stats.ticks_search_stable++ : stats.ticks_search_unstable++;
   for (const auto &other : *reason) {
     if (other == lit)
       continue;
@@ -783,7 +783,7 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
   auto sorted = std::vector<int> ();
   sorted.reserve (new_conflict->size);
   assert (sorted.empty ());
-  ++stats.otfs.strengthened;
+  ++stats.otfs_strengthened;
 
   int *lits = new_conflict->literals;
 

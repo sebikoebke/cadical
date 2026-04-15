@@ -1830,14 +1830,14 @@ inline void Closure::promote_clause (Clause *c) {
   c->redundant = false;
   if (internal->proof)
     internal->proof->strengthen (c->id);
-  internal->stats.current.irredundant++;
-  internal->stats.added.irredundant++;
-  internal->stats.irrlits += c->size;
-  assert (internal->stats.current.redundant > 0);
-  internal->stats.current.redundant--;
-  assert (internal->stats.added.redundant > 0);
-  internal->stats.added.redundant--;
-  // ... and keep 'stats.added.total'.
+  internal->stats.clauses_current_irredundant++;
+  internal->stats.clauses_added_irredundant++;
+  internal->stats.irredundant_literals += c->size;
+  assert (internal->stats.clauses_current_redundant > 0);
+  internal->stats.clauses_current_redundant--;
+  assert (internal->stats.clauses_added_redundant > 0);
+  internal->stats.clauses_added_redundant--;
+  // ... and keep 'stats.clauses_added_total'.
 }
 
 // This function is rather tricky for LRAT. If you have 2 = 1 and 3=4 you
@@ -4110,7 +4110,7 @@ void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
 
   VERBOSE (
       2, "connected %zu large clauses %.0f%%", candidates.size (),
-      percent (candidates.size (), internal->stats.current.irredundant));
+      percent (candidates.size (), internal->stats.clauses_current_irredundant));
 }
 
 Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
@@ -5143,14 +5143,14 @@ void Closure::subsume_clause (Clause *subsuming, Clause *subsumed) {
   if (internal->proof)
     internal->proof->strengthen (subsuming->id);
   internal->mark_garbage (subsumed);
-  stats.current.irredundant++;
-  stats.added.irredundant++;
-  stats.irrlits += subsuming->size;
-  assert (stats.current.redundant > 0);
-  stats.current.redundant--;
-  assert (stats.added.redundant > 0);
-  stats.added.redundant--;
-  // ... and keep 'stats.added.total'.
+  stats.clauses_current_irredundant++;
+  stats.clauses_added_irredundant++;
+  stats.irredundant_literals += subsuming->size;
+  assert (stats.clauses_current_redundant > 0);
+  stats.clauses_current_redundant--;
+  assert (stats.clauses_added_redundant > 0);
+  stats.clauses_added_redundant--;
+  // ... and keep 'stats.clauses_added_total'.
 }
 
 bool Closure::find_subsuming_clause (Clause *subsumed) {
@@ -7290,8 +7290,8 @@ void Closure::init_ite_gate_extraction (
            "counted %zu ternary ITE gates"
            "(%.0f%% of %" PRIu64 " irredundant clauses)",
            ternary.size (),
-           percent (ternary.size (), internal->stats.current.irredundant),
-           internal->stats.current.irredundant);
+           percent (ternary.size (), internal->stats.clauses_current_irredundant),
+           internal->stats.clauses_current_irredundant);
 #ifndef QUIET
   size_t connected = 0;
 #endif
@@ -7331,7 +7331,7 @@ void Closure::init_ite_gate_extraction (
 
   VERBOSE (
       4, "connected %zu large clauses %.0f%%", candidates.size (),
-      percent (candidates.size (), internal->stats.current.irredundant));
+      percent (candidates.size (), internal->stats.clauses_current_irredundant));
 
 #ifndef QUIET
   size_t size_candidates = candidates.size ();

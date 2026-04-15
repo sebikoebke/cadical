@@ -76,7 +76,7 @@ bool Internal::ineliminating () {
   //
   if (last.elim.fixed < stats.all.fixed)
     return true;
-  if (last.elim.marked < stats.mark.elim)
+  if (last.elim.marked < stats.mark_elim)
     return true;
 
   // VERBOSE (3, "elim not scheduled due to fixpoint");
@@ -774,7 +774,7 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
   stats.elimrounds++;
 
   int64_t marked_before = last.elim.marked;
-  last.elim.marked = stats.mark.elim;
+  last.elim.marked = stats.mark_elim;
   assert (!level);
 
   int64_t resolution_limit;
@@ -879,7 +879,7 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
   // Limit on garbage literals during variable elimination. If the limit is
   // hit a garbage collection is performed.
   //
-  const int64_t garbage_limit = (2 * stats.irrlits / 3) + (1 << 20);
+  const int64_t garbage_limit = (2 * stats.irredundant_literals / 3) + (1 << 20);
 
   // Main loops tries to eliminate variables according to the schedule. The
   // schedule is updated dynamically and variables are potentially
@@ -897,7 +897,7 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
 #ifndef QUIET
     tried++;
 #endif
-    if (stats.garbage.literals <= garbage_limit)
+    if (stats.garbage_literals <= garbage_limit)
       continue;
     mark_redundant_clauses_with_eliminated_variables_as_garbage ();
     garbage_collection ();

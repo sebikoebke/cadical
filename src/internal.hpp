@@ -372,15 +372,15 @@ struct Internal {
   bool active (int lit) { return flags (lit).active (); }
 
   int active () const {
-    int res = stats.active;
+    int res = stats.vars_active;
 #ifndef NDEBUG
     int tmp = max_var;
-    tmp -= stats.unused;
-    tmp -= stats.declared;
-    tmp -= stats.now.fixed;
-    tmp -= stats.now.eliminated;
-    tmp -= stats.now.substituted;
-    tmp -= stats.now.pure;
+    tmp -= stats.vars_unused;
+    tmp -= stats.vars_declared;
+    tmp -= stats.vars_now_fixed;
+    tmp -= stats.vars_now_eliminated;
+    tmp -= stats.vars_now_substituted;
+    tmp -= stats.vars_now_pure;
     assert (tmp >= 0);
     assert (tmp == res);
 #endif
@@ -391,9 +391,9 @@ struct Internal {
 
   // Currently remaining active redundant and irredundant clauses.
 
-  int64_t redundant () const { return stats.current.redundant; }
+  int64_t redundant () const { return stats.clauses_current_redundant; }
 
-  int64_t irredundant () const { return stats.current.irredundant; }
+  int64_t irredundant () const { return stats.clauses_current_irredundant; }
 
   double clause_variable_ratio () const {
     return relative (irredundant (), active ());
@@ -1114,7 +1114,7 @@ struct Internal {
     if (f.subsume)
       return;
     LOG ("marking %d as subsuming literal candidate", abs (lit));
-    stats.mark.subsume++;
+    stats.mark_subsume++;
     f.subsume = true;
   }
   void mark_ternary (int lit) {
@@ -1122,7 +1122,7 @@ struct Internal {
     if (f.ternary)
       return;
     LOG ("marking %d as ternary resolution literal candidate", abs (lit));
-    stats.mark.ternary++;
+    stats.mark_ternary++;
     f.ternary = true;
   }
   void mark_factor (int lit) {
@@ -1131,7 +1131,7 @@ struct Internal {
     if (f.factor & bit)
       return;
     LOG ("marking %d as factor literal candidate", lit);
-    stats.mark.factor++;
+    stats.mark_factor++;
     f.factor |= bit;
   }
   void mark_added (int lit, int size, bool redundant);
@@ -1151,7 +1151,7 @@ struct Internal {
     if (f.elim)
       return;
     LOG ("marking %d as elimination literal candidate", lit);
-    stats.mark.elim++;
+    stats.mark_elim++;
     f.elim = true;
   }
 
@@ -1161,7 +1161,7 @@ struct Internal {
     if (f.block & bit)
       return;
     LOG ("marking %d as blocking literal candidate", lit);
-    stats.mark.block++;
+    stats.mark_block++;
     f.block |= bit;
   }
   void mark_removed (int lit) {
@@ -1985,7 +1985,7 @@ inline bool Internal::search_limits_hit () {
   }
 
   if (lim.ticks >= 0 &&
-      stats.ticks_search[0] + stats.ticks_search[1] >= lim.ticks) {
+      stats.ticks_search_unstable + stats.ticks_search_stable >= lim.ticks) {
     LOG ("ticks limit %" PRId64 " reached", lim.ticks);
     return true;
   }

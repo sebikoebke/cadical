@@ -80,7 +80,7 @@ bool Internal::is_blocked_clause (Clause *c, int lit) {
     prev_d = d;  // backwards but remember clause at this position.
 
     LOG (d, "resolving on %d against", lit);
-    stats.blockres++;
+    stats.blocked_resolutions++;
 
     int prev_other = 0; // Previous non-tautological literal.
 
@@ -259,7 +259,7 @@ void Internal::block_pure_literal (Blocker &blocker, int lit) {
   for (const auto &c : nos)
     assert (c->garbage);
 #endif
-  stats.blockpurelits++;
+  stats.blocked_pure_literals++;
   LOG ("found pure literal %d", lit);
 #ifdef LOGGING
   int64_t pured = 0;
@@ -274,7 +274,7 @@ void Internal::block_pure_literal (Blocker &blocker, int lit) {
       proof->weaken_minus (c);
     }
     external->push_clause_on_extension_stack (c, lit);
-    stats.blockpured++;
+    stats.blocked_pure++;
     mark_garbage (c);
 #ifdef LOGGING
     pured++;
@@ -285,7 +285,7 @@ void Internal::block_pure_literal (Blocker &blocker, int lit) {
   erase_vector (nos);
 
   mark_pure (lit);
-  stats.blockpured++;
+  stats.blocked_pure++;
   LOG ("blocking %" PRId64 " clauses on pure literal %d", pured, lit);
 }
 
@@ -707,7 +707,7 @@ void Internal::block_literal (Blocker &blocker, int lit) {
        "with %" PRIu64 " positive and %" PRIu64 " negative occurrences",
        lit, noccs (lit), noccs (-lit));
 
-  stats.blockcands++;
+  stats.blocked_candidates++;
 
   assert (blocker.reschedule.empty ());
   assert (blocker.candidates.empty ());
@@ -740,7 +740,7 @@ bool Internal::block () {
     return false;
   if (unsat)
     return false;
-  if (!stats.current.irredundant)
+  if (!stats.clauses_current_irredundant)
     return false;
   if (terminated_asynchronously ())
     return false;
@@ -779,9 +779,9 @@ bool Internal::block () {
   block_schedule (blocker);
 
   int64_t blocked = stats.blocked;
-  int64_t resolutions = stats.blockres;
-  int64_t purelits = stats.blockpurelits;
-  int64_t pured = stats.blockpured;
+  int64_t resolutions = stats.blocked_resolutions;
+  int64_t purelits = stats.blocked_pure_literals;
+  int64_t pured = stats.blocked_pure;
 
   while (!terminated_asynchronously () && !blocker.schedule.empty ()) {
     int lit = u2i (blocker.schedule.front ());
@@ -794,15 +794,15 @@ bool Internal::block () {
   reset_noccs ();
   reset_occs ();
 
-  resolutions = stats.blockres - resolutions;
+  resolutions = stats.blocked_resolutions - resolutions;
   blocked = stats.blocked - blocked;
 
   PHASE ("block", stats.blockings,
          "blocked %" PRId64 " clauses in %" PRId64 " resolutions", blocked,
          resolutions);
 
-  pured = stats.blockpured - pured;
-  purelits = stats.blockpurelits - purelits;
+  pured = stats.blocked_pure - pured;
+  purelits = stats.blocked_pure_literals - purelits;
 
   if (pured)
     mark_redundant_clauses_with_eliminated_variables_as_garbage ();

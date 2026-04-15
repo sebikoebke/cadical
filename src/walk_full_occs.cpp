@@ -829,8 +829,8 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
     PHASE ("walk", stats.walk.count,
            "starting with %zd unsatisfied clauses "
            "(%.0f%% out of %" PRId64 ")",
-           broken, percent (broken, stats.current.irredundant),
-           stats.current.irredundant);
+           broken, percent (broken, stats.clauses_current_irredundant),
+           stats.clauses_current_irredundant);
 
     walk_full_occs_save_minimum (walker);
     assert (stats.walk.minimum <= walker.minimum);
@@ -947,7 +947,7 @@ void Internal::walk_full_occs () {
     STOP_INNER_WALK ();
     return;
   }
-  const int64_t ticks = stats.ticks_search[0] + stats.ticks_search[1];
+  const int64_t ticks = stats.ticks_search_unstable + stats.ticks_search_stable;
   int64_t limit = ticks - last.walk.ticks;
   VERBOSE (2,
            "walk scheduling: last %" PRId64 " current %" PRId64

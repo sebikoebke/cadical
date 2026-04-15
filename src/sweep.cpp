@@ -1885,7 +1885,7 @@ bool Internal::sweep () {
   if (terminated_asynchronously ())
     return false;
   if (delaying_sweep.bumpreasons.delay ()) { // TODO need to fix Delay
-    last.sweep.ticks = stats.ticks_search[0] + stats.ticks_search[1];
+    last.sweep.ticks = stats.ticks_search_unstable + stats.ticks_search_stable;
     return false;
   }
   delaying_sweep.bumpreasons.bypass_delay ();

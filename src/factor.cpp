@@ -1529,12 +1529,12 @@ bool Internal::factor () {
   }
   // The following assertion fails if there are *only* user propagator
   // clauses (which are redundant).
-  // assert (stats.mark.factor || clauses.empty ());
-  if (last.factor.marked >= stats.mark.factor) {
+  // assert (stats.mark_factor || clauses.empty ());
+  if (last.factor.marked >= stats.mark_factor) {
     VERBOSE (3,
              "factorization skipped as no literals have been"
              "marked to be added (%" PRIu64 " < %" PRIu64 ")",
-             last.factor.marked, stats.mark.factor);
+             last.factor.marked, stats.mark_factor);
     return false;
   }
   assert (!level);
@@ -1555,7 +1555,7 @@ bool Internal::factor () {
   } before, after, delta;
   before.variables = stats.variables_extension + stats.variables_original;
   before.ticks = stats.ticks_factor;
-  before.clauses = stats.current.irredundant;
+  before.clauses = stats.clauses_current_irredundant;
 #endif
 
   // TODO: redundant mode sometimes?
@@ -1570,7 +1570,7 @@ bool Internal::factor () {
 
 #ifndef QUIET
   after.variables = stats.variables_extension + stats.variables_original;
-  after.clauses = stats.current.irredundant;
+  after.clauses = stats.clauses_current_irredundant;
   after.ticks = stats.ticks_factor;
   delta.variables = after.variables - before.variables;
   delta.clauses = before.clauses - after.clauses;
@@ -1585,7 +1585,7 @@ bool Internal::factor () {
 #endif
 
   if (completed)
-    last.factor.marked = stats.mark.factor;
+    last.factor.marked = stats.mark_factor;
   STOP_SIMPLIFIER (factor, FACTOR);
   return true;
 }

@@ -1858,16 +1858,16 @@ int64_t Solver::get_statistic_value (const char *opt) const {
   if (!strcmp (opt, "decisions"))
     return internal->stats.decisions;
   if (!strcmp (opt, "ticks"))
-    return internal->stats.ticks_search[0] +
-           internal->stats.ticks_search[1];
+    return internal->stats.ticks_search_unstable +
+           internal->stats.ticks_search_stable;
   if (!strcmp (opt, "propagations"))
     return internal->stats.propagations_search;
   if (!strcmp (opt, "clauses"))
-    return internal->stats.current.total;
+    return internal->stats.clauses_current_total;
   if (!strcmp (opt, "redundant"))
-    return internal->stats.current.redundant;
+    return internal->stats.clauses_current_redundant;
   if (!strcmp (opt, "irredundant"))
-    return internal->stats.current.irredundant;
+    return internal->stats.clauses_current_irredundant;
   if (!strcmp (opt, "fixed"))
     return internal->stats.all.fixed;
   if (!strcmp (opt, "eliminated"))

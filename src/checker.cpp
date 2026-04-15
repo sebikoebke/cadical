@@ -43,7 +43,8 @@ CheckerClause *Checker::new_clause () {
   const size_t actual_literal_bytes = size * sizeof (int);
   size_t combined_bytes = header_bytes + actual_literal_bytes;
 #ifdef NFLEXIBLE
-  const size_t faked_literals_bytes = sizeof ((CheckerClause *) 0)->literals;
+  const size_t faked_literals_bytes =
+      sizeof ((CheckerClause *) 0)->literals;
   combined_bytes -= faked_literals_bytes;
 #endif
   CheckerClause *res = (CheckerClause *) new char[combined_bytes];
@@ -536,7 +537,7 @@ void Checker::add_clause (const char *type) {
   } else if (unit != INT_MIN) {
     LOG ("CHECKER added and checked %s unit clause %d", type, unit);
     assign (unit);
-    stats.learned_units++;
+    stats.units++;
     if (!propagate ()) {
       LOG ("CHECKER inconsistent after propagating %s unit", type);
       inconsistent = true;
