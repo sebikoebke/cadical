@@ -26,6 +26,7 @@ static const char *USAGE =
 "\n"
 "  -v | --verbose    increase verbosity\n"
 "  -q | --quiet      be quiet (only print failing and reduced traces)\n"
+"  -s | --stats      print summary of cadical statistics\n"
 "\n"
 "  --colors          force colors for both '<stdout>' and '<stderr>'\n"
 "  --no-colors       disable colors if '<stderr>' is connected to terminal\n"
@@ -248,6 +249,24 @@ struct Shared {
   int64_t timeout;
   int64_t oom;
 
+  struct {
+#define STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT) int64_t NAME = 0;
+
+    CADICAL_STATISTICS
+
+#undef STATISTIC
+
+  } stats_sum;
+
+  struct {
+#define STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT) int64_t NAME = 0;
+
+    CADICAL_STATISTICS
+
+#undef STATISTIC
+
+  } stats_count;
+
 #ifdef MOBICAL_MEMORY
 #define MOBICAL_MEMORY_STACK_COUNT 64
 #define MOBICAL_MEMORY_LEAK_COUNT (1024 * 64)
@@ -294,9 +313,9 @@ struct ExtendMap {
     if (declare_new_var) {
       extend_map_to (abs_arg);
       if (factor_check)
-        map[abs_arg] = s->declare_one_more_variable();
+        map[abs_arg] = s->declare_one_more_variable ();
       else
-       map[abs_arg] = s->vars () + 1;
+        map[abs_arg] = s->vars () + 1;
       return map[abs_arg] * sign;
     }
     const int max_var = s->vars ();
@@ -322,8 +341,8 @@ struct ExtendMap {
   // Does not do anything if diff == 0.
   //
   // Important: this mimics the `declare_more_variable`, but does not call
-  // `declare_more_variable`. It is the only place in this class where we use
-  // our internal knowledge of the API.
+  // `declare_more_variable`. It is the only place in this class where we
+  // use our internal knowledge of the API.
   void extend_map_by (Solver *&s, int diff) {
     assert (diff >= 0);
     if (map.empty ())
@@ -335,7 +354,6 @@ struct ExtendMap {
     for (int i = 1; i <= diff; i++)
       map.push_back (max_var + i);
   }
-
 };
 
 /*------------------------------------------------------------------------*/
@@ -440,9 +458,7 @@ private:
     return lemma->id;
   }
 
-  void extend_map (int arg) {
-    extendmap->extend_map_to(arg);
-  }
+  void extend_map (int arg) { extendmap->extend_map_to (arg); }
 
   int map_arg (int arg, bool declare_new_var = true) {
     return extendmap->map_arg (s, arg, declare_new_var);
@@ -528,10 +544,10 @@ public:
     if (!new_ovars) {
       const int abs_lit = abs (lit);
       extend_map (lit);
-      assert ((size_t)abs_lit < extendmap->map.size());
+      assert ((size_t) abs_lit < extendmap->map.size ());
       const int elit = map_arg (abs_lit);
       if (elit && !s->is_witness (elit)) { // does not extend map
-        s->add_observed_var (elit); // might be different
+        s->add_observed_var (elit);        // might be different
         observed_variables.insert (elit);
       }
     } else {
@@ -1117,6 +1133,7 @@ class Mobical : public Handler {
 
   bool verbose = false;
   bool quiet = false;
+  bool stats = false;
 
   bool add_set_log_to_true = false;
   bool add_dump_before_solve = false;
@@ -1190,6 +1207,7 @@ class Mobical : public Handler {
   int64_t traces = 0;
   int64_t spurious = 0;
 
+  void add_statistics (Solver *solver);
   void print_statistics ();
 
   /*----------------------------------------------------------------------*/
@@ -1449,15 +1467,16 @@ struct Call {
   // extend the size of `extendmap` to reach size `std::abs (arg)`.
   virtual void extend_map_to (Solver *&s, ExtendMap &extendmap, int arg) {
     extendmap.extend_map_to (arg);
-    (void)s;
+    (void) s;
   }
 
-  virtual int map_arg (Solver *&s, ExtendMap &extendmap, bool declare_new_var = true) {
+  virtual int map_arg (Solver *&s, ExtendMap &extendmap,
+                       bool declare_new_var = true) {
     if (!lit_type ())
       return arg;
     if (extendmap_type ())
       extend_map_to (s, extendmap);
-    return extendmap.map_arg(s, arg, declare_new_var);
+    return extendmap.map_arg (s, arg, declare_new_var);
   }
 
   virtual void execute (Solver *&, ExtendMap &extendmap) = 0;
@@ -1590,15 +1609,17 @@ struct ResizeCall : public Call {
 };
 
 struct DeclareMoreVariablesCall : public Call {
-  DeclareMoreVariablesCall (int max_var) : Call (RESIZE, max_var) {arg = max_var;}
+  DeclareMoreVariablesCall (int max_var) : Call (RESIZE, max_var) {
+    arg = max_var;
+  }
   void execute (Solver *&s, ExtendMap &extendmap) {
     extend_map_by (s, extendmap, arg);
 #ifndef NDEBUG
     int i =
 #endif
-      s->declare_more_variables (arg);
-    // check that our mapping from trace literals to external literals matchs
-    // the `declare_more_variables` result.
+        s->declare_more_variables (arg);
+    // check that our mapping from trace literals to external literals
+    // matchs the `declare_more_variables` result.
     assert (!arg || i == s->vars ());
     assert (!arg || extendmap.map.back () == i);
   }
@@ -1614,7 +1635,7 @@ struct DeclareOneMoreVariableCall : public Call {
 #ifndef NDEBUG
     int i =
 #endif
-      s->declare_one_more_variable ();
+        s->declare_one_more_variable ();
     assert (i == s->vars ());
     assert (extendmap.map.back () == i);
   }
@@ -1772,7 +1793,9 @@ struct LemmaCall : public Call {
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
 
-    if (mp && (!arg || s->observed (map_arg (s, extendmap, false)))) { // || mobical.donot.enforce
+    if (mp &&
+        (!arg || s->observed (map_arg (
+                     s, extendmap, false)))) { // || mobical.donot.enforce
       mp->push_lemma_lit (map_arg (s, extendmap));
     }
   }
@@ -2285,6 +2308,9 @@ public:
             else
               break;
           }
+        }
+        if (mobical.shared && c->type == Call::RESET) {
+          mobical.add_statistics (solver);
         }
         if (mobical.shared && process_type (c->type)) {
           mobical.shared->solved++;
@@ -3313,6 +3339,43 @@ static int rounded_percent (double a, double b) {
   return 0.5 + percent (a, b);
 }
 
+void Mobical::add_statistics (Solver *solver) {
+  assert (solver && shared);
+#define STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT) \
+  shared->stats_sum.NAME += solver->internal->stats.NAME;
+
+  CADICAL_STATISTICS
+
+#undef STATISTIC
+
+#define STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT) \
+  if (solver->internal->stats.NAME) \
+    shared->stats_count.NAME++;
+
+  CADICAL_STATISTICS
+
+#undef STATISTIC
+}
+
+#define PRINT_STATER(NAME, PRIMARY, INC, SECONDARY, UNITS, TYPE) \
+  do { \
+    prefix (); \
+    cerr << terminal.normal () << NAME << ": " PRIMARY << " "; \
+    const uint64_t SAVED_INC = (uint64_t) (INC); \
+    const double SAVED_SECONDARY = (double) (SECONDARY); \
+    const char *SAVED_UNITS = (const char *) (UNITS); \
+    const char *BOLDER = BOLD; \
+    cerr << terminal.bold (); \
+    if (SAVED_SECONDARY < 20) \
+      cerr << terminal.red (true); \
+    else if (SAVED_SECONDARY > 80) \
+      cerr << terminal.blue (true); \
+    else \
+      cerr << terminal.yellow (true); \
+    cerr << SAVED_SECONDARY << " " << SAVED_UNITS << terminal.normal (); \
+    << std::endl; \
+  } while (0)
+
 void Mobical::print_statistics () {
 
   if (!quiet)
@@ -3355,6 +3418,15 @@ void Mobical::print_statistics () {
       cerr << "out-of-time " << shared->timeout << ", " << "out-of-memory "
            << shared->memout << endl
            << flush;
+    }
+    if (stats) {
+#define STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT) \
+  PRINT_STATER (#NAME, shared->stats_sum->NAME, shared->stats_count->NAME, \
+                shared->executed, "%", "executed"); //, executed);
+
+      CADICAL_STATISTICS
+
+#undef STATISTIC
     }
   }
 
