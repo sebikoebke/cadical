@@ -46,7 +46,7 @@ void External::push_witness_literal_on_extension_stack (int ilit) {
 
 void External::push_clause_on_extension_stack (Clause *c) {
   internal->stats.weakened++;
-  internal->stats.weakenedlen += c->size;
+  internal->stats.weakened_lengths += c->size;
   push_zero_on_extension_stack ();
   push_id_on_extension_stack (c->id);
   push_zero_on_extension_stack ();
@@ -63,7 +63,7 @@ void External::push_clause_on_extension_stack (Clause *c, int pivot) {
 void External::push_binary_clause_on_extension_stack (int64_t id, int pivot,
                                                       int other) {
   internal->stats.weakened++;
-  internal->stats.weakenedlen += 2;
+  internal->stats.weakened_lengths += 2;
   push_zero_on_extension_stack ();
   push_witness_literal_on_extension_stack (pivot);
   push_zero_on_extension_stack ();

@@ -418,7 +418,7 @@ struct Walker_DDFW {
 Walker_DDFW::Walker_DDFW (Internal *i, int64_t l)
     : internal (i), random (internal->opts.seed), // global random seed
       ticks (0), limit (l), best_trail_pos (-1) {
-  random += internal->stats.walk.count; // different seed every time
+  random += internal->stats.walk; // different seed every time
   flips.reserve (i->max_var / 4);
   best_values.resize (i->max_var + 1, 0);
   woccs.resize (i->max_var * 2 + 2);
@@ -527,7 +527,7 @@ void Walker_DDFW::save_final_minimum (size_t old_init_minimum) {
   else
     save_walker_trail (false);
 
-  ++internal->stats.walk.improved;
+  ++internal->stats.walk_improved;
   for (auto v : internal->vars) {
     if (best_values[v])
       internal->phases.saved[v] = best_values[v];
@@ -629,7 +629,7 @@ void Walker_DDFW::make_clauses (int lit) {
   //   make_clauses_along_unsatisfied(lit);
   // else
   make_clauses_along_occurrences (lit);
-  internal->stats.ticks_walkflipWL += ticks - old;
+  internal->stats.ticks_walk_flip_wl += ticks - old;
   STOP (walkflipWL);
 }
 
@@ -687,7 +687,7 @@ void Walker_DDFW::break_clauses (int lit) {
 #endif
   }
   LOG ("broken %zd clauses by flipping %d", broken, lit);
-  internal->stats.ticks_walkflipbroken += ticks - old;
+  internal->stats.ticks_walk_flip_broken += ticks - old;
   STOP (walkflipbroken);
 }
 
@@ -709,7 +709,7 @@ void Walker_DDFW::walk_ddfw_flip_lit (int lit) {
   make_clauses (lit);
   break_clauses (-lit);
 
-  internal->stats.ticks_walkflip += ticks - old;
+  internal->stats.ticks_walk_flip += ticks - old;
   STOP (walkflip);
 }
 
@@ -784,9 +784,9 @@ void Walker_DDFW::do_sideways_jump () {
   int lit = no_gain_literals[pos];
   walk_ddfw_flip_lit (lit);
   push_flipped (lit);
-  internal->stats.walk.flips++;
-  internal->stats.walk.broken += broken.size ();
-  ++internal->stats.walk.sideways;
+  internal->stats.walk_flips++;
+  internal->stats.walk_broken += broken.size ();
+  ++internal->stats.walk_sideways;
 }
 
 void Walker_DDFW::transfer_weights () {
@@ -802,7 +802,7 @@ void Walker_DDFW::transfer_weights () {
   tranferred_weights += broken.size ();
 #endif
 
-  ++internal->stats.walk.weight_transfer;
+  ++internal->stats.walk_weight_transfer;
   ticks +=
       (1 + internal->cache_lines (broken.size (), sizeof (DDFW_Tagged)));
   for (auto c : broken) {
@@ -912,8 +912,8 @@ inline void Internal::walk_ddfw_save_minimum (Walker_DDFW &walker) {
   size_t broken = walker.broken.size ();
   if (broken >= walker.minimum)
     return;
-  if (broken <= stats.walk.minimum) {
-    stats.walk.minimum = broken;
+  if (broken <= stats.walk_minimum) {
+    stats.walk_minimum = broken;
     VERBOSE (3, "new global minimum %zd", broken);
   } else {
     VERBOSE (3, "new walk minimum %zd", broken);
@@ -1128,7 +1128,7 @@ bool Walker_DDFW::import_clauses (bool &failed) {
 
 int Internal::walk_ddfw_round (int64_t limit, bool prev) {
 
-  stats.walk.count++;
+  stats.walk++;
 
   std::vector<int> propagated;
   bool failed = false; // Inconsistent assumptions?
@@ -1155,10 +1155,10 @@ int Internal::walk_ddfw_round (int64_t limit, bool prev) {
   }
 #endif
 
-  PHASE ("walk", stats.walk.count,
+  PHASE ("walk", stats.walk,
          "random walk limit of %" PRId64 " ticks", limit);
 
-  PHASE ("walk", stats.walk.count,
+  PHASE ("walk", stats.walk,
          "%zd clauses over %d variables", clauses.size (),
          active ());
 
@@ -1233,14 +1233,14 @@ int Internal::walk_ddfw_round (int64_t limit, bool prev) {
     size_t broken = walker.broken.size ();
     size_t initial_minimum = broken;
 
-    PHASE ("walk", stats.walk.count,
+    PHASE ("walk", stats.walk,
            "starting with %zd unsatisfied clauses "
            "(%.0f%% out of %" PRId64 ")",
            broken, percent (broken, stats.clauses_current_irredundant),
            stats.clauses_current_irredundant);
 
     walk_ddfw_save_minimum (walker);
-    assert (stats.walk.minimum <= walker.minimum);
+    assert (stats.walk_minimum <= walker.minimum);
 
     size_t minimum = broken;
 #ifndef QUIET
@@ -1255,7 +1255,7 @@ int Internal::walk_ddfw_round (int64_t limit, bool prev) {
 #endif
 #ifndef NDEBUG
       //useful for debugging, but really really really expensive
-      if (internal->stats.walk.flips % 100 == 000)
+      if (internal->stats.walk_flips % 100 == 000)
         walker.check_all();
 #endif
 
@@ -1273,12 +1273,12 @@ int Internal::walk_ddfw_round (int64_t limit, bool prev) {
       // for the Tassat strategy than for the others, because it transfers more
       // weights at once (especially compared to the original ddfw).
       if (weight_reducing_lit && weight_reduction > 0.1) {
-        ++stats.walk.weight_reducing_var;
+        ++stats.walk_weight_reducing;
         LOG ("flipping one literal");
         walker.walk_ddfw_flip_lit (weight_reducing_lit);
         walker.push_flipped (weight_reducing_lit);
-        stats.walk.flips++;
-        stats.walk.broken += broken;
+        stats.walk_flips++;
+        stats.walk_broken += broken;
         broken = walker.broken.size ();
         LOG ("now have %zd broken clauses in total", broken);
         if (broken < minimum) {
@@ -1315,13 +1315,13 @@ int Internal::walk_ddfw_round (int64_t limit, bool prev) {
     walker.save_final_minimum (initial_minimum);
 #ifndef QUIET
     if (minimum == initial_minimum) {
-      PHASE ("walk", internal->stats.walk.count,
+      PHASE ("walk", internal->stats.walk,
              "%sno improvement %zd%s in %" PRId64 " flips and "
              "%" PRId64 " ticks",
              tout.bright_yellow_code (), minimum, tout.normal_code (),
              flips, walker.ticks);
     } else {
-      PHASE ("walk", internal->stats.walk.count,
+      PHASE ("walk", internal->stats.walk,
              "best phase minimum %zd in %" PRId64 " flips and "
              "%" PRId64 " ticks",
              minimum, flips, walker.ticks);
@@ -1329,17 +1329,17 @@ int Internal::walk_ddfw_round (int64_t limit, bool prev) {
 #endif
 
     if (opts.profile >= 2) {
-      PHASE ("walk", stats.walk.count, "%.2f million ticks per second",
+      PHASE ("walk", stats.walk, "%.2f million ticks per second",
              1e-6 *
                  relative (walker.ticks, time () - profiles.walk.started));
 
-      PHASE ("walk", stats.walk.count, "%.2f thousand flips per second",
+      PHASE ("walk", stats.walk, "%.2f thousand flips per second",
              relative (1e-3 * flips, time () - profiles.walk.started));
 
     } else {
-      PHASE ("walk", stats.walk.count, "%.2f ticks", 1e-6 * walker.ticks);
+      PHASE ("walk", stats.walk, "%.2f ticks", 1e-6 * walker.ticks);
 
-      PHASE ("walk", stats.walk.count, "%.2f thousand flips", 1e-3 * flips);
+      PHASE ("walk", stats.walk, "%.2f thousand flips", 1e-3 * flips);
     }
 
     if (minimum > 0) {
@@ -1355,7 +1355,7 @@ int Internal::walk_ddfw_round (int64_t limit, bool prev) {
 
     res = 20;
 
-    PHASE ("walk", stats.walk.count,
+    PHASE ("walk", stats.walk,
            "aborted due to inconsistent assumptions");
   }
 

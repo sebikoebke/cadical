@@ -271,7 +271,8 @@ bool LratChecker::check_resolution (vector<int64_t> proof_chain) {
       return false;
     }
     if (!checked_lit (lit)) {
-      LOG ("literal %d of the clause is not present in the resolvents.", lit);
+      LOG ("literal %d of the clause is not present in the resolvents.",
+           lit);
       // learned clause is subsumed by resolvents
       // should only be triggered by following options.
       assert (internal->opts.sweep || internal->opts.cover ||
@@ -456,7 +457,7 @@ void LratChecker::add_original_clause (int64_t id, bool,
   LOG (c, "LRAT CHECKER addition of original clause[%" PRId64 "]", id);
   if (restore)
     restore_clause (id, c);
-  stats.clauses_added_+;
+  stats.added++;
   stats.original++;
   import_clause (c);
   last_id = id;
@@ -487,7 +488,7 @@ void LratChecker::add_derived_clause (int64_t id, bool, int w,
   assert (!w || c[0] == w);
   if (w)
     stats.rat++;
-  stats.clauses_added_+;
+  stats.added++;
   stats.derived++;
   import_clause (c);
   last_id = id;

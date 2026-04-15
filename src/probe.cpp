@@ -232,7 +232,7 @@ inline int Internal::hyper_binary_resolve (Clause *reason) {
 #endif
   LOG (reason, "hyper binary resolving");
   stats.hbrs++;
-  stats.hbrsizes += reason->size;
+  stats.hbr_sizes += reason->size;
   const int lit = lits[1];
   int dom = -lit, non_root_level_literals = 0;
   for (k = lits + 2; k != end; k++) {
@@ -250,7 +250,7 @@ inline int Internal::hyper_binary_resolve (Clause *reason) {
       contained = (*k == -dom);
     const bool red = !contained || reason->redundant;
     if (red)
-      stats.hbreds++;
+      stats.hbrs++;
     LOG ("new %s hyper binary resolvent %d %d",
          (red ? "redundant" : "irredundant"), -dom, lits[0]);
     assert (clause.empty ());
@@ -266,7 +266,7 @@ inline int Internal::hyper_binary_resolve (Clause *reason) {
     clause.clear ();
     lrat_chain.clear ();
     if (contained) {
-      stats.hbrsubs++;
+      stats.hbr_subsuming++;
       LOG (reason, "subsumed original");
       mark_garbage (reason);
     }
@@ -499,7 +499,7 @@ bool Internal::probe_propagate () {
     } else
       break;
   }
-  int64_t delta = (int64_t)propagated2 - before;
+  int64_t delta = (int64_t) propagated2 - before;
   stats.propagations_probe += delta;
   if (conflict)
     LOG (conflict, "conflict");
@@ -514,8 +514,8 @@ bool Internal::probe_propagate () {
 void Internal::failed_literal (int failed) {
 
   LOG ("analyzing failed literal probe %d", failed);
-  stats.failed++;
-  stats.probefailed++;
+  stats.failed_literals++;
+  stats.probe_failed_literals++;
 
   assert (!unsat);
   assert (conflict);
@@ -808,7 +808,7 @@ bool Internal::probe () {
   PHASE ("probe-round", stats.probingrounds,
          "probing limit of %" PRId64 " propagations ", limit);
 
-  int old_failed = stats.failed;
+  int old_failed = stats.failed_literals;
 #ifndef QUIET
   int64_t old_probed = stats.probed;
 #endif
@@ -853,7 +853,7 @@ bool Internal::probe () {
       sort_watches ();
   }
 
-  int failed = stats.failed - old_failed;
+  int failed = stats.failed_literals - old_failed;
 #ifndef QUIET
   int64_t probed = stats.probed - old_probed;
 #endif
@@ -970,10 +970,10 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
   assert (removed >= 0);
 
   if (removed) {
-    stats.inprobesuccess++;
+    stats.inprobingsuccess++;
     PHASE ("probe-phase", stats.inprobingphases,
-           "successfully removed %" PRId64 " active variables %.0f%%", removed,
-           percent (removed, before));
+           "successfully removed %" PRId64 " active variables %.0f%%",
+           removed, percent (removed, before));
   } else
     PHASE ("probe-phase", stats.inprobingphases,
            "could not remove any active variable");

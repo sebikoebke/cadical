@@ -37,9 +37,9 @@ bool Internal::rephasing () {
 // Pick the original default phase.
 
 char Internal::rephase_original () {
-  stats.rephased.original++;
+  stats.rephased_original++;
   signed char val = opts.phase ? 1 : -1; // original = initial
-  PHASE ("rephase", stats.rephased.total, "switching to original phase %d",
+  PHASE ("rephase", stats.rephased, "switching to original phase %d",
          val);
   for (auto idx : vars)
     phases.saved[idx] = val;
@@ -49,9 +49,9 @@ char Internal::rephase_original () {
 // Pick the inverted original default phase.
 
 char Internal::rephase_inverted () {
-  stats.rephased.inverted++;
+  stats.rephased_inverted++;
   signed char val = opts.phase ? -1 : 1; // original = -initial
-  PHASE ("rephase", stats.rephased.total,
+  PHASE ("rephase", stats.rephased,
          "switching to inverted original phase %d", val);
   for (auto idx : vars)
     phases.saved[idx] = val;
@@ -61,8 +61,8 @@ char Internal::rephase_inverted () {
 // Flip the current phase.
 
 char Internal::rephase_flipping () {
-  stats.rephased.flipped++;
-  PHASE ("rephase", stats.rephased.total,
+  stats.rephased_flipped++;
+  PHASE ("rephase", stats.rephased,
          "flipping all phases individually");
   for (auto idx : vars)
     phases.saved[idx] *= -1;
@@ -72,10 +72,10 @@ char Internal::rephase_flipping () {
 // Complete random picking of phases.
 
 char Internal::rephase_random () {
-  stats.rephased.random++;
-  PHASE ("rephase", stats.rephased.total, "resetting all phases randomly");
+  stats.rephased_random++;
+  PHASE ("rephase", stats.rephased, "resetting all phases randomly");
   Random random (opts.seed);       // global seed
-  random += stats.rephased.random; // different every time
+  random += stats.rephased_random; // different every time
   for (auto idx : vars)
     phases.saved[idx] = random.generate_bool () ? -1 : 1;
   return '#';
@@ -85,8 +85,8 @@ char Internal::rephase_random () {
 // See code and comments in 'update_target_and_best' in 'backtrack.cpp'
 
 char Internal::rephase_best () {
-  stats.rephased.best++;
-  PHASE ("rephase", stats.rephased.total,
+  stats.rephased_best++;
+  PHASE ("rephase", stats.rephased,
          "overwriting saved phases by best phases");
   signed char val;
   for (auto idx : vars)
@@ -98,8 +98,8 @@ char Internal::rephase_best () {
 // Trigger local search 'walk' in 'walk.cpp'.
 
 char Internal::rephase_walk () {
-  stats.rephased.walk++;
-  PHASE ("rephase", stats.rephased.total,
+  stats.rephased_walk++;
+  PHASE ("rephase", stats.rephased,
          "starting local search to improve current phase");
   if (opts.walkfullocc == 1)
     walk_full_occs ();
@@ -114,10 +114,10 @@ char Internal::rephase_walk () {
 
 void Internal::rephase () {
 
-  stats.rephased.total++;
+  stats.rephased++;
   last.stabilize.rephased++;
-  assert (last.stabilize.rephased <= stats.rephased.total);
-  PHASE ("rephase", stats.rephased.total,
+  assert (last.stabilize.rephased <= stats.rephased);
+  PHASE ("rephase", stats.rephased,
          "reached rephase limit %" PRId64 " after %" PRId64 " conflicts",
          lim.rephase,
          opts.rephase == 2 ? stats.stabconflicts : stats.conflicts);
@@ -379,11 +379,11 @@ void Internal::rephase () {
   copy_phases (phases.target);
   // resetting target_assigned is not in `update_target_and_best`.
 
-  int64_t delta = opts.rephaseint * (stats.rephased.total + 1);
+  int64_t delta = opts.rephaseint * (stats.rephased + 1);
   lim.rephase =
       (opts.rephase == 2 ? stats.stabconflicts : stats.conflicts) + delta;
 
-  PHASE ("rephase", stats.rephased.total,
+  PHASE ("rephase", stats.rephased,
          "new rephase limit %" PRId64 " after %" PRId64 " conflicts",
          lim.rephase, delta);
 

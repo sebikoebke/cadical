@@ -173,7 +173,7 @@ bool Internal::inst_propagate () { // Adapted from 'propagate'.
 // This is the instantiation attempt.
 
 bool Internal::instantiate_candidate (int lit, Clause *c) {
-  stats.instried++;
+  stats.instantiate_tried++;
   if (c->garbage)
     return false;
   assert (!level);
@@ -312,7 +312,7 @@ bool Internal::instantiate_candidate (int lit, Clause *c) {
 void Internal::instantiate (Instantiator &instantiator) {
   assert (opts.instantiate);
   START (instantiate);
-  stats.instrounds++;
+  stats.instantiations++;
 #ifndef QUIET
   const int64_t candidates = instantiator.candidates.size ();
   int64_t tried = 0;
@@ -327,7 +327,7 @@ void Internal::instantiate (Instantiator &instantiator) {
       assert (unsat);
     }
   }
-  PHASE ("instantiate", stats.instrounds,
+  PHASE ("instantiate", stats.instantiations,
          "attempting to instantiate %" PRId64
          " candidate literal clause pairs",
          candidates);
@@ -353,7 +353,7 @@ void Internal::instantiate (Instantiator &instantiator) {
              tried, percent (tried, candidates),
              percent (instantiated, tried), cand.negoccs, cand.size);
   }
-  PHASE ("instantiate", stats.instrounds,
+  PHASE ("instantiate", stats.instantiations,
          "instantiated %" PRId64 " candidate successfully "
          "out of %" PRId64 " tried %.1f%%",
          instantiated, tried, percent (instantiated, tried));

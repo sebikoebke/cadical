@@ -101,7 +101,7 @@ inline void Internal::search_assign (int lit, Clause *reason) {
   if (level)
     require_mode (SEARCH);
 
-  assert (!flags (lit).unused());
+  assert (!flags (lit).unused ());
   const int idx = vidx (lit);
   const bool from_external = reason == external_reason;
   assert (!val (idx));
@@ -227,8 +227,8 @@ bool Internal::propagate () {
   LOG ("starting propagate");
 
   // IPASIR-UP make everything harder.
-  if (!imports.empty())
-    activating_all_new_imported_literals();
+  if (!imports.empty ())
+    activating_all_new_imported_literals ();
 
   START (propagate);
 
@@ -471,14 +471,15 @@ bool Internal::propagate () {
     // Avoid updating stats eagerly in the hot-spot of the solver.
     //
     stats.propagations_search += propagated - before;
-    stats.ticks_search[stable] += ticks;
+    stable ? stats.ticks_search_stable += ticks
+           : stats.ticks_search_unstable += ticks;
 
     if (!conflict)
       no_conflict_until = propagated;
     else {
 
       if (stable)
-        stats.stabconflicts++;
+        stats.stable_conflicts++;
       stats.conflicts++;
 
       LOG (conflict, "conflict");

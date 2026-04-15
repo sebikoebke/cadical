@@ -135,7 +135,7 @@ Report::Report (const char *h, int precision, int min, double value)
   REPORT ("MB", 0, 2, MB) \
   REPORT ("level", 0, 2, averages.current.level) \
   REPORT ("reductions", 0, 1, stats.reductions) \
-  REPORT ("restarts", 0, 3, stats.restarts) \
+  REPORT ("restarts", 0, 3, stats.restart) \
   REPORT ("rate", 0, 2, averages.current.decisions) \
   REPORT ("conflicts", 0, 4, stats.conflicts) \
   REPORT ("redundant", 0, 4, stats.clauses_current_redundant) \

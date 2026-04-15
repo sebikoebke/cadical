@@ -15,7 +15,7 @@ int Internal::next_decision_variable_on_queue () {
   while (val (res))
     res = link (res).prev, searched++;
   if (searched) {
-    stats.searched += searched;
+    stats.decisions_searched += searched;
     update_queue_unassigned (res);
   }
   LOG ("next queue decision variable %d bumped %" PRId64 "", res,
@@ -45,7 +45,7 @@ void Internal::start_random_sequence () {
   assert (stable || opts.randecfocused);
   assert (!randomized_deciding);
 
-  const uint64_t count = ++stats.randec.random_decision_phases;
+  const uint64_t count = ++stats.decisions_random_phases;
   const unsigned length = opts.randeclength * log (count + 10);
   VERBOSE (3,
            "starting random decision sequence "
@@ -53,8 +53,8 @@ void Internal::start_random_sequence () {
            stats.conflicts, length);
   randomized_deciding = length;
 
-  const double delta = stats.randec.random_decision_phases *
-                       log (stats.randec.random_decision_phases);
+  const double delta = stats.decisions_random_phases *
+                       log (stats.decisions_random_phases);
   lim.random_decision = stats.conflicts + delta * opts.randecint;
   VERBOSE (3,
            "next random decision sequence "
@@ -86,7 +86,7 @@ int Internal::next_random_decision () {
   LOG ("searching for random decision");
   Random random (internal->opts.seed);
   random += stats.decisions;
-  ++stats.randec.random_decisions;
+  ++stats.decisions_random;
   for (;;) {
     int idx = 1 + (random.next () % max_var);
     LOG ("trying lit %s", LOGLIT (idx));
@@ -146,7 +146,7 @@ int Internal::decide_phase (int idx, bool target) {
   if (!phase) {
     // ported from kissat where it does not seem very useful
     if (opts.stubbornIOfocused && opts.rephase == 2)
-      switch ((stats.rephased.total >> 1) & 7) {
+      switch ((stats.rephased >> 1) & 7) {
       case 1:
         phase = initial_phase;
         break;

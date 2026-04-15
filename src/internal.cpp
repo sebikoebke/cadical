@@ -371,12 +371,12 @@ int Internal::propagate_assumptions () {
   if (opts.ilb) {
     sort_and_reuse_assumptions ();
     assert (opts.ilb == 2 || (size_t) level <= assumptions.size ());
-    stats.ilbtriggers++;
-    stats.ilbsuccess += (level > 0);
-    stats.levelsreused += level;
+    stats.ilb_triggers++;
+    stats.ilb_success += (level > 0);
+    stats.reused_levels += level;
     if (level) {
       assert (control.size () > 1);
-      stats.literalsreused += num_assigned - control[1].trail;
+      stats.ilb_reused_literals += num_assigned - control[1].trail;
     }
   }
   init_search_limits ();
@@ -619,7 +619,7 @@ void Internal::init_search_limits () {
   last.stabilize.conflicts = stats.conflicts;
   lim.stabilize = stats.conflicts + opts.stabilizeinit;
   last.stabilize.ticks = stats.ticks_search_unstable;
-  stats.nowstabphases = 0;
+  stats.stable_phases_incremental = 0;
   LOG ("new ticks-based stabilize limit %" PRId64 " after %d conflicts",
        lim.stabilize, (int) opts.stabilizeinit);
 
@@ -687,7 +687,7 @@ void Internal::init_search_limits () {
       tier1[u] = max (tier1[u], opts.tier1minglue ? opts.tier1minglue : 2);
       tier2[u] = max (tier2[u], opts.tier2minglue ? opts.tier2minglue : 6);
     }
-    stats.tierecomputed = 0;
+    stats.clauses_recomputed_glue = 0;
   }
 
   /*----------------------------------------------------------------------*/
@@ -833,7 +833,7 @@ int Internal::preprocess (bool always) {
     return res;
   bool preprecessing_triggered = false;
 
-  if (opts.deduplicateallinit && !stats.deduplicatedinitrounds)
+  if (opts.deduplicateallinit && !stats.deduplicate_init_rounds)
     deduplicate_all_clauses ();
   preprocess_quickly (always, preprecessing_triggered);
   for (int i = 0; i < lim.preprocessing; i++)
@@ -974,7 +974,7 @@ int Internal::local_search () {
 
   if (res == 10) {
     LOG ("local search determined formula to be satisfiable");
-    assert (!stats.walk.minimum);
+    assert (!stats.walk_minimum);
     res = try_to_satisfy_formula_by_saved_phases ();
   } else if (res == 20) {
     LOG ("local search determined assumptions to be inconsistent");
@@ -999,12 +999,12 @@ int Internal::solve (bool preprocess_only) {
   if (opts.ilb) {
     sort_and_reuse_assumptions ();
     assert (opts.ilb || (size_t) level <= assumptions.size ());
-    stats.ilbtriggers++;
-    stats.ilbsuccess += (level > 0);
-    stats.levelsreused += level;
+    stats.ilb_triggers++;
+    stats.ilb_success += (level > 0);
+    stats.reused_levels += level;
     if (level) {
       assert (control.size () > 1);
-      stats.literalsreused += num_assigned - control[1].trail;
+      stats.ilb_reused_literals += num_assigned - control[1].trail;
     }
     if (external->propagator)
       renotify_trail_after_ilb ();

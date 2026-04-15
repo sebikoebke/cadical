@@ -1791,7 +1791,7 @@ bool Closure::really_merge_literals (
   representative (larger_repr) = smaller_repr;
   representative (-larger_repr) = -smaller_repr;
   schedule_literal (larger_repr);
-  ++internal->stats.congruence_congruent;
+  ++internal->stats.congruent;
   assert (lrat_chain.empty ());
   return true;
 }
@@ -1992,7 +1992,7 @@ bool Closure::merge_literals_from_clauses (int lit, int other, Clause *c1,
   representative (larger_repr) = smaller_repr;
   representative (-larger_repr) = -smaller_repr;
   schedule_literal (larger_repr);
-  ++internal->stats.congruence_congruent;
+  ++internal->stats.congruent;
   return true;
 }
 
@@ -2506,7 +2506,7 @@ void Closure::update_and_gate (Gate *g, GatesTable::iterator it, int src,
                                                extra_reasons_ulit);
       if (merge_literals (g, g, g->lhs, g->rhs[0], extra_reasons_lit,
                           extra_reasons_ulit)) {
-        ++internal->stats.congruence_unaries;
+        ++internal->stats.congruence_unary;
         ++internal->stats.congruence_unary_and;
       }
     }
@@ -2599,7 +2599,7 @@ void Closure::update_xor_gate (Gate *g, GatesTable::iterator git) {
       learn_congruence_unit (-g->rhs[0]);
     } else if (merge_literals (g->lhs, g->rhs[0], reasons_implication,
                                reasons_back)) {
-      ++internal->stats.congruence_unaries;
+      ++internal->stats.congruence_unary;
       ++internal->stats.congruence_unary_and;
     }
     assert (clause.empty ());
@@ -2778,7 +2778,7 @@ Gate *Closure::find_gate_lits (const vector<int> &rhs, Gate_Type typ,
     auto git = table.find (dummy_search_gate);
     if (git != std::end (table))
       h = *git;
-    assert (h != (Gate*)1);
+    assert (h != (Gate *) 1);
     assert (!except || h != except);
   } else {
     auto it = table.find (dummy_search_gate, except);
@@ -2844,7 +2844,7 @@ Gate *Closure::find_gate_lits (const_literal_iterator begin,
     assert (!except || h != except);
   } else {
     auto it = table.find (dummy_search_gate, except);
-    if (it != table.end())
+    if (it != table.end ())
       h = *it;
 #if 0
     // standard C++ version
@@ -2954,7 +2954,7 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
       connect_goccs (g, lit);
     }
   }
-  ++internal->stats.congruence_and_gates;
+  ++internal->stats.congruence_gates_and;
   return g;
 }
 
@@ -3371,7 +3371,7 @@ void Closure::extract_and_gates () {
   marks.resize (internal->max_var * 2 + 3);
   init_and_gate_extraction ();
 #ifndef QUIET
-  const int64_t gates_before = internal->stats.congruence_and_gates;
+  const int64_t gates_before = internal->stats.congruence_gates_and;
 #endif
   const size_t size = internal->clauses.size ();
   for (size_t i = 0; i < size && !internal->terminated_asynchronously ();
@@ -3395,7 +3395,7 @@ void Closure::extract_and_gates () {
            "[congruence-%" PRId64 "] "
            "found %" PRIu64 " AND gates",
            internal->stats.congruence_rounds,
-           internal->stats.congruence_and_gates - gates_before);
+           internal->stats.congruence_gates_and - gates_before);
   reset_and_gate_extraction ();
   STOP (extractands);
 }
@@ -3943,7 +3943,7 @@ Gate *Closure::new_xor_gate (const vector<LitClausePair> &glauses,
       connect_goccs (g, lit);
     }
   }
-  ++internal->stats.congruence_xor_gates;
+  ++internal->stats.congruence_gates_xor;
   return g;
 }
 
@@ -4108,9 +4108,9 @@ void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
       internal->occs (lit).push_back (c);
   }
 
-  VERBOSE (
-      2, "connected %zu large clauses %.0f%%", candidates.size (),
-      percent (candidates.size (), internal->stats.clauses_current_irredundant));
+  VERBOSE (2, "connected %zu large clauses %.0f%%", candidates.size (),
+           percent (candidates.size (),
+                    internal->stats.clauses_current_irredundant));
 }
 
 Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
@@ -4312,7 +4312,7 @@ void Closure::extract_xor_gates () {
     return;
   START (extractxors);
 #ifndef QUIET
-  const int64_t gates_before = internal->stats.congruence_xor_gates;
+  const int64_t gates_before = internal->stats.congruence_gates_xor;
 #endif
   LOG ("starting extracting XOR");
   std::vector<Clause *> candidates = {};
@@ -4326,7 +4326,7 @@ void Closure::extract_xor_gates () {
   }
   VERBOSE (2, "[congruence-%" PRId64 "] found %" PRId64 " XOR gates",
            internal->stats.congruence_rounds,
-           internal->stats.congruence_xor_gates - gates_before);
+           internal->stats.congruence_gates_xor - gates_before);
   reset_xor_gate_extraction ();
   STOP (extractxors);
 }
@@ -4876,7 +4876,7 @@ bool Closure::propagate_binary_clauses_in_and_gates () {
       lrat_chain.push_back (c->id);
     }
     learn_congruence_unit (-h->lhs);
-    ++internal->stats.congruence_congruent_dummy_ands;
+    ++internal->stats.congruence_dummy_ands;
     found_new_unit = true;
   }
   rhs.clear ();
@@ -5825,8 +5825,8 @@ bool Closure::produce_ite_merge_lhs_then_else_reasons (Gate *g,
       }
       if (merge_literals (g->lhs, lit_to_merge, reasons_implication,
                           reasons_back)) {
-        ++internal->stats.congruence_unaries;
-        ++internal->stats.congruence_unary_ites;
+        ++internal->stats.congruence_unary;
+        ++internal->stats.congruence_unary_ite;
       }
       delete_proof_chain ();
       return true;
@@ -5887,8 +5887,8 @@ bool Closure::produce_ite_merge_lhs_then_else_reasons (Gate *g,
 
   if (merge_literals (g->lhs, lit_to_merge, reasons_implication,
                       reasons_back)) {
-    ++internal->stats.congruence_unaries;
-    ++internal->stats.congruence_unary_ites;
+    ++internal->stats.congruence_unary;
+    ++internal->stats.congruence_unary_ite;
   }
   return true;
 }
@@ -6166,8 +6166,8 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
             g, src, dst, reasons_implication, reasons_back);
       if (merge_literals (g->lhs, else_lit, reasons_implication,
                           reasons_back)) {
-        ++internal->stats.congruence_unaries;
-        ++internal->stats.congruence_unary_ites;
+        ++internal->stats.congruence_unary;
+        ++internal->stats.congruence_unary_ite;
       }
       delete_proof_chain ();
       garbage = true;
@@ -6241,8 +6241,8 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
             g, src, dst, reasons_implication, reasons_back);
       if (merge_literals (g->lhs, then_lit, reasons_implication,
                           reasons_back)) {
-        ++internal->stats.congruence_unaries;
-        ++internal->stats.congruence_unary_ites;
+        ++internal->stats.congruence_unary;
+        ++internal->stats.congruence_unary_ite;
       }
       garbage = true;
     } else if (not_dst == then_lit) {
@@ -6656,8 +6656,8 @@ void Closure::simplify_ite_gate (Gate *g) {
                                        0, 1);
     }
     if (merge_literals (lhs, then_lit, reasons_lrat, reasons_back_lrat)) {
-      ++internal->stats.congruence_unary_ites;
-      ++internal->stats.congruence_unaries;
+      ++internal->stats.congruence_unary_ite;
+      ++internal->stats.congruence_unary;
     }
   } else if (v_cond < 0) {
     if (internal->lrat) {
@@ -6665,8 +6665,8 @@ void Closure::simplify_ite_gate (Gate *g) {
                                        2, 3);
     }
     if (merge_literals (lhs, else_lit, reasons_lrat, reasons_back_lrat)) {
-      ++internal->stats.congruence_unary_ites;
-      ++internal->stats.congruence_unaries;
+      ++internal->stats.congruence_unary_ite;
+      ++internal->stats.congruence_unary;
     }
   } else {
     LOG ("then %d: %d; else %d: %d", then_lit, v_then, else_lit, v_else);
@@ -6687,8 +6687,8 @@ void Closure::simplify_ite_gate (Gate *g) {
                                          extra_reasons_back, 1, 2);
       }
       if (merge_literals (lhs, cond, extra_reasons, extra_reasons_back)) {
-        ++internal->stats.congruence_unary_ites;
-        ++internal->stats.congruence_unaries;
+        ++internal->stats.congruence_unary_ite;
+        ++internal->stats.congruence_unary;
       }
     } else if (v_then < 0 && v_else > 0) {
       // if the gate is a = -a ? false : true, there is nothing to do and
@@ -6699,8 +6699,8 @@ void Closure::simplify_ite_gate (Gate *g) {
                                          extra_reasons_back, 0, 3);
       }
       if (merge_literals (lhs, -cond, extra_reasons_back, extra_reasons)) {
-        ++internal->stats.congruence_unary_ites;
-        ++internal->stats.congruence_unaries;
+        ++internal->stats.congruence_unary_ite;
+        ++internal->stats.congruence_unary;
       }
     } else {
       assert (!!v_then + !!v_else == 1);
@@ -7197,7 +7197,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
     }
   }
   check_ite_lrat_reasons (g);
-  ++internal->stats.congruence_ite_gates;
+  ++internal->stats.congruence_gates_ite;
   return g;
 }
 
@@ -7290,7 +7290,8 @@ void Closure::init_ite_gate_extraction (
            "counted %zu ternary ITE gates"
            "(%.0f%% of %" PRIu64 " irredundant clauses)",
            ternary.size (),
-           percent (ternary.size (), internal->stats.clauses_current_irredundant),
+           percent (ternary.size (),
+                    internal->stats.clauses_current_irredundant),
            internal->stats.clauses_current_irredundant);
 #ifndef QUIET
   size_t connected = 0;
@@ -7329,9 +7330,9 @@ void Closure::init_ite_gate_extraction (
 
   ternary.clear ();
 
-  VERBOSE (
-      4, "connected %zu large clauses %.0f%%", candidates.size (),
-      percent (candidates.size (), internal->stats.clauses_current_irredundant));
+  VERBOSE (4, "connected %zu large clauses %.0f%%", candidates.size (),
+           percent (candidates.size (),
+                    internal->stats.clauses_current_irredundant));
 
 #ifndef QUIET
   size_t size_candidates = candidates.size ();
@@ -7748,7 +7749,7 @@ void Closure::extract_ite_gates () {
   START (extractites);
   std::vector<ClauseSize> candidates;
 #ifndef QUIET
-  const int64_t gates_before = internal->stats.congruence_ite_gates;
+  const int64_t gates_before = internal->stats.congruence_gates_ite;
 #endif
   init_ite_gate_extraction (candidates);
 
@@ -7762,7 +7763,7 @@ void Closure::extract_ite_gates () {
   // Kissat has an alternative version MERGE_CONDITIONAL_EQUIVALENCES
   VERBOSE (2, "[congruence-%" PRId64 "] found %" PRId64 " ITE clauses",
            internal->stats.congruence_rounds,
-           internal->stats.congruence_ite_gates - gates_before);
+           internal->stats.congruence_gates_ite - gates_before);
   reset_ite_gate_extraction ();
   STOP (extractites);
 }
@@ -7854,12 +7855,10 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   assert (unsat || closure.chain.empty ());
   assert (unsat || lrat_chain.empty ());
   const int64_t inital_old_merged =
-      stats.congruence
-          .congruent; // the binary stuff is covered by other techniques
+      stats.congruent; // the binary stuff is covered by other techniques
   closure.extract_binaries ();
   const int64_t old_merged =
-      stats.congruence
-          .congruent; // the binary stuff is covered by other techniques
+      stats.congruent; // the binary stuff is covered by other techniques
   assert (unsat || closure.chain.empty ());
   assert (unsat || lrat_chain.empty ());
   closure.extract_gates ();
@@ -7897,7 +7896,7 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   assert (!internal->occurring ());
   assert (lrat_chain.empty ());
 
-  const int64_t new_merged = stats.congruence_congruent;
+  const int64_t new_merged = stats.congruent;
 
   PHASE ("congruence-phase", stats.congruence_rounds,
          "merged %" PRId64 " literals", new_merged - old_merged);
@@ -7906,8 +7905,7 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   }
 
   STOP_SIMPLIFIER (congruence, CONGRUENCE);
-  report ('c',
-          !opts.reportall && !(stats.congruence_congruent - old_merged));
+  report ('c', !opts.reportall && !(stats.congruent - old_merged));
 #ifndef NDEBUG
   size_t watched = 0;
   for (auto v : vars) {

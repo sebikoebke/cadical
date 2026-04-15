@@ -116,7 +116,7 @@ void Internal::warmup_propagate_beyond_conflict () {
 
         if (b < 0)
           // ignoring conflict
-          ++stats.warmup.conflicts;
+          ++stats.walk_warmup_conflicts;
         else {
           warmup_assign (w.blit, w.clause);
         }
@@ -192,7 +192,7 @@ void Internal::warmup_propagate_beyond_conflict () {
             assert (v < 0);
 
             // ignoring conflict
-            ++stats.warmup.conflicts;
+            ++stats.walk_warmup_conflicts;
           }
         }
       }
@@ -205,7 +205,7 @@ void Internal::warmup_propagate_beyond_conflict () {
 
   assert (propagated == trail.size ());
 
-  stats.warmup.propagated += (trail.size () - before);
+  stats.walk_warmup_propagated += (trail.size () - before);
   STOP (propagate);
 }
 
@@ -328,10 +328,10 @@ void Internal::warmup_decide () {
   assert ((size_t) level >= assumptions.size ());
   assert (!constraint.size () || (size_t) level > assumptions.size ());
   const bool target = (stable || opts.target == 2);
-  stats.warmup.decision++;
+  stats.walk_warmup_decision++;
   int idx = next_decision_variable ();
   if (flags (idx).eliminated ())
-    ++stats.warmup.dummydecision;
+    ++stats.walk_warmup_dummy_decision;
   int decision = decide_phase (idx, target);
   new_trail_level (decision);
   warmup_assign (decision, decision_reason);
@@ -403,13 +403,13 @@ int Internal::warmup () {
     return 0;
   require_mode (WALK);
   START (warmup);
-  ++stats.warmup.count;
+  ++stats.walk_warmup;
   int res = 0;
 
 #ifndef QUIET
-  const int64_t warmup_propagated = stats.warmup.propagated;
-  const int64_t decision = stats.warmup.decision;
-  const int64_t dummydecision = stats.warmup.dummydecision;
+  const int64_t warmup_propagated = stats.walk_warmup_propagated;
+  const int64_t decision = stats.walk_warmup_decision;
+  const int64_t dummydecision = stats.walk_warmup_dummy_decision;
 #endif
   LOG ("starting warmup");
 
@@ -451,14 +451,14 @@ int Internal::warmup () {
   assert (res || num_assigned + stats.vars_unused == (size_t) max_var);
 #ifndef QUIET
   // constrains with empty levels break this
-  // assert (res || stats.warmup.propagated - warmup_propagated ==
+  // assert (res || stats.walk_warmup_propagated - warmup_propagated ==
   // (int64_t)num_assigned);
   VERBOSE (3,
            "warming-up needed %" PRIu64 " propagations including %" PRIu64
            " decisions (with %" PRIu64 " dummy ones)",
-           stats.warmup.propagated - warmup_propagated,
-           stats.warmup.decision - decision,
-           stats.warmup.dummydecision - dummydecision);
+           stats.walk_warmup_propagated - warmup_propagated,
+           stats.walk_warmup_decision - decision,
+           stats.walk_warmup_dummy_decision - dummydecision);
 #endif
 
   // now we backtrack, notifying only if there was something to

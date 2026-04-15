@@ -110,7 +110,7 @@ bool Internal::hyper_ternary_resolve (Clause *c, int pivot, Clause *d) {
   LOG ("hyper binary resolving on pivot %d", pivot);
   LOG (c, "1st antecedent");
   LOG (d, "2nd antecedent");
-  stats.ternres++;
+  stats.ternary_resolutions++;
   assert (c->size == 3);
   assert (d->size == 3);
   assert (clause.empty ());
@@ -208,18 +208,18 @@ void Internal::ternary_lit (int pivot, int64_t &steps, int64_t &htrs) {
         lrat_chain.clear ();
         clause.clear ();
         LOG (r, "hyper ternary resolved");
-        stats.htrs++;
+        stats.ternary_htrs++;
         for (const auto &lit : *r)
           occs (lit).push_back (r);
         if (size == 2) {
           LOG ("hyper ternary resolvent subsumes both antecedents");
           mark_garbage (c);
           mark_garbage (d);
-          stats.htrs2++;
+          stats.ternary_htrs_binary++;
           break;
         } else {
           assert (r->size == 3);
-          stats.htrs3++;
+          stats.ternary_htrs_ternary++;
         }
       } else {
         LOG (clause, "ignoring size %zd resolvent", clause.size ());
@@ -415,11 +415,11 @@ bool Internal::ternary () {
       break;
     if (round)
       stats.ternary++;
-    int old_htrs2 = stats.htrs2;
-    int old_htrs3 = stats.htrs3;
+    int old_htrs2 = stats.ternary_htrs_binary;
+    int old_htrs3 = stats.ternary_htrs_ternary;
     completed = ternary_round (steps_limit, htrs_limit);
-    int delta_htrs2 = stats.htrs2 - old_htrs2;
-    int delta_htrs3 = stats.htrs3 - old_htrs3;
+    int delta_htrs2 = stats.ternary_htrs_binary - old_htrs2;
+    int delta_htrs3 = stats.ternary_htrs_ternary - old_htrs3;
     PHASE ("ternary", stats.ternary,
            "derived %d ternary and %d binary resolvents", delta_htrs3,
            delta_htrs2);

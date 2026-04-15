@@ -33,7 +33,7 @@ bool Internal::minimize_literal (int lit, int depth) {
   bool res = true;
   assert (v.reason);
   if (opts.minimizeticks)
-    stats.ticks_search[stable]++;
+    stable ? stats.ticks_search_stable++ : stats.ticks_search_unstable++;
   if (v.reason == external_reason) {
     assert (!opts.exteagerreasons);
     v.reason = learn_external_reason_clause (lit, 0, true);

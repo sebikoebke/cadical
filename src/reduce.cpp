@@ -50,9 +50,9 @@ void Internal::mark_clauses_to_be_flushed () {
       continue;
     mark_garbage (c); // flush unused clauses
     if (c->hyper)
-      stats.flush.hyper++;
+      stats.flush_hyper++;
     else
-      stats.flush.learned++;
+      stats.flush_learned++;
   }
   // No change to 'lim.kept{size,glue}'.
 }
@@ -217,7 +217,7 @@ void Internal::reduce () {
 
   bool flush = flushing ();
   if (flush)
-    stats.flush.count++;
+    stats.flush_count++;
 
   if (!propagate_out_of_order_units ())
     goto DONE;
@@ -258,11 +258,11 @@ void Internal::reduce () {
   }
 
   if (flush) {
-    PHASE ("flush", stats.flush.count, "new flush increment %" PRId64 "",
+    PHASE ("flush", stats.flush_count, "new flush increment %" PRId64 "",
            inc.flush);
     inc.flush *= opts.flushfactor;
     lim.flush = stats.conflicts + inc.flush;
-    PHASE ("flush", stats.flush.count, "new flush limit %" PRId64 "",
+    PHASE ("flush", stats.flush_count, "new flush limit %" PRId64 "",
            lim.flush);
   }
 

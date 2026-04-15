@@ -57,7 +57,7 @@ bool Internal::elimfast_resolvents_are_bounded (Eliminator &eliminator,
   assert (eliminator.gates.empty ());
   assert (!eliminator.definition_unit);
 
-  stats.elimtried++;
+  stats.eliminate_tried++;
 
   assert (!unsat);
   assert (active (pivot));
@@ -270,7 +270,7 @@ int Internal::elimfast_round (bool &completed,
 
   START_SIMPLIFIER (fastelim, ELIM);
 
-  stats.elimfastrounds++;
+  stats.eliminate_fast_rounds++;
 
   assert (!level);
 
@@ -284,12 +284,12 @@ int Internal::elimfast_round (bool &completed,
     if (delta > opts.elimmaxeff)
       delta = opts.elimmaxeff;
 
-    PHASE ("fastelim-round", stats.elimfastrounds,
+    PHASE ("fastelim-round", stats.eliminate_fast_rounds,
            "limit of %" PRId64 " resolutions", delta);
 
-    resolution_limit = stats.elimres + delta;
+    resolution_limit = stats.eliminate_resolved + delta;
   } else {
-    PHASE ("fastelim-round", stats.elimfastrounds, "resolutions unlimited");
+    PHASE ("fastelim-round", stats.eliminate_fast_rounds, "resolutions unlimited");
     resolution_limit = LONG_MAX;
   }
 
@@ -354,7 +354,7 @@ int Internal::elimfast_round (bool &completed,
   int64_t scheduled = schedule.size ();
 #endif
 
-  PHASE ("fastelim-round", stats.elimfastrounds,
+  PHASE ("fastelim-round", stats.eliminate_fast_rounds,
          "scheduled %" PRId64 " variables %.0f%% for elimination",
          scheduled, percent (scheduled, active ()));
 
@@ -367,7 +367,7 @@ int Internal::elimfast_round (bool &completed,
           occs (lit).push_back (c);
 
 #ifndef QUIET
-  const int64_t old_resolutions = stats.elimres;
+  const int64_t old_resolutions = stats.eliminate_resolved;
 #endif
   const int old_eliminated = stats.vars_all_eliminated;
   const int old_fixed = stats.vars_all_fixed;
@@ -385,7 +385,7 @@ int Internal::elimfast_round (bool &completed,
   int64_t tried = 0;
 #endif
   while (!unsat && !terminated_asynchronously () &&
-         stats.elimres <= resolution_limit && !schedule.empty ()) {
+         stats.eliminate_resolved <= resolution_limit && !schedule.empty ()) {
     int idx = schedule.front ();
     schedule.pop_front ();
     flags (idx).elim = false;
@@ -405,7 +405,7 @@ int Internal::elimfast_round (bool &completed,
   //
   completed = !schedule.size ();
 
-  PHASE ("fastelim-round", stats.elimfastrounds,
+  PHASE ("fastelim-round", stats.eliminate_fast_rounds,
          "tried to eliminate %" PRId64 " variables %.0f%% (%zd remain)",
          tried, percent (tried, scheduled), schedule.size ());
 
@@ -420,10 +420,10 @@ int Internal::elimfast_round (bool &completed,
     mark_redundant_clauses_with_eliminated_variables_as_garbage ();
 
   int eliminated = stats.vars_all_eliminated - old_eliminated;
-  stats.vars_all_fasteliminated += eliminated;
+  stats.vars_all_eliminated_fast += eliminated;
 #ifndef QUIET
-  int64_t resolutions = stats.elimres - old_resolutions;
-  PHASE ("fastelim-round", stats.elimfastrounds,
+  int64_t resolutions = stats.eliminate_resolved - old_resolutions;
+  PHASE ("fastelim-round", stats.eliminate_fast_rounds,
          "eliminated %d variables %.0f%% in %" PRId64 " resolutions",
          eliminated, percent (eliminated, scheduled), resolutions);
 #endif
@@ -450,8 +450,8 @@ void Internal::elimfast () {
     return;
   }
 
-  stats.elimfastphases++;
-  PHASE ("fastelim-phase", stats.elimfastphases,
+  stats.eliminate_fast_phases++;
+  PHASE ("fastelim-phase", stats.eliminate_fast_phases,
          "starting at most %d elimination rounds", opts.fastelimrounds);
 
   if (external_prop) {
@@ -492,7 +492,7 @@ void Internal::elimfast () {
         elimfast_round (round_complete, deleted_binary_clause);
 
     if (!round_complete) {
-      PHASE ("fastelim-phase", stats.elimphases,
+      PHASE ("fastelim-phase", stats.eliminate_phases,
              "last round %d incomplete %s", round,
              eliminated ? "but successful" : "and unsuccessful");
       assert (!phase_complete);
@@ -500,7 +500,7 @@ void Internal::elimfast () {
     }
 
     if (round++ >= opts.fastelimrounds) {
-      PHASE ("fastelim-phase", stats.elimphases, "round limit %d hit (%s)",
+      PHASE ("fastelim-phase", stats.eliminate_phases, "round limit %d hit (%s)",
              round - 1,
              eliminated ? "though last round successful"
                         : "last round unsuccessful anyhow");
@@ -517,7 +517,7 @@ void Internal::elimfast () {
     // variable elimination round, neither through subsumption, nor blocked,
     // nor covered clause elimination.
     //
-    PHASE ("fastelim-phase", stats.elimphases,
+    PHASE ("fastelim-phase", stats.eliminate_phases,
            "no new variable elimination candidates");
 
     assert (round_complete);
@@ -530,16 +530,16 @@ void Internal::elimfast () {
   }
 
   if (phase_complete) {
-    stats.elimcompleted++;
-    PHASE ("fastelim-phase", stats.elimphases,
+    stats.eliminate_complete++;
+    PHASE ("fastelim-phase", stats.eliminate_phases,
            "fully completed elimination %" PRId64
            " at elimination bound %" PRId64 "",
-           stats.elimcompleted, lim.elimbound);
+           stats.eliminate_complete, lim.elimbound);
   } else {
-    PHASE ("fastelim-phase", stats.elimphases,
+    PHASE ("fastelim-phase", stats.eliminate_phases,
            "incomplete elimination %" PRId64
            " at elimination bound %" PRId64 "",
-           stats.elimcompleted + 1, lim.elimbound);
+           stats.eliminate_complete + 1, lim.elimbound);
   }
 
   if (deleted_binary_clause)
@@ -560,7 +560,7 @@ void Internal::elimfast () {
 
 #ifndef QUIET
   eliminated = stats.vars_all_eliminated - old_eliminated;
-  PHASE ("fastelim-phase", stats.elimphases,
+  PHASE ("fastelim-phase", stats.eliminate_phases,
          "eliminated %d variables %.2f%%", eliminated,
          percent (eliminated, old_active_variables));
 #endif

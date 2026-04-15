@@ -130,7 +130,7 @@ void Internal::factor_mode (bool redundant_only) {
     for (const auto &lit : *c)
       occs (lit).push_back (c);
 
-  PHASE ("factor", stats.factor,
+  PHASE ("factor", stats.factorings,
          "initialized %zd clauses using %" PRId64 " ticks",
          candidates.size (), ticks);
 }
@@ -417,7 +417,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
         best_third = third;
       } else if (opts.factorxorrand && tmp == matches) {
         Random random (internal->opts.seed);
-        random += stats.factor + other;
+        random += stats.factorings + other;
         if (random.generate_bool ()) {
           matches = tmp;
           best_second = other;
@@ -1116,10 +1116,10 @@ void Internal::delete_unfactored (Quotient *q) {
   for (auto c : q->qlauses) {
     eagerly_remove_from_occurences (c);
     mark_garbage (c);
-    stats.literals_unfactored += c->size;
-    stats.clauses_unfactored++;
+    stats.factor_removed_literals += c->size;
+    stats.factor_removed_clauses++;
     if (c->redundant)
-      stats.clauses_unfactored_redundant++;
+      stats.factor_removed_redundant++;
   }
 }
 
@@ -1517,7 +1517,7 @@ bool Internal::factor () {
   if (!v_active)
     return false;
   size_t log_active = log10 (v_active);
-  size_t eliminations = stats.elimrounds;
+  size_t eliminations = stats.eliminations;
   size_t delay = opts.factordelay;
   size_t delay_limit = eliminations + delay;
   if (delay && log_active > delay_limit) {
@@ -1538,16 +1538,16 @@ bool Internal::factor () {
     return false;
   }
   assert (!level);
-  const bool is_preprocessing = !stats.factor;
+  const bool is_preprocessing = !stats.factorings;
 
-  SET_EFFORT_LIMIT (limit, factor, stats.factor);
+  SET_EFFORT_LIMIT (limit, factor, stats.factorings);
   if (preprocessing)
     limit += opts.factoriniticks * 1e6;
 
   mark_duplicated_binary_clauses_as_garbage ();
 
   START_SIMPLIFIER (factor, FACTOR);
-  stats.factor++;
+  stats.factorings++;
 
 #ifndef QUIET
   struct {
@@ -1576,10 +1576,10 @@ bool Internal::factor () {
   delta.clauses = before.clauses - after.clauses;
   delta.ticks = after.ticks - before.ticks;
   VERBOSE (2, "used %f million factorization ticks", delta.ticks * 1e-6);
-  phase ("factorization", stats.factor,
+  phase ("factorization", stats.factorings,
          "introduced %" PRId64 " extension variables %.0f%%",
          delta.variables, percent (delta.variables, before.variables));
-  phase ("factorization", stats.factor,
+  phase ("factorization", stats.factorings,
          "removed %" PRId64 " irredundant clauses %.0f%%", delta.clauses,
          percent (delta.clauses, before.clauses));
 #endif

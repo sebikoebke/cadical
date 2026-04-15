@@ -209,7 +209,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
       exported++;
     }
   }
-  stats.definitions_checked++;
+  stats.eliminate_defs_checked++;
   const size_t limit = opts.elimdefticks;
   kitten_set_ticks_limit (citten, limit);
   int status = kitten_solve (citten);
@@ -242,7 +242,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
       (void) reduced;
 #endif
     }
-    stats.definitions_extracted++;
+    stats.eliminate_defs_extracted++;
     eliminator.gatetype = DEF;
     eliminator.definition_unit = 0;
     kitten_traverse_core_ids (citten, &extractor, traverse_definition_core);
@@ -254,7 +254,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
       unit = lit;
 
     if (unit) {
-      stats.definition_units++;
+      stats.eliminate_defs_unit++;
       VERBOSE (2, "one sided core "
                   "definition extraction yields "
                   "failed literal");
@@ -276,7 +276,7 @@ void Internal::find_definition (Eliminator &eliminator, int lit) {
   ABORT:
     LOG ("sub-solver failed to show that definition exists");
   }
-  stats.definition_ticks += kitten_current_ticks (citten);
+  stats.eliminate_defs_ticks += kitten_current_ticks (citten);
   return;
 }
 

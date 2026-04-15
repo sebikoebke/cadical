@@ -157,8 +157,8 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
 
     if (unit) {
 
-      stats.failed++;
-      stats.hyperunary++;
+      stats.deduplicate_failed++;
+      stats.deduplicate_hyper_unary++;
       assign_unit (unit);
       // lrat_chain.clear ();   done in search_assign
 
@@ -251,11 +251,11 @@ void Internal::deduplicate_all_clauses () {
       LOG (prev, "subsuming");
       assert (!c->garbage);
       assert (!prev->garbage);
-      // Defensive code that I did not manage to trigger with an assertion (I
-      // only manage to have identical redundant/irredundant clauses). But the
-      // scheduling of deduplication is not final (it currently only triggers in
-      // the first solving before anything else), so I prefer supporting this
-      // case here.
+      // Defensive code that I did not manage to trigger with an assertion
+      // (I only manage to have identical redundant/irredundant clauses).
+      // But the scheduling of deduplication is not final (it currently only
+      // triggers in the first solving before anything else), so I prefer
+      // supporting this case here.
       if (!c->redundant && prev->redundant) {
         make_irredundant (prev);
       }
@@ -278,12 +278,12 @@ void Internal::deduplicate_all_clauses () {
 
   clauses.resize (j - clauses.begin ());
 
-  ++stats.deduplicatedinitrounds;
-  PHASE ("deduplicate-all", stats.deduplicatedinitrounds,
+  ++stats.deduplicate_init_rounds;
+  PHASE ("deduplicate-all", stats.deduplicate_init_rounds,
          "flushed %" PRId64 " subsumed clauses out of %zd", subsumed,
          clauses.end () - start);
   stats.subsumed += subsumed;
-  stats.deduplicatedinit += subsumed;
+  stats.deduplicate_init += subsumed;
   check_clause_stats ();
   connect_watches ();
   report ('d', !opts.reportall && !subsumed);

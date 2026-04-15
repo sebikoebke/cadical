@@ -302,8 +302,8 @@ bool Internal::external_propagate () {
                   external->is_observed[abs (elit)]),
         "external propagations are only allowed over observed variables.");
 
-    stats.propagator_cb_ext_cb++;
-    stats.propagator_cb_eprop_call++;
+    stats.propagator_cb++;
+    stats.propagator_cb_propagate++;
     while (elit) {
       assert (external->is_observed[abs (elit)]);
       int ilit = external->e2i[abs (elit)];
@@ -324,7 +324,7 @@ bool Internal::external_propagate () {
           (void) res;
         } else
           search_assign_external (ilit);
-        stats.propagator_cb_eprop_prop++;
+        stats.propagator_cb_propagate_assign++;
 
         if (unsat || conflict)
           break;
@@ -335,7 +335,7 @@ bool Internal::external_propagate () {
       } else if (tmp < 0) {
         LOG ("External propgation of %d is falsified under current trail",
              ilit);
-        stats.propagator_cb_eprop_conf++;
+        stats.propagator_cb_propagate_clash++;
         int level_before = level;
         size_t assigned = num_assigned;
         Clause *res = learn_external_reason_clause (ilit, elit);
@@ -358,8 +358,8 @@ bool Internal::external_propagate () {
         }
       } // else (tmp > 0) -> the case of a satisfied literal is ignored
       elit = external->propagator->cb_propagate ();
-      stats.propagator_cb_ext_cb++;
-      stats.propagator_cb_eprop_call++;
+      stats.propagator_cb++;
+      stats.propagator_cb_propagate++;
     }
 
 #ifndef NDEBUG
@@ -373,8 +373,8 @@ bool Internal::external_propagate () {
       bool has_external_clause = ask_external_clause ();
       // New observed variable might have triggered a backtrack during this
       // ask_external_clause call, so we need to propagate before continuing
-      stats.propagator_cb_ext_cb++;
-      stats.propagator_cb_elearn_call++;
+      stats.propagator_cb++;
+      stats.propagator_cb_add++;
 
       bool trail_changed =
           (num_assigned != assigned || level != level_before ||
@@ -417,8 +417,8 @@ bool Internal::external_propagate () {
           notify_assignments ();
         }
         has_external_clause = ask_external_clause ();
-        stats.propagator_cb_ext_cb++;
-        stats.propagator_cb_elearn_call++;
+        stats.propagator_cb++;
+        stats.propagator_cb_add++;
       }
     }
 #ifndef NDEBUG
@@ -762,7 +762,7 @@ Clause *Internal::learn_external_reason_clause (int ilit,
   assert (clause.empty ());
   assert (original.empty ());
 
-  stats.propagator_cb_eprop_expl++;
+  stats.propagator_cb_propagate_explain++;
 
   int elit = 0;
   if (!falsified_elit) {
@@ -830,7 +830,7 @@ Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
 //
 void Internal::handle_external_clause (Clause *res, int64_t new_id) {
   if (from_propagator)
-    stats.propagator_cb_elearned++;
+    stats.propagator_learned++;
 
   // new unit clause. For now just backtrack.
   if (!res && (force_no_backtrack ||
@@ -856,7 +856,7 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
 
   if (!res) {
     if (from_propagator)
-      stats.propagator_cb_elearn_prop++;
+      stats.propagator_learned_propagating++;
     const int lit = clause[0];
     assert (!val (lit) || var (lit).level);
     if (val (lit))
@@ -1015,7 +1015,7 @@ bool Internal::external_check_solution () {
     if (!satisfied ())
       break;
     LOG ("Final check by external propagator is invoked.");
-    stats.propagator_cb_echeck_call++;
+    stats.propagator_cb_check_model++;
     external->reset_extended ();
     external->extend ();
 
@@ -1054,7 +1054,7 @@ bool Internal::external_check_solution () {
     bool is_consistent =
         external->propagator->cb_check_found_model (notification_trail);
     notification_trail.clear ();
-    stats.propagator_cb_ext_cb++;
+    stats.propagator_cb++;
     forced_backt_allowed = false;
 
     if (num_assigned != assigned || level != level_before ||
@@ -1072,8 +1072,8 @@ bool Internal::external_check_solution () {
 
     bool has_external_clause = ask_external_clause ();
 
-    stats.propagator_cb_ext_cb++;
-    stats.propagator_cb_elearn_call++;
+    stats.propagator_cb++;
+    stats.propagator_cb_add++;
 
     if (has_external_clause)
       LOG ("Found solution triggered new clauses from external "
@@ -1111,8 +1111,8 @@ bool Internal::external_check_solution () {
       if (unsat || conflict || trail_changed)
         break;
       has_external_clause = ask_external_clause ();
-      stats.propagator_cb_ext_cb++;
-      stats.propagator_cb_elearn_call++;
+      stats.propagator_cb++;
+      stats.propagator_cb_add++;
     }
     LOG ("No more external clause to add.");
     if (unsat || conflict)
@@ -1212,7 +1212,7 @@ int Internal::ask_decision () {
   forced_backt_allowed = true;
   int elit = external->propagator->cb_decide ();
   forced_backt_allowed = false;
-  stats.propagator_cb_ext_cb++;
+  stats.propagator_cb++;
 
   if (level_before != level) {
 

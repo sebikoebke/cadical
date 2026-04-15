@@ -32,7 +32,7 @@ struct Walker {
   std::vector<int>
       flips; // remember the flips compared to the last best saved model
   int best_trail_pos;
-  size_t minimum = (size_t)(-1);
+  size_t minimum = (size_t) (-1);
   std::vector<signed char> best_values; // best model stored so far
   double score (unsigned);              // compute score from break count
 #ifndef NDEBUG
@@ -42,14 +42,13 @@ struct Walker {
   Walker (Internal *, int64_t limit);
   void populate_table (double size);
 
-
   // for efficiency, storing the model each time an improvement is
   // found is too costly. Instead we store some of the flips since
   // last time and the position of the best model found so far.
   //
   // Once that buffer is full, we save the last best assignment. This is
-  // particularly important at the beginning where every or nearly every flip
-  // improves the current assignment.
+  // particularly important at the beginning where every or nearly every
+  // flip improves the current assignment.
 
   // Push the literal on the buffer of flipped literals
   void push_flipped (int flipped);
@@ -98,8 +97,8 @@ inline static double fitcbval (double size) {
 
 Walker::Walker (Internal *i, int64_t l)
     : internal (i), random (internal->opts.seed), // global random seed
-      ticks (0), limit (l), epsilon(-1), best_trail_pos (-1) {
-  random += internal->stats.walk.count; // different seed every time
+      ticks (0), limit (l), epsilon (-1), best_trail_pos (-1) {
+  random += internal->stats.walk; // different seed every time
   flips.reserve (i->max_var / 4);
   best_values.resize (i->max_var + 1, 0);
 #ifndef NDEBUG
@@ -112,7 +111,7 @@ void Walker::populate_table (double size) {
   // according to the average size every second invocation and otherwise
   // just the default '2.0', which turns into the base '0.5'.
   //
-  const bool use_size_based_cb = (internal->stats.walk.count & 1);
+  const bool use_size_based_cb = (internal->stats.walk & 1);
   const double cb = use_size_based_cb ? fitcbval (size) : 2.0;
   assert (cb);
   const double base = 1 / cb; // scores are 'base^0,base^1,base^2,...
@@ -121,7 +120,7 @@ void Walker::populate_table (double size) {
   for (epsilon = next; next; next = epsilon * base)
     table.push_back (epsilon = next);
 
-  PHASE ("walk", internal->stats.walk.count,
+  PHASE ("walk", internal->stats.walk,
          "CB %.2f with inverse %.2f as base and table size %zd", cb, base,
          table.size ());
 }
@@ -228,7 +227,7 @@ void Walker::save_final_minimum (size_t old_init_minimum) {
   else
     save_walker_trail (false);
 
-  ++internal->stats.walk.improved;
+  ++internal->stats.walk_improved;
   for (auto v : internal->vars) {
     if (best_values[v])
       internal->phases.saved[v] = best_values[v];
@@ -255,7 +254,7 @@ ClauseOrBinary Internal::walk_pick_clause (Walker &walker) {
   size_t size = walker.broken.size ();
   if (size > INT_MAX)
     size = INT_MAX;
-  int pos = walker.random.pick_int (0, (int)size - 1);
+  int pos = walker.random.pick_int (0, (int) size - 1);
   ClauseOrBinary res = walker.broken[pos];
 #ifdef LOGGING
   Clause *c;
@@ -336,7 +335,7 @@ unsigned Internal::walk_break_value (int lit, int64_t &ticks) {
     }
     res++; // Literal 'lit' single satisfies clause 'c'.
   }
-  stats.ticks_walkbreak += (ticks - oldticks);
+  stats.ticks_walk_break += (ticks - oldticks);
   STOP (walkbreak);
 
   return res;
@@ -404,7 +403,7 @@ int Internal::walk_pick_lit (Walker &walker, Clause *c) {
   }
   walker.scores.clear ();
   LOG ("picking literal %d by break-count", res);
-  stats.ticks_walkpick += walker.ticks - old;
+  stats.ticks_walk_pick += walker.ticks - old;
   return res;
 }
 
@@ -466,7 +465,7 @@ int Internal::walk_pick_lit (Walker &walker, const TaggedBinary c) {
   assert (res);
   walker.scores.clear ();
   LOG ("picking literal %d by break-count", res);
-  stats.ticks_walkpick += walker.ticks - old;
+  stats.ticks_walk_pick += walker.ticks - old;
   return res;
 }
 
@@ -505,8 +504,7 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
     // broken is in cache given how central it is... but not always (see the
     // ncc problems). Value was heuristically determined to give reasonnable
     // values.
-    walker.ticks +=
-        1 + cache_lines (walker.broken.size (), sizeof (*i));
+    walker.ticks += 1 + cache_lines (walker.broken.size (), sizeof (*i));
 #if defined(LOGGING) || !defined(NDEBUG)
     int64_t made = 0;
 #endif
@@ -608,7 +606,7 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
     }
   }
 
-  stats.ticks_walkflipbroken += walker.ticks - old;
+  stats.ticks_walk_flip_broken += walker.ticks - old;
 
   const int64_t old_after_broken = walker.ticks;
 
@@ -697,8 +695,8 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
     ws.clear ();
   }
   STOP (walkflip);
-  stats.ticks_walkflipWL += walker.ticks - old_after_broken;
-  stats.ticks_walkflip += walker.ticks - old;
+  stats.ticks_walk_flip_wl += walker.ticks - old_after_broken;
+  stats.ticks_walk_flip += walker.ticks - old;
   return true;
 }
 
@@ -710,8 +708,8 @@ inline void Internal::walk_save_minimum (Walker &walker) {
   size_t broken = walker.broken.size ();
   if (broken >= walker.minimum)
     return;
-  if (broken <= stats.walk.minimum) {
-    stats.walk.minimum = broken;
+  if (broken <= stats.walk_minimum) {
+    stats.walk_minimum = broken;
     VERBOSE (3, "new global minimum %zd", broken);
   } else {
     VERBOSE (3, "new walk minimum %zd", broken);
@@ -767,7 +765,7 @@ inline void Internal::walk_save_minimum (Walker &walker) {
 
 int Internal::walk_round (int64_t limit, bool prev) {
 
-  stats.walk.count++;
+  stats.walk++;
   std::vector<int> propagated;
   bool failed = false; // Inconsistent assumptions?
   int res = decide_and_propagate_all_assumptions (propagated);
@@ -790,14 +788,14 @@ int Internal::walk_round (int64_t limit, bool prev) {
   }
 #endif
 
-  PHASE ("walk", stats.walk.count, "random walk limit of %" PRId64 " ticks",
+  PHASE ("walk", stats.walk, "random walk limit of %" PRId64 " ticks",
          limit);
 
   // Instantiate data structures for this local search round.
   //
   Walker walker (internal, limit);
 #ifndef QUIET
-  size_t old_global_minimum = stats.walk.minimum;
+  size_t old_global_minimum = stats.walk_minimum;
 #endif
 
   level = 1; // Assumed variables assigned at level 1.
@@ -808,7 +806,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
     LOG ("assigning assumptions to their forced phase first");
     std::vector<int> propagated;
     for (auto lit : trail)
-    propagated.push_back(lit);
+      propagated.push_back (lit);
 
     for (const auto lit : propagated) {
       signed char tmp = val (lit);
@@ -869,7 +867,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
         continue;
       if (c->redundant) {
         if (opts.walkredundant == 1 && c->size == 2 && !c->hyper)
-	  LOG (c, "importing binary clause");
+          LOG (c, "importing binary clause");
         else if (opts.walkredundant == 0)
           continue;
         if (!likely_to_be_kept_clause (c))
@@ -929,7 +927,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
 
     double average_size = relative (size, n);
     walker.populate_table (average_size);
-    PHASE ("walk", stats.walk.count,
+    PHASE ("walk", stats.walk,
            "%" PRId64 " clauses average size %.2f over %d variables", n,
            average_size, active ());
 
@@ -951,14 +949,14 @@ int Internal::walk_round (int64_t limit, bool prev) {
     size_t broken = walker.broken.size ();
     size_t initial_minimum = broken;
 
-    PHASE ("walk", stats.walk.count,
+    PHASE ("walk", stats.walk,
            "starting with %zd unsatisfied clauses "
            "(%.0f%% out of %" PRId64 ")",
            broken, percent (broken, stats.clauses_current_irredundant),
            stats.clauses_current_irredundant);
 
     walk_save_minimum (walker);
-    assert (stats.walk.minimum <= walker.minimum);
+    assert (stats.walk_minimum <= (int64_t) walker.minimum);
 
     size_t minimum = broken;
 #ifndef QUIET
@@ -969,8 +967,8 @@ int Internal::walk_round (int64_t limit, bool prev) {
 #ifndef QUIET
       flips++;
 #endif
-      stats.walk.flips++;
-      stats.walk.broken += (int64_t)broken;
+      stats.walk_flips++;
+      stats.walk_broken += (int64_t) broken;
       ClauseOrBinary c = walk_pick_clause (walker);
       const int lit = walk_pick_lit (walker, c);
       bool finished = walk_flip_lit (walker, lit);
@@ -982,8 +980,8 @@ int Internal::walk_round (int64_t limit, bool prev) {
       if (broken >= minimum)
         continue;
       minimum = broken;
-      VERBOSE (3, "new phase minimum %zd after %" PRId64 " flips",
-               minimum, flips);
+      VERBOSE (3, "new phase minimum %zd after %" PRId64 " flips", minimum,
+               flips);
       walk_save_minimum (walker);
     }
 
@@ -991,41 +989,40 @@ int Internal::walk_round (int64_t limit, bool prev) {
 
 #ifndef QUIET
     if (minimum == initial_minimum) {
-      PHASE ("walk", internal->stats.walk.count,
+      PHASE ("walk", internal->stats.walk,
              "%sno improvement %zd%s in %" PRId64 " flips and "
              "%" PRId64 " ticks",
              tout.bright_yellow_code (), minimum, tout.normal_code (),
              flips, walker.ticks);
     } else if (minimum < old_global_minimum)
-      PHASE ("walk", stats.walk.count,
+      PHASE ("walk", stats.walk,
              "%snew global minimum %zd%s in %" PRId64 " flips and "
              "%" PRId64 " ticks",
              tout.bright_yellow_code (), minimum, tout.normal_code (),
              flips, walker.ticks);
     else
-      PHASE ("walk", stats.walk.count,
+      PHASE ("walk", stats.walk,
              "best phase minimum %zd in %" PRId64 " flips and "
              "%" PRId64 " ticks",
              minimum, flips, walker.ticks);
 
     if (opts.profile >= 2) {
-      PHASE ("walk", stats.walk.count, "%.2f million ticks per second",
+      PHASE ("walk", stats.walk, "%.2f million ticks per second",
              1e-6 *
                  relative (walker.ticks, time () - profiles.walk.started));
 
-      PHASE ("walk", stats.walk.count, "%.2f thousand flips per second",
+      PHASE ("walk", stats.walk, "%.2f thousand flips per second",
              relative (1e-3 * flips, time () - profiles.walk.started));
 
     } else {
-      PHASE ("walk", stats.walk.count, "%.2f ticks", 1e-6 * walker.ticks);
+      PHASE ("walk", stats.walk, "%.2f ticks", 1e-6 * walker.ticks);
 
-      PHASE ("walk", stats.walk.count, "%.2f thousand flips", 1e-3 * flips);
+      PHASE ("walk", stats.walk, "%.2f thousand flips", 1e-3 * flips);
     }
 #endif
 
     if (minimum > 0) {
-      LOG ("minimum %zd non-zero thus potentially continue",
-           minimum);
+      LOG ("minimum %zd non-zero thus potentially continue", minimum);
       res = 0;
     } else {
       LOG ("minimum is zero thus stop local search");
@@ -1036,8 +1033,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
 
     res = 20;
 
-    PHASE ("walk", stats.walk.count,
-           "aborted due to inconsistent assumptions");
+    PHASE ("walk", stats.walk, "aborted due to inconsistent assumptions");
   }
 
   for (auto idx : vars)
@@ -1079,7 +1075,8 @@ void Internal::walk () {
     STOP_INNER_WALK ();
     return;
   }
-  const int64_t ticks = stats.ticks_search_unstable + stats.ticks_search_stable;
+  const int64_t ticks =
+      stats.ticks_search_unstable + stats.ticks_search_stable;
   int64_t limit = ticks - last.walk.ticks;
 
   last.walk.ticks = ticks;

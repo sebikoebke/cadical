@@ -83,9 +83,9 @@ inline int Internal::subsume_check (Clause *subsuming, Clause *subsumed) {
   assert (subsuming != subsumed);
   assert (subsuming->size <= subsumed->size);
 
-  stats.subchecks++;
+  stats.subsume_checks++;
   if (subsuming->size == 2)
-    stats.subchecks2++;
+    stats.subsume_checks2++;
 
   int flipped = 0, prev = 0;
   bool failed = false;
@@ -215,7 +215,7 @@ void Internal::strengthen_clause_and_remove_units (Clause *c, int lit) {
 inline int Internal::try_to_subsume_clause (Clause *c,
                                             vector<Clause *> &shrunken) {
 
-  stats.subtried++;
+  stats.subsume_tried++;
   assert (!level);
   LOG (c, "trying to subsume");
 
@@ -375,7 +375,7 @@ bool Internal::subsume_round () {
     return false;
 
   START_SIMPLIFIER (subsume, SUBSUME);
-  stats.subsumerounds++;
+  stats.subsume_rounds++;
 
   int64_t check_limit;
   if (opts.subsumelimited) {
@@ -387,12 +387,12 @@ bool Internal::subsume_round () {
       delta = opts.subsumemaxeff;
     delta = max (delta, (int64_t) 2l * active ());
 
-    PHASE ("subsume-round", stats.subsumerounds,
+    PHASE ("subsume-round", stats.subsume_rounds,
            "limit of %" PRId64 " subsumption checks", delta);
 
-    check_limit = stats.subchecks + delta;
+    check_limit = stats.subsume_checks + delta;
   } else {
-    PHASE ("subsume-round", stats.subsumerounds,
+    PHASE ("subsume-round", stats.subsume_rounds,
            "unlimited subsumption checks");
     check_limit = LONG_MAX;
   }
@@ -465,7 +465,7 @@ bool Internal::subsume_round () {
 #ifndef QUIET
   int64_t scheduled = schedule.size ();
   int64_t total = stats.clauses_current_irredundant + stats.clauses_current_redundant;
-  PHASE ("subsume-round", stats.subsumerounds,
+  PHASE ("subsume-round", stats.subsume_rounds,
          "scheduled %" PRId64 " clauses %.0f%% out of %" PRId64 " clauses",
          scheduled, percent (scheduled, total), total);
 #endif
@@ -487,7 +487,7 @@ bool Internal::subsume_round () {
 
     if (terminated_asynchronously ())
       break;
-    if (stats.subchecks >= check_limit)
+    if (stats.subsume_checks >= check_limit)
       break;
 
     Clause *c = s.clause;
@@ -590,7 +590,7 @@ bool Internal::subsume_round () {
     }
   }
 
-  PHASE ("subsume-round", stats.subsumerounds,
+  PHASE ("subsume-round", stats.subsume_rounds,
          "subsumed %" PRId64 " and strengthened %" PRId64 " out of %" PRId64
          " clauses %.0f%%",
          subsumed, strengthened, scheduled,
@@ -600,10 +600,10 @@ bool Internal::subsume_round () {
   const bool completed = !remain;
 
   if (completed)
-    PHASE ("subsume-round", stats.subsumerounds,
+    PHASE ("subsume-round", stats.subsume_rounds,
            "checked all %" PRId64 " scheduled clauses", checked);
   else
-    PHASE ("subsume-round", stats.subsumerounds,
+    PHASE ("subsume-round", stats.subsume_rounds,
            "checked %" PRId64 " clauses %.0f%% of scheduled (%" PRId64
            " remain)",
            checked, percent (checked, scheduled), remain);
@@ -648,7 +648,7 @@ void Internal::subsume () {
     return;
   }
 
-  stats.subsumephases++;
+  stats.subsume_phases++;
 
   if (external_prop) {
     assert (!level);

@@ -368,12 +368,12 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
 
   if (tautological) {
     if (coveror.extend.empty ()) {
-      stats.cover.asymmetric++;
-      stats.cover.total++;
+      stats.cover_asymmetric++;
+      stats.cover_total++;
       LOG (c, "asymmetric tautological");
     } else {
-      stats.cover.blocked++;
-      stats.cover.total++;
+      stats.cover_blocked++;
+      stats.cover_total++;
       // Only copy extension stack if successful.
       int prev = INT_MIN;
       bool already_pushed = false;
@@ -492,7 +492,7 @@ int64_t Internal::cover_round () {
     delta = opts.covermaxeff;
   delta = max (delta, ((int64_t) 2) * active ());
 
-  PHASE ("cover", stats.cover.count,
+  PHASE ("cover", stats.coverings,
          "covered clause elimination limit of %" PRId64 " propagations",
          delta);
 
@@ -546,7 +546,7 @@ int64_t Internal::cover_round () {
 
   if (schedule.empty ()) {
 
-    PHASE ("cover", stats.cover.count, "no previously untried clause left");
+    PHASE ("cover", stats.coverings, "no previously untried clause left");
 
     for (auto c : clauses) {
       if (c->garbage)
@@ -591,7 +591,7 @@ int64_t Internal::cover_round () {
 
 #ifndef QUIET
   const size_t scheduled = schedule.size ();
-  PHASE ("cover", stats.cover.count,
+  PHASE ("cover", stats.coverings,
          "scheduled %zd clauses %.0f%% with %" PRId64 " untried %.0f%%",
          scheduled, percent (scheduled, stats.clauses_current_irredundant), untried,
          percent (untried, scheduled));
@@ -624,15 +624,15 @@ int64_t Internal::cover_round () {
 #ifndef QUIET
   const size_t remain = schedule.size ();
   const size_t tried = scheduled - remain;
-  PHASE ("cover", stats.cover.count,
+  PHASE ("cover", stats.coverings,
          "eliminated %" PRId64 " covered clauses out of %zd tried %.0f%%",
          covered, tried, percent (covered, tried));
   if (remain)
-    PHASE ("cover", stats.cover.count,
+    PHASE ("cover", stats.coverings,
            "remaining %zu clauses %.0f%% untried", remain,
            percent (remain, scheduled));
   else
-    PHASE ("cover", stats.cover.count, "all scheduled clauses tried");
+    PHASE ("cover", stats.coverings, "all scheduled clauses tried");
 #endif
   reset_occs ();
   reset_watches ();
@@ -669,7 +669,7 @@ bool Internal::cover () {
 
   START_SIMPLIFIER (cover, COVER);
 
-  stats.cover.count++;
+  stats.coverings++;
 
   // During variable elimination unit clauses can be generated which need to
   // be propagated properly over redundant clauses too.  Since variable

@@ -295,7 +295,7 @@ int Internal::lookahead_probing () {
   termination_forced = false;
 
 #ifndef QUIET
-  int old_failed = stats.failed;
+  int old_failed = stats.failed_literals;
   int64_t old_probed = stats.probed;
 #endif
   int64_t old_hbrs = stats.hbrs;
@@ -383,7 +383,7 @@ int Internal::lookahead_probing () {
   }
 
 #ifndef QUIET
-  int failed = stats.failed - old_failed;
+  int failed = stats.failed_literals - old_failed;
   int64_t probed = stats.probed - old_probed;
 #endif
   int64_t hbrs = stats.hbrs - old_hbrs;

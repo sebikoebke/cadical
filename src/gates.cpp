@@ -275,8 +275,8 @@ void Internal::find_equivalence (Eliminator &eliminator, int pivot) {
       continue;
 
     LOG ("found equivalence %d = %d", pivot, -second);
-    stats.elimequivs++;
-    stats.elimgates++;
+    stats.eliminate_equivalence++;
+    stats.eliminate_gates++;
 
     LOG (c, "first gate clause");
     assert (!c->gate);
@@ -394,8 +394,8 @@ void Internal::find_and_gate (Eliminator &eliminator, int pivot) {
       fflush (stdout);
     }
 #endif
-    stats.elimands++;
-    stats.elimgates++;
+    stats.eliminate_and++;
+    stats.eliminate_gates++;
     eliminator.gatetype = AND;
 
     (void) arity;
@@ -563,8 +563,8 @@ void Internal::find_if_then_else (Eliminator &eliminator, int pivot) {
       eliminator.gates.push_back (dj);
       eliminator.gates.push_back (d1);
       eliminator.gates.push_back (d2);
-      stats.elimgates++;
-      stats.elimites++;
+      stats.eliminate_gates++;
+      stats.eliminate_ite++;
       eliminator.gatetype = ITE;
       return;
     }
@@ -707,8 +707,8 @@ void Internal::find_xor_gate (Eliminator &eliminator, int pivot) {
       fflush (stdout);
     }
 #endif
-    stats.elimgates++;
-    stats.elimxors++;
+    stats.eliminate_gates++;
+    stats.eliminate_xor++;
     const auto end = eliminator.gates.end ();
     auto j = eliminator.gates.begin ();
     for (auto i = j; i != end; i++) {

@@ -140,7 +140,7 @@ void Internal::reactivate (int lit) {
   f.status = Flags::ACTIVE;
   f.sweep = false;
   assert (active (lit));
-  stats.reactivated++;
+  stats.vars_reactivated++;
   assert (stats.vars_inactive > 0);
   stats.vars_inactive--;
   stats.vars_active++;

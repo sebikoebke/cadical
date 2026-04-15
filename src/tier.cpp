@@ -8,9 +8,9 @@ void Internal::recompute_tier () {
   if (!opts.recomputetier)
     return;
 
-  ++stats.tierecomputed;
+  ++stats.clauses_recomputed_glue;
   const int64_t delta =
-      stats.tierecomputed >= 16 ? 1u << 16 : (1u << stats.tierecomputed);
+      stats.clauses_recomputed_glue >= 16 ? 1u << 16 : (1u << stats.clauses_recomputed_glue);
   lim.recompute_tier = stats.conflicts + delta;
   LOG ("rescheduling in %" PRId64 " at %" PRId64 " (conflicts at %" PRId64
        ")",
@@ -74,7 +74,7 @@ void Internal::recompute_tier () {
     tier2[stable] = tier1[stable] + 1;
   assert (tier2[stable] > tier1[stable]);
 
-  PHASE ("retiered", stats.tierecomputed,
+  PHASE ("retiered", stats.clauses_recomputed_glue,
          "tier1 limit = %d in %s mode, tier2 limit = %d in %s mode",
          tier1[stable], stable ? "stable" : "focused", tier2[stable],
          stable ? "stable" : "focused");

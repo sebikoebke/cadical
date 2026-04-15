@@ -50,9 +50,9 @@
   STATISTIC (congruence_gates_ite,                 1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (congruence_gates_xor,                 1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (congruence_ites,                      1, CONFLICT_INTERVAL,  "",            "interval") \
-  STATISTIC (congruence_rewritted_ands,            1, CONFLICT_INTERVAL,  "",            "interval") \
-  STATISTIC (congruence_rewritted_ites,            1, CONFLICT_INTERVAL,  "",            "interval") \
-  STATISTIC (congruence_rewritted_xors,            1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_rewritten_ands,            1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_rewritten_ites,            1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (congruence_rewritten_xors,            1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (congruence_rounds,                    1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (congruence_simplified,                1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (congruence_simplified_ands,           1, CONFLICT_INTERVAL,  "",            "interval") \
@@ -79,6 +79,8 @@
   STATISTIC (deduplicated,                         1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (deduplicate_init,                     1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (deduplicate_init_rounds,              1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (deduplicate_failed,                   1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (deduplicate_hyper_unary,              1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (deduplications,                       1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (eager_subsumed,                       1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (eager_subsumtions,                    1, CONFLICT_INTERVAL,  "",            "interval") \
@@ -99,7 +101,8 @@
   STATISTIC (eliminate_fast_rounds,                1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (eliminate_gates,                      1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (eliminate_ite,                        1, CONFLICT_INTERVAL,  "",            "interval") \
-  STATISTIC (eliminate_otfs,                       1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_otf_strengthened,           1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (eliminate_otf_subsumed,               1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (eliminate_phases,                     1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (eliminate_resolved,                   1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (eliminate_resolve_tried,              1, CONFLICT_INTERVAL,  "",            "interval") \
@@ -123,6 +126,7 @@
   STATISTIC (factor_removed_clauses,               1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (factor_removed_literals,              1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (factor_removed_redundant,             1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (failed_literals,                      1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (flushed,                              1, PCNT_CONFLICTS,    "%",           "conflicts") \
   STATISTIC (flush_hyper,                          2, PCNT_CONFLICTS,    "%",           "conflicts") \
   STATISTIC (flushings,                            2, CONFLICT_INTERVAL,  "",            "interval") \
@@ -143,7 +147,7 @@
   STATISTIC (inprobingphases,                      1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (inprobingsuccess,                     1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (instantiated,                         1, CONFLICT_INTERVAL,  "",            "interval") \
-  STATISTIC (instantiate_rounds,                   1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (instantiate_tried,                    1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (instantiations,                       1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (irredundant_literals,                 1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (learned_binaries,                     1, CONFLICT_INTERVAL,  "",            "interval") \
@@ -178,7 +182,7 @@
   STATISTIC (propagations,                         0, PER_SECOND,         "",          "per second") \
   STATISTIC (propagations_backbone,                2, PCNT_PROPAGATIONS, "%",        "propagations") \
   STATISTIC (propagations_cover,                   2, PCNT_PROPAGATIONS, "%",        "propagations") \
-  STATISTIC (propagations_instatiate,              2, PCNT_PROPAGATIONS, "%",        "propagations") \
+  STATISTIC (propagations_instantiate,             2, PCNT_PROPAGATIONS, "%",        "propagations") \
   STATISTIC (propagations_probe,                   2, PCNT_PROPAGATIONS, "%",        "propagations") \
   STATISTIC (propagations_search,                  2, PCNT_PROPAGATIONS, "%",        "propagations") \
   STATISTIC (propagations_transred,                2, PCNT_PROPAGATIONS, "%",        "propagations") \
@@ -195,7 +199,6 @@
   STATISTIC (propagator_learned_elevating,         2, PCNT_EXT_LEARNED,  "%",  "propagator clauses") \
   STATISTIC (propagator_learned_propagating,       2, PCNT_EXT_LEARNED,  "%",  "propagator clauses") \
   STATISTIC (propagator_learned_unit,              2, PCNT_EXT_LEARNED,  "%",  "propagator clauses") \
-  STATISTIC (reactivated_clauses,                  1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (recomputed_tiers,                     1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (reduced,                              1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (reduce_prct,                          1, CONFLICT_INTERVAL,  "",            "interval") \
@@ -300,6 +303,7 @@
   STATISTIC (vars_now_fixed,                       1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (vars_now_pure,                        1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (vars_now_substituted,                 1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (vars_reactivated,                     1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (vars_unused,                          1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (vivifications,                        1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (vivified,                             1, CONFLICT_INTERVAL,  "",            "interval") \

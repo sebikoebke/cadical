@@ -111,7 +111,7 @@ void Internal::lucky_assume_decision (int lit) {
 int Internal::trivially_false_satisfiable () {
   VERBOSE (3, "checking that all clauses contain a negative literal");
   assert (!level);
-  ++stats.lucky.constant.zero;
+  ++stats.lucky_constant_zero;
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
@@ -156,14 +156,14 @@ int Internal::trivially_false_satisfiable () {
     LOG ("propagation failed including redundant clauses");
     return unlucky (0);
   }
-  stats.lucky.constant.zero++;
+  stats.lucky_constant_zero++;
   return 10;
 }
 
 int Internal::trivially_true_satisfiable () {
   VERBOSE (3, "checking that all clauses contain a positive literal");
   assert (!level);
-  ++stats.lucky.constant.one;
+  ++stats.lucky_constant_one;
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
@@ -247,9 +247,9 @@ int Internal::lucky_fixed_test (Iterator begin, Iterator end, signed char pol, s
   assert (!unsat);
   assert (!level);
   if (pol == 1)
-    stats.lucky.forward.one++;
+    stats.lucky_forward_one++;
   else
-   stats.lucky.forward.zero++;
+   stats.lucky_forward_zero++;
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
@@ -292,7 +292,7 @@ int Internal::backward_false_satisfiable () {
   VERBOSE (3, "checking decreasing variable index false assignment");
   assert (!unsat);
   assert (!level);
-  stats.lucky.backward.zero++;
+  stats.lucky_backward_zero++;
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
@@ -322,7 +322,7 @@ int Internal::backward_true_satisfiable () {
   VERBOSE (3, "checking decreasing variable index true assignment");
   assert (!unsat);
   assert (!level);
-  stats.lucky.backward.one++;
+  stats.lucky_backward_one++;
   int res = lucky_decide_assumptions ();
   if (res)
     return res;
@@ -394,7 +394,7 @@ int Internal::random_lucky_assignment(signed char pol) {
   VERBOSE(3, "checking random variable order %s assignment", pol == 1 ? "true" : "false");
   assert(!unsat);
   assert(!level);
-  stats.lucky.random++;
+  stats.lucky_random++;
 
   // Shuffle the variables
   std::vector<int> shuffle;
@@ -405,7 +405,7 @@ int Internal::random_lucky_assignment(signed char pol) {
     shuffle.push_back (idx);
   }
   Random random (opts.seed); // global seed
-  random += stats.lucky.random;  // different every time
+  random += stats.lucky_random;  // different every time
   const int highest_var = (int)shuffle.size ();
   for (int i = 0; i <= highest_var - 2; i++) {
     const int j = random.pick_int (i, highest_var - 1);
@@ -460,7 +460,7 @@ int Internal::lucky_phases () {
   LOG ("starting lucky");
   assert (!searching_lucky_phases);
   searching_lucky_phases = true;
-  stats.lucky.tried++;
+  stats.lucky_tried++;
   int64_t units =0;
   int res = 0, rounds = 0;
 #ifndef QUIET
@@ -516,7 +516,7 @@ int Internal::lucky_phases () {
   if (res < 0)
     assert (termination_forced), res = 0;
   if (res == 10)
-    stats.lucky.succeeded++;
+    stats.lucky++;
   report ('l', !res);
   assert (searching_lucky_phases);
 
@@ -541,22 +541,22 @@ int Internal::lucky_phases () {
       if (res < 0)
         assert (termination_forced), res = 0;
       if (res == 10)
-        stats.lucky.succeeded++;
+        stats.lucky++;
       assert (searching_lucky_phases);
 
       assert (res || !level);
       assert (res || propagated == trail.size ());
 
       units = active_before - stats.vars_active;
-      stats.lucky.units += units;
+      stats.lucky_units += units;
 
       if (!res && units)
-        VERBOSE (3, "lucky-%" PRId64 " in round %d found %" PRId64 " units", stats.lucky.tried, rounds, units);
+        VERBOSE (3, "lucky-%" PRId64 " in round %d found %" PRId64 " units", stats.lucky_tried, rounds, units);
     } while (units && !res && ++rounds < opts.luckyrounds);
 
   report ('l', !res && (old_active == stats.vars_active));
   searching_lucky_phases = false;
-  PHASE ("lucky", stats.lucky.tried, " produced %" PRId64 " units after %d rounds", active_initially - stats.vars_active, rounds);
+  PHASE ("lucky", stats.lucky_tried, " produced %" PRId64 " units after %d rounds", active_initially - stats.vars_active, rounds);
 
   STOP (lucky);
   STOP (search);

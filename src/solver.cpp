@@ -1872,7 +1872,7 @@ int64_t Solver::get_statistic_value (const char *opt) const {
     return internal->stats.vars_all_fixed;
   if (!strcmp (opt, "eliminated"))
     return internal->stats.vars_all_eliminated +
-           internal->stats.vars_all_fasteliminated;
+           internal->stats.vars_all_eliminated_fast;
   if (!strcmp (opt, "substituted"))
     return internal->stats.vars_all_substituted;
   return -1;

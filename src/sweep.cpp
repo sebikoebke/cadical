@@ -23,9 +23,9 @@ int Internal::sweep_solve () {
   stats.sweep_solved++;
   int res = kitten_solve (citten);
   if (res == 10)
-    stats.sweep_sat++;
+    stats.sweep_solved_sat++;
   if (res == 20)
-    stats.sweep_unsat++;
+    stats.sweep_solved_unsat++;
   STOP (sweepsolve);
   return res;
 }
@@ -789,7 +789,7 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
     bool limit_hit = false;
     while (p != end) {
       const int lit = *p++;
-      stats.sweep_flip_backbone++;
+      stats.sweep_backbone_flip++;
       if (limit_hit || terminated_asynchronously ()) {
         break;
       } else if (sweep_flip (lit)) {
@@ -797,7 +797,7 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
 #ifdef LOGGING
         total_flipped++;
 #endif
-        stats.sweep_flipped_backbone++;
+        stats.sweep_backbone_flipped++;
         flipped++;
       } else {
         LOG ("flipping backbone candidate %d failed", lit);
@@ -824,17 +824,17 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
 
 bool Internal::sweep_extract_fixed (Sweeper &sweeper, int lit) {
   const int not_lit = -lit;
-  stats.sweep_solved_backbone++;
+  stats.sweep_backbone_solved++;
   kitten_assume_signed (citten, not_lit);
   int res = sweep_solve ();
   if (!res) {
-    stats.sweep_unknown_backbone++;
+    stats.sweep_backbone_solved_unknown++;
     return false;
   }
   assert (res == 20);
   LOG ("sweep unit %d", lit);
   save_add_clear_core (sweeper);
-  stats.sweep_unsat_backbone++;
+  stats.sweep_backbone_solved_unsat++;
   return true;
 }
 
@@ -842,7 +842,7 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
   LOG ("trying backbone candidate %d", lit);
   signed char value = kitten_fixed_signed (citten, lit);
   if (value) {
-    stats.sweep_fixed_backbone++;
+    stats.sweep_backbone_fixed++;
     assert (value > 0);
     if (val (lit) <= 0) {
       return sweep_extract_fixed (sweeper, lit);
@@ -855,9 +855,9 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
   if (res != 10) {
     LOG ("not flipping due to status %d != 10", res);
   }
-  stats.sweep_flip_backbone++;
+  stats.sweep_backbone_flip++;
   if (res == 10 && sweep_flip (lit)) {
-    stats.sweep_flipped_backbone++;
+    stats.sweep_backbone_flipped++;
     LOG ("flipping %d succeeded", lit);
     // LOGBACKBONE ("refined backbone candidates");
     return false;
@@ -865,13 +865,13 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
 
   LOG ("flipping %d failed", lit);
   const int not_lit = -lit;
-  stats.sweep_solved_backbone++;
+  stats.sweep_backbone_solved++;
   kitten_assume_signed (citten, not_lit);
   res = sweep_solve ();
   if (res == 10) {
     LOG ("sweeping backbone candidate %d failed", lit);
     sweep_refine (sweeper);
-    stats.sweep_sat_backbone++;
+    stats.sweep_backbone_solved_sat++;
     return false;
   }
 
@@ -879,11 +879,11 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
     LOG ("sweep unit %d", lit);
     save_add_clear_core (sweeper);
     assert (val (lit));
-    stats.sweep_unsat_backbone++;
+    stats.sweep_backbone_solved_unsat++;
     return true;
   }
 
-  stats.sweep_unknown_backbone++;
+  stats.sweep_backbone_solved_unknown++;
 
   LOG ("sweeping backbone candidate %d failed", lit);
   return false;
@@ -1321,7 +1321,7 @@ void Internal::flip_partition_literals (Sweeper &sweeper) {
           LOG ("flipping equivalence candidate %d failed", lit);
           *q++ = lit;
         }
-        stats.sweep_flip_equivalences++;
+        stats.sweep_equivalences_flip++;
       }
       if (size > 1) {
         *q++ = 0;
@@ -1329,7 +1329,7 @@ void Internal::flip_partition_literals (Sweeper &sweeper) {
       }
       src = end_src + 1;
     }
-    stats.sweep_flipped_equivalences += flipped;
+    stats.sweep_equivalences_flipped += flipped;
     sweeper.partition.resize (dst - sweeper.partition.begin ());
     LOG ("flipped %u equivalence candidates in round %u", flipped, round);
     if (terminated_asynchronously ())
@@ -1354,9 +1354,9 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   const int third = (end - begin == 3) ? 0 : end[-4];
   int res = kitten_status (citten);
   if (res == 10) {
-    stats.sweep_flip_equivalences++;
+    stats.sweep_equivalences_flip++;
     if (sweep_flip (lit)) {
-      stats.sweep_flipped_equivalences++;
+      stats.sweep_equivalences_flipped++;
       LOG ("flipping %d succeeded", lit);
       if (third == 0) {
         LOG ("squashing equivalence class of %d", lit);
@@ -1369,9 +1369,9 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
       }
       return false;
     }
-    stats.sweep_flip_equivalences++;
+    stats.sweep_equivalences_flip++;
     if (sweep_flip (other)) {
-      stats.sweep_flipped_equivalences++;
+      stats.sweep_equivalences_flipped++;
       LOG ("flipping %d succeeded", other);
       if (third == 0) {
         LOG ("squashing equivalence class of %d", lit);
@@ -1417,21 +1417,21 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   LOG ("flipping %d and %d both failed", lit, other);
   kitten_assume_signed (citten, not_lit);
   kitten_assume_signed (citten, other);
-  stats.sweep_solved_equivalences++;
+  stats.sweep_equivalences_solved++;
   res = sweep_solve ();
   if (res == 10) {
-    stats.sweep_sat_equivalences++;
+    stats.sweep_equivalences_solved_sat++;
     LOG ("first sweeping implication %d -> %d failed", other, lit);
     sweep_refine (sweeper);
   } else if (!res) {
-    stats.sweep_unknown_equivalences++;
+    stats.sweep_equivalences_solved_unknown++;
     LOG ("first sweeping implication %d -> %d hit ticks limit", other, lit);
   }
 
   if (res != 20)
     return false;
 
-  stats.sweep_unsat_equivalences++;
+  stats.sweep_equivalences_solved_unsat++;
   LOG ("first sweeping implication %d -> %d succeeded", other, lit);
 
   save_core (sweeper, 0);
@@ -1439,13 +1439,13 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   kitten_assume_signed (citten, lit);
   kitten_assume_signed (citten, not_other);
   res = sweep_solve ();
-  stats.sweep_solved_equivalences++;
+  stats.sweep_equivalences_solved++;
   if (res == 10) {
-    stats.sweep_sat_equivalences++;
+    stats.sweep_equivalences_solved_sat++;
     LOG ("second sweeping implication %d <- %d failed", other, lit);
     sweep_refine (sweeper);
   } else if (!res) {
-    stats.sweep_unknown_equivalences++;
+    stats.sweep_equivalences_solved_unknown++;
     LOG ("second sweeping implication %d <- %d hit ticks limit", other,
          lit);
   }
@@ -1457,7 +1457,7 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
 
   assert (res == 20);
 
-  stats.sweep_unsat_equivalences++;
+  stats.sweep_equivalences_solved_unsat++;
   LOG ("second sweeping implication %d <- %d succeeded too", other, lit);
 
   save_core (sweeper, 1);
