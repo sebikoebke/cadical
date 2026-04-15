@@ -181,11 +181,12 @@ void Stats::print (Internal *internal) {
     PRT ("decisions:       %15" PRId64 "   %10.2f    per second",
          stats.decisions, relative (stats.decisions, t));
     PRT ("  searched:      %15" PRId64 "   %10.2f    per decision",
-         stats.searches, relative (stats.searches, stats.decisions));
+         stats.decisions_searched,
+         relative (stats.decisions_searched, stats.decisions));
   }
   if (all || stats.decisions_random) {
     PRT ("rand. dec phase: %15" PRId64 "   %10.2f    per interval",
-         stats.decisions_random,
+         stats.decisions_random_phases,
          relative (stats.decisions_random_phases, stats.decisions));
     PRT ("random decs:     %15" PRId64 "   %10.2f    per phase",
          stats.decisions_random,
@@ -354,8 +355,8 @@ void Stats::print (Internal *internal) {
          stats.hbrs, relative (stats.hbrs, stats.probed));
     PRT ("  hbrsizes:      %15" PRId64 "   %10.2f    per hbr",
          stats.hbr_sizes, relative (stats.hbr_sizes, stats.hbrs));
-    PRT ("  hbreds:        %15" PRId64 "   %10.2f %%  per hbr", stats.hbrs,
-         percent (stats.hbrs, stats.hbrs));
+    PRT ("  hbreds:        %15" PRId64 "   %10.2f %%  per hbr",
+         stats.hbr_redundant, percent (stats.hbr_redundant, stats.hbrs));
     PRT ("  hbrsubs:       %15" PRId64 "   %10.2f %%  per hbr",
          stats.hbr_subsuming, percent (stats.hbr_subsuming, stats.hbrs));
   }
@@ -651,9 +652,11 @@ void Stats::print (Internal *internal) {
     PRT ("  deduplicated:  %15" PRId64 "   %10.2f %%  per subsumed",
          stats.deduplicated, percent (stats.deduplicated, stats.subsumed));
     PRT ("  transreds:     %15" PRId64 "   %10.2f    interval",
-         stats.transitive, relative (stats.conflicts, stats.transitive));
+         stats.transitive_rounds,
+         relative (stats.conflicts, stats.transitive_rounds));
     PRT ("  transitive:    %15" PRId64 "   %10.2f %%  per subsumed",
-         stats.transitive, percent (stats.transitive, stats.subsumed));
+         stats.transitive_clauses,
+         percent (stats.transitive_clauses, stats.subsumed));
     PRT ("  subirr:        %15" PRId64 "   %10.2f %%  of subsumed",
          stats.subsumed_irredundant,
          percent (stats.subsumed_irredundant, stats.subsumed));
@@ -748,16 +751,16 @@ void Stats::print (Internal *internal) {
        percent (stats.ticks_walk_break, searchticks));
   if (all) {
     PRT ("tier recomputed: %15" PRId64 "   %10.2f    interval",
-         stats.clauses_recomputed_glue,
-         relative (stats.conflicts, stats.clauses_recomputed_glue));
+         stats.recomputed_tiers,
+         relative (stats.conflicts, stats.recomputed_tiers));
   }
   if (all || stats.ilb_triggers) {
     PRT ("trail reuses:    %15" PRId64 "   %10.2f %%  of incremental calls",
          stats.ilb_success,
          percent (stats.ilb_success, stats.ilb_triggers));
     PRT ("  levels:        %15" PRId64 "   %10.2f    per reuse",
-         stats.reused_levels,
-         relative (stats.reused_levels, stats.ilb_success));
+         stats.ilb_reused_levels,
+         relative (stats.ilb_reused_levels, stats.ilb_success));
     PRT ("  literals:      %15" PRId64 "   %10.2f    per reuse",
          stats.ilb_reused_literals,
          relative (stats.ilb_reused_literals, stats.ilb_success));

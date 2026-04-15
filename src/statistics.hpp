@@ -283,8 +283,8 @@
   STATISTIC (ticks_walk_flip_broken,               2, PCNT_TICKS_WALK,   "%",          "walk ticks") \
   STATISTIC (ticks_walk_flip_wl,                   2, PCNT_TICKS_WALK,   "%",          "walk ticks") \
   STATISTIC (ticks_walk_pick,                      2, PCNT_TICKS_WALK,   "%",          "walk ticks") \
-  STATISTIC (transitive,                           1, CONFLICT_INTERVAL,  "",            "interval") \
-  STATISTIC (transitive_reduced,                   1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (transitive_rounds,                    1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (transitive_clauses,                   1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (transitive_units,                     1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (variables_extension,                  1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (variables_original,                   1, CONFLICT_INTERVAL,  "",            "interval") \

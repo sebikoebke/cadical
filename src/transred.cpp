@@ -23,7 +23,7 @@ void Internal::transred () {
   assert (!level);
 
   START_SIMPLIFIER (transred, TRANSRED);
-  stats.transitive++;
+  stats.transitive_rounds++;
 
   // Transitive reduction can not be run to completion for larger formulas
   // with many binary clauses.  We bound it in the same way as 'probe_core'.
@@ -36,7 +36,7 @@ void Internal::transred () {
   if (limit > opts.transredmaxeff)
     limit = opts.transredmaxeff;
 
-  PHASE ("transred", stats.transitive,
+  PHASE ("transred", stats.transitive_rounds,
          "transitive reduction limit of %" PRId64 " propagations", limit);
 
   const auto end = clauses.end ();
@@ -60,7 +60,7 @@ void Internal::transred () {
   //
   if (i == end) {
 
-    PHASE ("transred", stats.transitive,
+    PHASE ("transred", stats.transitive_rounds,
            "rescheduling all clauses since no clauses to check left");
     for (i = clauses.begin (); i != end; i++) {
       Clause *c = *i;
@@ -222,7 +222,7 @@ void Internal::transred () {
 
     if (transitive) {
       removed++;
-      stats.transitive_reduced++;
+      stats.transitive_clauses++;
       LOG (c, "transitive redundant");
       mark_garbage (c);
     } else if (failed) {
@@ -243,7 +243,7 @@ void Internal::transred () {
   stats.propagations_transred += propagations;
   erase_vector (work);
 
-  PHASE ("transred", stats.transitive,
+  PHASE ("transred", stats.transitive_rounds,
          "removed %" PRId64 " transitive clauses, found %" PRId64 " units",
          removed, units);
 
