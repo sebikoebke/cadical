@@ -250,7 +250,7 @@ inline int Internal::hyper_binary_resolve (Clause *reason) {
       contained = (*k == -dom);
     const bool red = !contained || reason->redundant;
     if (red)
-      stats.hbrs++;
+      stats.hbr_redundant++;
     LOG ("new %s hyper binary resolvent %d %d",
          (red ? "redundant" : "irredundant"), -dom, lits[0]);
     assert (clause.empty ());

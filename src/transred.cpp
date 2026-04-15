@@ -222,7 +222,7 @@ void Internal::transred () {
 
     if (transitive) {
       removed++;
-      stats.transitive++;
+      stats.transitive_reduced++;
       LOG (c, "transitive redundant");
       mark_garbage (c);
     } else if (failed) {

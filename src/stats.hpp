@@ -21,8 +21,8 @@ struct Stats {
 #undef STATISTIC
 
   struct {
-    double real;
-    double process;
+    double real = 0;
+    double process = 0;
   } time;
 
   uint64_t bump_used[2] = {0, 0};

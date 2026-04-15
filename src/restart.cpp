@@ -64,14 +64,13 @@ bool Internal::stabilizing () {
   next_delta_ticks *= stabphases * stabphases;
 
   lim.stabilize = next_delta_ticks;
+  if (lim.stabilize < 1)
+    lim.stabilize = 1;
   lim.stabilize +=
       !stable ? stats.ticks_search_stable : stats.ticks_search_unstable;
   last.stabilize.ticks =
       !stable ? stats.ticks_search_stable : stats.ticks_search_unstable;
-  if (lim.stabilize <= !stable ? stats.ticks_search_stable
-                               : stats.ticks_search_unstable)
-    lim.stabilize = !stable ? stats.ticks_search_stable
-                            : stats.ticks_search_unstable + 1;
+
   PHASE ("stabilizing", stats.stable_phases_total,
          "next %s stabilization limit %" PRId64
          " at ticks interval %" PRId64,

@@ -157,7 +157,7 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
 
     if (unit) {
 
-      stats.deduplicate_failed++;
+      stats.failed_literals++;
       stats.deduplicate_hyper_unary++;
       assign_unit (unit);
       // lrat_chain.clear ();   done in search_assign
