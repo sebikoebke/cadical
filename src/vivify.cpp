@@ -299,6 +299,7 @@ bool Internal::vivify_propagate (int64_t &ticks) {
   }
   const size_t delta = propagated2 - before;
   stats.propagations_vivify += static_cast<int64_t> (delta);
+  stats.propagations += static_cast<int64_t> (delta);
   if (conflict)
     LOG (conflict, "conflict");
   STOP (propagate);

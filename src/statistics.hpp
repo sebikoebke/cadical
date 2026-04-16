@@ -44,7 +44,6 @@
   STATISTIC (condition_propagated,                 2, PER_CONDITIONING,   "",    "per conditioning") \
   STATISTIC (conflicts,                            0, PER_SECOND,         "",          "per second") \
   STATISTIC (conflicts_chrono,                     3, NO_SECONDARY,       "",                    "") \
-  STATISTIC (congruence,                           1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (congruence_ands,                      1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (congruence_dummy_ands,                1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (congruence_gates,                     1, CONFLICT_INTERVAL,  "",            "interval") \
@@ -70,7 +69,6 @@
   STATISTIC (congruent,                            1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (cover_asymmetric,                     2, PER_COVERING,       "",        "per covering") \
   STATISTIC (cover_blocked,                        2, PER_COVERING,       "",        "per covering") \
-  STATISTIC (covered,                              1, PER_COVERING,       "",        "per covering") \
   STATISTIC (coverings,                            2, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (cover_total,                          2, PER_COVERING,       "",        "per covering") \
   STATISTIC (decisions,                            0, PER_SECOND,         "",          "per second") \
@@ -178,7 +176,6 @@
   STATISTIC (preprocessings,                       1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (probed,                               1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (probe_failed_literals,                1, CONFLICT_INTERVAL,  "",            "interval") \
-  STATISTIC (probe_hyper_unary,                    1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (probingrounds,                        1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (propagations,                         0, PER_SECOND,         "",          "per second") \
   STATISTIC (propagations_backbone,                2, PCNT_PROPAGATIONS, "%",        "propagations") \
@@ -202,8 +199,6 @@
   STATISTIC (propagator_learned_unit,              2, PCNT_EXT_LEARNED,  "%",  "propagator clauses") \
   STATISTIC (recomputed_tiers,                     1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (reduced,                              1, CONFLICT_INTERVAL,  "",            "interval") \
-  STATISTIC (reduce_prct,                          1, CONFLICT_INTERVAL,  "",            "interval") \
-  STATISTIC (reduce_sqrt,                          1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (reductions,                           1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (rephased,                             1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (rephased_best,                        2, PCNT_REPHASED,     "%",            "rephased") \
@@ -252,7 +247,6 @@
   STATISTIC (sweep_depth,                          1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (sweep_environment,                    1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (sweep_equivalences,                   1, CONFLICT_INTERVAL,  "",            "interval") \
-  STATISTIC (sweep_equivalences_fixed,             1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (sweep_equivalences_flip,              1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (sweep_equivalences_flipped,           1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (sweep_equivalences_solved,            1, CONFLICT_INTERVAL,  "",            "interval") \

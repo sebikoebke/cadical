@@ -131,6 +131,7 @@ inline bool Internal::backbone_propagate (int64_t &ticks) {
   }
   int64_t delta = propagated2 - before;
   stats.propagations_backbone += delta;
+  stats.propagations += delta;
   if (conflict)
     LOG (conflict, "conflict");
   STOP (propagate);
@@ -167,6 +168,7 @@ inline void Internal::backbone_propagate2 (int64_t &ticks) {
 
   int64_t delta = propagated2 - before;
   stats.propagations_backbone += delta;
+  stats.propagations += delta;
 }
 
 void Internal::schedule_backbone_cands (std::vector<int> &candidates) {
@@ -196,7 +198,7 @@ void Internal::schedule_backbone_cands (std::vector<int> &candidates) {
       if (!f.active ())
         continue;
       if (val (v))
-	continue;
+        continue;
       if (!f.backbone0) {
         LOG ("scheduling backbone literal candidate %s", LOGLIT (v));
         candidates.push_back (v);
@@ -274,7 +276,7 @@ inline void Internal::backbone_unit_assign (int lit) {
   const int idx = vidx (lit);
   assert (!vals[idx]);
   Var &v = var (idx);
-  v.level = 0;                   // required to reuse decisions
+  v.level = 0;                 // required to reuse decisions
   v.trail = get_trail_size (); // used in 'vivify_better_watch'
   assert ((int) num_assigned < max_var);
   num_assigned++;
@@ -297,7 +299,7 @@ inline void Internal::backbone_assign_any (int lit, Clause *reason) {
   assert (!flags (idx).eliminated () || !reason);
   assert (reason == decision_reason || !reason || reason->size >= 2);
   Var &v = var (idx);
-  v.level = level;               // required to reuse decisions
+  v.level = level;             // required to reuse decisions
   v.trail = get_trail_size (); // used in 'vivify_better_watch'
   assert ((int) num_assigned < max_var);
   num_assigned++;
@@ -320,7 +322,7 @@ inline void Internal::backbone_assign (int lit, Clause *reason) {
   assert (!flags (idx).eliminated () || !reason);
   assert (reason == decision_reason || !reason || reason->size == 2);
   Var &v = var (idx);
-  v.level = level;               // required to reuse decisions
+  v.level = level;             // required to reuse decisions
   v.trail = get_trail_size (); // used in 'vivify_better_watch'
   assert ((int) num_assigned < max_var);
   num_assigned++;

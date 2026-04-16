@@ -44,12 +44,7 @@ void Stats::print (Internal *internal) {
 
   double t = internal->solve_time ();
 
-  int64_t propagations = 0;
-  propagations += stats.propagations_cover;
-  propagations += stats.propagations_probe;
-  propagations += stats.propagations_search;
-  propagations += stats.propagations_transred;
-  propagations += stats.propagations_vivify;
+  int64_t propagations = stats.propagations;
 
   int64_t vivified = stats.vivify_subsumed + stats.vivify_strengthened +
                      stats.vivify_implied;
@@ -488,10 +483,6 @@ void Stats::print (Internal *internal) {
          stats.reduced, percent (stats.reduced, stats.conflicts));
     PRT ("  reductions:    %15" PRId64 "   %10.2f    interval",
          stats.reductions, relative (stats.conflicts, stats.reductions));
-    PRT ("  sqrt scheme:   %15" PRId64 "   %10.2f %%  reductions",
-         stats.reduce_sqrt, relative (stats.reduce_sqrt, stats.reductions));
-    PRT ("  prct scheme:   %15" PRId64 "   %10.2f %%  reductions",
-         stats.reduce_prct, relative (stats.reduce_prct, stats.reductions));
     PRT ("  collections:   %15" PRId64 "   %10.2f    interval",
          stats.collections, relative (stats.conflicts, stats.collections));
   }

@@ -501,6 +501,7 @@ bool Internal::probe_propagate () {
   }
   int64_t delta = (int64_t) propagated2 - before;
   stats.propagations_probe += delta;
+  stats.propagations += delta;
   if (conflict)
     LOG (conflict, "conflict");
   STOP (propagate);

@@ -241,6 +241,7 @@ void Internal::transred () {
 
   last.transred.propagations = stats.propagations_search;
   stats.propagations_transred += propagations;
+  stats.propagations += propagations;
   erase_vector (work);
 
   PHASE ("transred", stats.transitive_rounds,

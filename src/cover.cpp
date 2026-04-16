@@ -101,6 +101,7 @@ bool Internal::cover_propagate_asymmetric (int lit, Clause *ignore,
                                            Coveror &coveror) {
   require_mode (COVER);
   stats.propagations_cover++;
+  stats.propagations++;
   assert (val (lit) < 0);
   bool subsumed = false;
   LOG ("asymmetric literal propagation of %d", lit);
@@ -188,6 +189,7 @@ bool Internal::cover_propagate_covered (int lit, Coveror &coveror) {
   }
 
   stats.propagations_cover++;
+  stats.propagations++;
 
   LOG ("covered propagation of %d", lit);
   assert (coveror.intersection.empty ());
@@ -593,8 +595,8 @@ int64_t Internal::cover_round () {
   const size_t scheduled = schedule.size ();
   PHASE ("cover", stats.coverings,
          "scheduled %zd clauses %.0f%% with %" PRId64 " untried %.0f%%",
-         scheduled, percent (scheduled, stats.clauses_current_irredundant), untried,
-         percent (untried, scheduled));
+         scheduled, percent (scheduled, stats.clauses_current_irredundant),
+         untried, percent (untried, scheduled));
 #endif
 
   // Heuristically it should be beneficial to intersect with smaller clauses
@@ -628,9 +630,8 @@ int64_t Internal::cover_round () {
          "eliminated %" PRId64 " covered clauses out of %zd tried %.0f%%",
          covered, tried, percent (covered, tried));
   if (remain)
-    PHASE ("cover", stats.coverings,
-           "remaining %zu clauses %.0f%% untried", remain,
-           percent (remain, scheduled));
+    PHASE ("cover", stats.coverings, "remaining %zu clauses %.0f%% untried",
+           remain, percent (remain, scheduled));
   else
     PHASE ("cover", stats.coverings, "all scheduled clauses tried");
 #endif
