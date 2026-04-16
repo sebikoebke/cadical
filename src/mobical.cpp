@@ -26,12 +26,12 @@ static const char *USAGE =
 "\n"
 "  -v | --verbose    increase verbosity\n"
 "  -q | --quiet      be quiet (only print failing and reduced traces)\n"
-"  -s | --stats      print summary of cadical statistics\n"
 "\n"
 "  --colors          force colors for both '<stdout>' and '<stderr>'\n"
 "  --no-colors       disable colors if '<stderr>' is connected to terminal\n"
 "  --no-terminal     assume '<stderr>' is not connected to terminal\n"
 "  --no-seeds        do not print seeds in random mode\n"
+"  --no-summary      do not print detailed summary\n"
 "\n"
 "  -<n>              specify the number of solving phases explicitly\n"
 "  --time <seconds>  set time limit per trace (none=0, default=%d)\n"
@@ -235,12 +235,14 @@ struct DoNot {
   bool fork = false;       // do not fork sub-process
   bool enforce = false;    // do not enforce contracts on read trace
   bool seeds = false;
+  bool summary = false;
   bool ignore_resource_limits = false;
 };
 
 /*------------------------------------------------------------------------*/
 
 struct Shared {
+  int64_t executed;
   int64_t solved;
   int64_t incremental;
   int64_t unsat;
@@ -1133,7 +1135,6 @@ class Mobical : public Handler {
 
   bool verbose = false;
   bool quiet = false;
-  bool stats = false;
 
   bool add_set_log_to_true = false;
   bool add_dump_before_solve = false;
@@ -2309,8 +2310,10 @@ public:
               break;
           }
         }
-        if (mobical.shared && c->type == Call::RESET) {
+        if (!mobical.donot.summary && mobical.shared &&
+            c->type == Call::RESET) {
           mobical.add_statistics (solver);
+          mobical.shared->executed++;
         }
         if (mobical.shared && process_type (c->type)) {
           mobical.shared->solved++;
@@ -3360,20 +3363,20 @@ void Mobical::add_statistics (Solver *solver) {
 #define PRINT_STATER(NAME, PRIMARY, INC, SECONDARY, UNITS, TYPE) \
   do { \
     prefix (); \
-    cerr << terminal.normal () << NAME << ": " PRIMARY << " "; \
-    const uint64_t SAVED_INC = (uint64_t) (INC); \
-    const double SAVED_SECONDARY = (double) (SECONDARY); \
+    terminal.normal (); \
+    cerr << NAME << ": " << PRIMARY << " "; \
+    const double SAVED_SECONDARY = (double) percent (INC, SECONDARY); \
     const char *SAVED_UNITS = (const char *) (UNITS); \
-    const char *BOLDER = BOLD; \
-    cerr << terminal.bold (); \
+    terminal.bold (); \
     if (SAVED_SECONDARY < 20) \
-      cerr << terminal.red (true); \
+      terminal.red (true); \
     else if (SAVED_SECONDARY > 80) \
-      cerr << terminal.blue (true); \
+      terminal.blue (true); \
     else \
-      cerr << terminal.yellow (true); \
-    cerr << SAVED_SECONDARY << " " << SAVED_UNITS << terminal.normal (); \
-    << std::endl; \
+      terminal.yellow (true); \
+    cerr << INC << " " << SAVED_SECONDARY << " " << SAVED_UNITS << " " \
+         << TYPE << std::endl; \
+    terminal.normal (); \
   } while (0)
 
 void Mobical::print_statistics () {
@@ -3419,9 +3422,9 @@ void Mobical::print_statistics () {
            << shared->memout << endl
            << flush;
     }
-    if (stats) {
+    if (!mobical.donot.summary) {
 #define STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT) \
-  PRINT_STATER (#NAME, shared->stats_sum->NAME, shared->stats_count->NAME, \
+  PRINT_STATER (#NAME, shared->stats_sum.NAME, shared->stats_count.NAME, \
                 shared->executed, "%", "executed"); //, executed);
 
       CADICAL_STATISTICS
@@ -5198,6 +5201,8 @@ int Mobical::main (int argc, char **argv) {
       donot.enforce = true;
     else if (!strcmp (argv[i], "--no-seeds"))
       donot.seeds = true;
+    else if (!strcmp (argv[i], "--no-summary"))
+      donot.summary = true;
     else if (!strcmp (argv[i], "--do-not-shrink") ||
              !strcmp (argv[i], "--do-not-shrink-at-all"))
       donot.shrink.atall = true;
