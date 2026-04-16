@@ -31,7 +31,8 @@ static const char *USAGE =
 "  --no-colors       disable colors if '<stderr>' is connected to terminal\n"
 "  --no-terminal     assume '<stderr>' is not connected to terminal\n"
 "  --no-seeds        do not print seeds in random mode\n"
-"  --no-summary      do not print detailed summary\n"
+"  --no-summary      force not to print detailed summary\n"
+"  --summary         force to print detailed summary\n"
 "\n"
 "  -<n>              specify the number of solving phases explicitly\n"
 "  --time <seconds>  set time limit per trace (none=0, default=%d)\n"
@@ -3420,7 +3421,7 @@ void Mobical::print_statistics () {
   if (!quiet)
     hline ();
 
-  if (!mobical.donot.summary) {
+  if (!mobical.donot.summary && mobical.shared) {
     section ("summary");
 #define STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT) \
   PRINT_STATER (#NAME, shared->stats_sum.NAME, shared->stats_count.NAME, \
@@ -3429,9 +3430,9 @@ void Mobical::print_statistics () {
     CADICAL_STATISTICS
 
 #undef STATISTIC
+    section ("total");
   }
 
-  section ("total");
   prefix ();
   cerr << "generated " << Trace::generated << " traces: ";
   if (Trace::ok > 0)
@@ -5201,6 +5202,8 @@ int Mobical::main (int argc, char **argv) {
   int64_t limit = -1;
   int64_t bug_limit = -1;
 
+  int summary = -1;
+
   // Error message in 'die' also uses colors.
   //
   for (int i = 1; i < argc; i++)
@@ -5241,7 +5244,9 @@ int Mobical::main (int argc, char **argv) {
     else if (!strcmp (argv[i], "--no-seeds"))
       donot.seeds = true;
     else if (!strcmp (argv[i], "--no-summary"))
-      donot.summary = true;
+      summary = 0;
+    else if (!strcmp (argv[i], "--summary"))
+      summary = 1;
     else if (!strcmp (argv[i], "--do-not-shrink") ||
              !strcmp (argv[i], "--do-not-shrink-at-all"))
       donot.shrink.atall = true;
@@ -5431,6 +5436,15 @@ int Mobical::main (int argc, char **argv) {
       mode |= OUTPUT;
   }
   check_mode_valid ();
+
+  if (summary == 1)
+    donot.summary = false;
+  else if (summary == 0)
+    donot.summary = true;
+  else if (mode & RANDOM)
+    donot.summary = false;
+  else
+    donot.summary = true;
 
   /*----------------------------------------------------------------------*/
 
