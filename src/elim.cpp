@@ -541,6 +541,7 @@ inline void Internal::elim_add_resolvents (Eliminator &eliminator,
 
   const bool substitute = !eliminator.gates.empty ();
   const bool resolve_gates = eliminator.definition_unit;
+  stats.eliminated++;
   if (substitute) {
     LOG ("substituting pivot %d by resolving with %zd gate clauses", pivot,
          eliminator.gates.size ());
@@ -879,7 +880,8 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
   // Limit on garbage literals during variable elimination. If the limit is
   // hit a garbage collection is performed.
   //
-  const int64_t garbage_limit = (2 * stats.irredundant_literals / 3) + (1 << 20);
+  const int64_t garbage_limit =
+      (2 * stats.irredundant_literals / 3) + (1 << 20);
 
   // Main loops tries to eliminate variables according to the schedule. The
   // schedule is updated dynamically and variables are potentially
@@ -889,7 +891,8 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
   int64_t tried = 0;
 #endif
   while (!unsat && !terminated_asynchronously () &&
-         stats.eliminate_resolved <= resolution_limit && !schedule.empty ()) {
+         stats.eliminate_resolved <= resolution_limit &&
+         !schedule.empty ()) {
     int idx = schedule.front ();
     schedule.pop_front ();
     flags (idx).elim = false;
@@ -1077,15 +1080,16 @@ void Internal::elim (bool update_limits) {
         elim_round (round_complete, deleted_binary_clause);
 
     if (!round_complete) {
-      PHASE ("elim-phase", stats.eliminate_phases, "last round %d incomplete %s",
-             round, eliminated ? "but successful" : "and unsuccessful");
+      PHASE ("elim-phase", stats.eliminate_phases,
+             "last round %d incomplete %s", round,
+             eliminated ? "but successful" : "and unsuccessful");
       assert (!phase_complete);
       break;
     }
 
     if (round++ >= opts.elimrounds) {
-      PHASE ("elim-phase", stats.eliminate_phases, "round limit %d hit (%s)",
-             round - 1,
+      PHASE ("elim-phase", stats.eliminate_phases,
+             "round limit %d hit (%s)", round - 1,
              eliminated ? "though last round successful"
                         : "last round unsuccessful anyhow");
       assert (!phase_complete);
@@ -1150,8 +1154,9 @@ void Internal::elim (bool update_limits) {
 
 #ifndef QUIET
   eliminated = stats.vars_all_eliminated - old_eliminated;
-  PHASE ("elim-phase", stats.eliminate_phases, "eliminated %d variables %.2f%%",
-         eliminated, percent (eliminated, old_active_variables));
+  PHASE ("elim-phase", stats.eliminate_phases,
+         "eliminated %d variables %.2f%%", eliminated,
+         percent (eliminated, old_active_variables));
 #endif
 
   if (external_prop) {

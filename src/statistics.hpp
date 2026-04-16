@@ -79,7 +79,6 @@
   STATISTIC (deduplicated,                         1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (deduplicate_init,                     1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (deduplicate_init_rounds,              1, CONFLICT_INTERVAL,  "",            "interval") \
-  STATISTIC (deduplicate_failed,                   1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (deduplicate_hyper_unary,              1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (deduplications,                       1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (eager_subsumed,                       1, CONFLICT_INTERVAL,  "",            "interval") \
@@ -126,7 +125,6 @@
   STATISTIC (factor_removed_literals,              1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (factor_removed_redundant,             1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (failed_literals,                      1, CONFLICT_INTERVAL,  "",            "interval") \
-  STATISTIC (flushed,                              1, PCNT_CONFLICTS,    "%",           "conflicts") \
   STATISTIC (flush_hyper,                          2, PCNT_CONFLICTS,    "%",           "conflicts") \
   STATISTIC (flushings,                            2, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (flush_learned,                        2, PCNT_CONFLICTS,    "%",           "conflicts") \
