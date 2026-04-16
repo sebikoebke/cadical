@@ -420,7 +420,7 @@ long Internal::condition_round (long delta) {
   stats.condition_init_assigned += initial.assigned;
   stats.condition_init_conditional += initial.conditional;
   stats.condition_init_autarky += initial.autarky;
-  stats.condition_final_assigned += active ();
+  stats.condition_active += active ();
 
   // To speed-up and particularly simplify the code we unassign all
   // root-level variables temporarily, actually all inactive assigned
@@ -544,7 +544,7 @@ long Internal::condition_round (long delta) {
       continue;
     }
 
-    // TODO: which stat was this? stats.conditionings++;
+    stats.condition_candidates++;
 
     LOG ("watching first autarky literal %d", watched_autarky_literal);
 
@@ -758,7 +758,7 @@ long Internal::condition_round (long delta) {
       assert (is_in_candidate_clause (watched_autarky_literal));
 
       blocked++;
-      // TODO: which stat was this? stats.conditionings++;
+      stats.conditioned++;
       LOG (c, "positive autarky literal %d globally blocks",
            watched_autarky_literal);
 
@@ -797,7 +797,7 @@ long Internal::condition_round (long delta) {
       stats.condition_final_assigned += remain.assigned;
       stats.condition_final_conditional += remain.conditional;
       stats.condition_final_autarky += remain.autarky;
-      stats.condition_init_assigned += initial.assigned;
+      stats.condition_final_assigned_init += initial.assigned;
     }
 
     // In this last part specific to one candidate clause, we have to get

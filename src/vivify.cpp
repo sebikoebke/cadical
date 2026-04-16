@@ -109,7 +109,8 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming,
     if (subsuming->redundant)
       stats.clauses_current_redundant++;
     else
-      stats.clauses_current_irredundant++, stats.irredundant_literals += subsuming->size;
+      stats.clauses_current_irredundant++,
+          stats.irredundant_literals += subsuming->size;
     stats.garbage_literals -= subsuming->size;
     --stats.garbage_clauses;
   }
@@ -1176,6 +1177,7 @@ bool Internal::vivify_clause (Vivifier &vivifier, Clause *c) {
   ignore = nullptr;
 
   if (res) {
+    stats.vivified++;
     switch (vivifier.tier) {
     case Vivify_Mode::IRREDUNDANT:
       ++stats.vivified_irredundant;

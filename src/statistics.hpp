@@ -30,8 +30,10 @@
   STATISTIC (collected,                            1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (collections,                          1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (compacts,                             1, CONFLICT_INTERVAL,  "",            "interval") \
+  STATISTIC (condition_active,                     2, PER_CONDITIONING,   "",    "per conditioning") \
   STATISTIC (condition_candidates,                 2, PER_CONDITIONING,   "",    "per conditioning") \
   STATISTIC (conditioned,                          1, PER_CONDITIONING,   "",    "per conditioning") \
+  STATISTIC (condition_final_assigned_init,        2, PER_CONDITIONING,   "",    "per conditioning") \
   STATISTIC (condition_final_assigned,             2, PER_CONDITIONING,   "",    "per conditioning") \
   STATISTIC (condition_final_autarky,              2, PER_CONDITIONING,   "",    "per conditioning") \
   STATISTIC (condition_final_conditional,          2, PER_CONDITIONING,   "",    "per conditioning") \
@@ -116,7 +118,6 @@
   STATISTIC (extensions,                           1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (factor_added_clauses,                 1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (factor_added_literals,                1, CONFLICT_INTERVAL,  "",            "interval") \
-  STATISTIC (factor_added_variables,               1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (factored,                             1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (factored_and,                         1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (factored_eliminated,                  1, CONFLICT_INTERVAL,  "",            "interval") \
@@ -299,7 +300,6 @@
   STATISTIC (vars_declared,                        1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (vars_inactive,                        1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (vars_now_eliminated,                  1, CONFLICT_INTERVAL,  "",            "interval") \
-  STATISTIC (vars_now_eliminated_fast,             1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (vars_now_fixed,                       1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (vars_now_pure,                        1, CONFLICT_INTERVAL,  "",            "interval") \
   STATISTIC (vars_now_substituted,                 1, CONFLICT_INTERVAL,  "",            "interval") \

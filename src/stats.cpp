@@ -150,7 +150,7 @@ void Stats::print (Internal *internal) {
     PRT ("  condassrem:    %17.1f  %9.2f %%  final assigned",
          relative (stats.condition_final_assigned, stats.conditioned),
          percent (stats.condition_final_assigned,
-                  stats.condition_init_assigned));
+                  stats.condition_final_assigned_init));
     PRT ("  condcondrem:   %19.3f  %7.2f %%  final conditional",
          relative (stats.condition_final_conditional, stats.conditioned),
          percent (stats.condition_final_conditional,
