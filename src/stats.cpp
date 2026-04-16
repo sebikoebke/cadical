@@ -25,24 +25,15 @@ Stats::Stats () {
 
 /*------------------------------------------------------------------------*/
 
-void Stats::print (Internal *internal) {
-
-#ifdef QUIET
-  (void) internal;
-#else
-
+#ifndef QUIET
+void Stats::print_old (Internal *internal) {
   Stats &stats = internal->stats;
-
+  double t = internal->solve_time ();
   int all = internal->opts.verbose > 0 || internal->opts.stats;
 #ifdef LOGGING
   if (internal->opts.log)
     all = true;
 #endif // ifdef LOGGING
-
-  if (internal->opts.profile)
-    internal->print_profile ();
-
-  double t = internal->solve_time ();
 
   int64_t propagations = stats.propagations;
 
@@ -57,8 +48,6 @@ void Stats::print (Internal *internal) {
 
   size_t extendbytes = internal->external->extension.size ();
   extendbytes *= sizeof (int);
-
-  SECTION ("statistics");
 
   if (all || stats.blocked) {
     PRT ("blocked:         %15" PRId64
@@ -930,6 +919,64 @@ void Stats::print (Internal *internal) {
          stats.congruence_dummy_ands,
          relative (stats.congruence_dummy_ands, stats.congruence_rounds));
   }
+}
+
+#define NAME_OFFSET "22"
+#define NUM_OFFSET "20"
+
+#define PRINT_STATER(NAME, NUM, VERBOSE, REF, SYMBOL, PRINT) \
+  do { \
+    if (VERBOSE > verbose) \
+      break; \
+    const int RELATIVE = percent (NUM, 1); \
+    const size_t PNUMBER = std::to_string (NUM).length (); \
+    const size_t OFFSET1 = 55 - strlen (NAME) - PNUMBER; \
+    const size_t RNUMBER = std::to_string (RELATIVE).length (); \
+    const size_t OFFSET2 = 10 - RNUMBER; \
+    const char *SAVED_SYMBOL = (const char *) (SYMBOL); \
+    const char *SAVED_PRINT = (const char *) (PRINT); \
+    MSG ("%-" NAME_OFFSET "s %" NUM_OFFSET PRId64 "", NAME ":", NUM); \
+  } while (0)
+
+void Stats::print_new (Internal *internal) {
+
+  Stats stats = internal->stats;
+  int verbose = internal->opts.verbose;
+
+  // TODO: verbosity is always 3 like this.
+  if (internal->opts.stats)
+    verbose = 3;
+#ifdef LOGGING
+  if (internal->opts.log)
+    all = true;
+#endif // ifdef LOGGING
+
+  double t = internal->solve_time ();
+
+#define STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT) \
+  PRINT_STATER (#NAME, stats.NAME, VERBOSE, REF, SYMBOL, PRINT);
+
+  // CADICAL_STATISTICS
+
+#undef STATISTIC
+}
+#endif
+
+void Stats::print (Internal *internal) {
+
+#ifdef QUIET
+  (void) internal;
+#else
+
+  if (internal->opts.profile)
+    internal->print_profile ();
+
+  SECTION ("statistics");
+
+  if (internal->opts.stats == 2)
+    print_new (internal);
+  else
+    print_old (internal);
 
   LINE ();
   MSG ("%sseconds are measured in %s time for solving%s",

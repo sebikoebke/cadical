@@ -32,6 +32,10 @@ struct Stats {
   ~Stats () = default;
 
   void print (Internal *);
+#ifndef QUIET
+  void print_old (Internal *);
+  void print_new (Internal *);
+#endif
 };
 
 /*------------------------------------------------------------------------*/

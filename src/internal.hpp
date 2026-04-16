@@ -1985,7 +1985,8 @@ inline bool Internal::search_limits_hit () {
   }
 
   if (lim.ticks >= 0 &&
-      stats.ticks_search_unstable + stats.ticks_search_stable >= lim.ticks) {
+      stats.ticks_search_unstable + stats.ticks_search_stable >=
+          lim.ticks) {
     LOG ("ticks limit %" PRId64 " reached", lim.ticks);
     return true;
   }
