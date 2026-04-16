@@ -383,7 +383,8 @@ bool Internal::ternary () {
   // substantially, particularly for random formulas.  Thus we limit the
   // number of added clauses too (actually the number of 'htrs').
   //
-  int64_t htrs_limit = stats.clauses_current_redundant + stats.clauses_current_irredundant;
+  int64_t htrs_limit =
+      stats.clauses_current_redundant + stats.clauses_current_irredundant;
   htrs_limit *= opts.ternarymaxadd;
   htrs_limit /= 100;
 

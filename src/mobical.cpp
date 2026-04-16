@@ -1210,6 +1210,7 @@ class Mobical : public Handler {
 
   void add_statistics (Solver *solver);
   void print_statistics ();
+  void section (const char *);
 
   /*----------------------------------------------------------------------*/
 
@@ -2117,8 +2118,8 @@ class Trace {
   Solver *solver;
   vector<Call *> calls;
   // map from mobical vars to solver vars (skipping extension variables)
-  // the map is strictly increasing and gets updated whenever a call with an
-  // argument gets executed.
+  // the map is strictly increasing and gets updated whenever a call with
+  // an argument gets executed.
   ExtendMap extendmap;
 
   friend class Reader;
@@ -2185,23 +2186,27 @@ public:
 #ifdef MOBICAL_MEMORY
       if (mobical.shared->bad_alloc.alloc_call_index == i + 1)
         o << "# "
-             "V------------------------------------------------------------"
+             "V----------------------------------------------------------"
+             "--"
              "---------- bad alloc: allocation"
           << endl;
       if (mobical.shared->bad_alloc.signal_call_index == i + 1)
         o << "# "
-             "V------------------------------------------------------------"
+             "V----------------------------------------------------------"
+             "--"
              "---------- bad alloc: crashed"
           << endl;
       if (mobical.shared->bad_alloc.debug_filter_index == i + 1)
         o << "# "
-             "V------------------------------------------------------------"
+             "V----------------------------------------------------------"
+             "--"
              "---------- debug: call was filtered"
           << endl;
       for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
         if (mobical.shared->leak_alloc.call_index[index] == i + 1) {
           o << "# "
-               "V----------------------------------------------------------"
+               "V--------------------------------------------------------"
+               "--"
                "------------ leak alloc: allocation"
             << endl;
           break;
@@ -2586,9 +2591,9 @@ bool Trace::ignored_option (const char *name) {
 }
 
 // Check whether the trace already contains an option which disables the
-// option 'name'.  Here we assume that an option disables another one if the
-// disabling one has as name proper prefix of the disabled one and the value
-// of the former is set to zero in the trace.
+// option 'name'.  Here we assume that an option disables another one if
+// the disabling one has as name proper prefix of the disabled one and the
+// value of the former is set to zero in the trace.
 //
 bool Trace::ignore_option (const char *name, int max_var) {
 
@@ -2596,7 +2601,8 @@ bool Trace::ignore_option (const char *name, int max_var) {
     return true;
 
   // There are options which should be kept at their default value unless
-  // the formula is really small.  Otherwise the solver might run 'forever'.
+  // the formula is really small.  Otherwise the solver might run
+  // 'forever'.
   //
   if (max_var > SMALL) {
     if (!strcmp (name, "reduce"))
@@ -2612,7 +2618,8 @@ bool Trace::ignore_option (const char *name, int max_var) {
 }
 
 // For incomplete solving phases such as 'walk' we do not want to increase
-// the option value above the default and similarly for elimination bounds.
+// the option value above the default and similarly for elimination
+// bounds.
 //
 int64_t Trace::option_high_value (const char *name, int64_t def, int64_t lo,
                                   int64_t hi) {
@@ -2682,13 +2689,14 @@ void Trace::generate_options (Random &random, Size size) {
     if (o.lo == o.hi)
       continue;
 
-    // We ignore logging here and set it below to make mobical deterministic
+    // We ignore logging here and set it below to make mobical
+    // deterministic
     if (!strcmp (o.name, "log"))
       continue;
     if (!strcmp (o.name, "logsort"))
       continue;
-    // We keep choosing the value for 'simplify' and 'walk' out of the loop
-    // (see the arguments described above).
+    // We keep choosing the value for 'simplify' and 'walk' out of the
+    // loop (see the arguments described above).
     //
     if (!strcmp (o.name, "simplify"))
       continue;
@@ -2729,8 +2737,8 @@ void Trace::generate_options (Random &random, Size size) {
     push_back (new SetCall (o.name, val));
   }
 
-  // Now setting the option for logging. Even if we do not generate the log
-  // call, we need the side effect of generate_bool ()
+  // Now setting the option for logging. Even if we do not generate the
+  // log call, we need the side effect of generate_bool ()
   auto log_option =
       std::find_if (Options::begin (), Options::end (),
                     [] (const Option o) { return strcmp (o.name, "log"); });
@@ -3360,31 +3368,71 @@ void Mobical::add_statistics (Solver *solver) {
 #undef STATISTIC
 }
 
-#define PRINT_STATER(NAME, PRIMARY, INC, SECONDARY, UNITS, TYPE) \
+#define PRINT_STATER(NAME, PRIMARY, INC, SECONDARY) \
   do { \
+    const int RELATIVE = percent (INC, SECONDARY); \
+    const size_t PNUMBER = std::to_string (PRIMARY).length (); \
+    const size_t OFFSET1 = 55 - strlen (NAME) - PNUMBER; \
+    const size_t SNUMBER = std::to_string (INC).length (); \
+    const size_t OFFSET2 = 10 - SNUMBER; \
+    const size_t RNUMBER = std::to_string (RELATIVE).length (); \
+    const size_t OFFSET3 = 4 - RNUMBER; \
     prefix (); \
     terminal.normal (); \
-    cerr << NAME << ": " << PRIMARY << " "; \
-    const double SAVED_SECONDARY = (double) percent (INC, SECONDARY); \
-    const char *SAVED_UNITS = (const char *) (UNITS); \
+    cerr << NAME << ":"; \
+    cerr << setfill (' ') << setw (OFFSET1) << " "; \
+    cerr << PRIMARY << " "; \
+    cerr << setfill (' ') << setw (OFFSET2) << " "; \
+    cerr << INC << " "; \
+    cerr << setfill (' ') << setw (OFFSET3) << " "; \
     terminal.bold (); \
-    if (SAVED_SECONDARY < 20) \
+    if (RELATIVE < 20) \
       terminal.red (true); \
-    else if (SAVED_SECONDARY > 80) \
-      terminal.blue (true); \
+    else if (RELATIVE > 80) \
+      terminal.green (true); \
     else \
       terminal.yellow (true); \
-    cerr << INC << " " << SAVED_SECONDARY << " " << SAVED_UNITS << " " \
-         << TYPE << std::endl; \
+    cerr << RELATIVE << " %" << std::endl; \
     terminal.normal (); \
   } while (0)
+
+void Mobical::section (const char *title) {
+  prefix ();
+  cerr << endl;
+  prefix ();
+  tout.blue ();
+  fputs ("--- [ ", stderr);
+  tout.blue (true);
+  fputs (title, stderr);
+  tout.blue ();
+  fputs (" ] ", stderr);
+  for (int i = strlen (title) + 11; i < 78; i++)
+    fputc ('-', stderr);
+  tout.normal ();
+  fputc ('\n', stderr);
+  fflush (stderr);
+  prefix ();
+  cerr << endl;
+}
 
 void Mobical::print_statistics () {
 
   if (!quiet)
     hline ();
-  prefix ();
 
+  if (!mobical.donot.summary) {
+    section ("summary");
+#define STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT) \
+  PRINT_STATER (#NAME, shared->stats_sum.NAME, shared->stats_count.NAME, \
+                shared->executed);
+
+    CADICAL_STATISTICS
+
+#undef STATISTIC
+  }
+
+  section ("total");
+  prefix ();
   cerr << "generated " << Trace::generated << " traces: ";
   if (Trace::ok > 0)
     terminal.green (true);
@@ -3418,18 +3466,9 @@ void Mobical::print_statistics () {
          << flush;
     if (shared->memout || shared->timeout) {
       prefix ();
-      cerr << "out-of-time " << shared->timeout << ", " << "out-of-memory "
-           << shared->memout << endl
+      cerr << "out-of-time " << shared->timeout << ", "
+           << "out-of-memory " << shared->memout << endl
            << flush;
-    }
-    if (!mobical.donot.summary) {
-#define STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT) \
-  PRINT_STATER (#NAME, shared->stats_sum.NAME, shared->stats_count.NAME, \
-                shared->executed, "%", "executed"); //, executed);
-
-      CADICAL_STATISTICS
-
-#undef STATISTIC
     }
   }
 
@@ -3505,8 +3544,8 @@ void Trace::child_signal_handler (int sig) {
     if ((int64_t) u.ru_maxrss >> 10 >= mobical.space_limit) {
       if (mobical.shared)
         mobical.shared->memout++;
-      // Since there is no memout signal we just misuse SIXCPU to notify the
-      // calling process that this is a out-of-resource situation.
+      // Since there is no memout signal we just misuse SIXCPU to notify
+      // the calling process that this is a out-of-resource situation.
       sig = SIGXCPU;
     } else {
       double t = u.ru_utime.tv_sec + 1e-6 * u.ru_utime.tv_usec +
@@ -4273,10 +4312,10 @@ bool Trace::reduce_values (int expected) {
         }
       }
 
-      // Now we do a delta-debugging inspired binary search for the smallest
-      // value for which the execution produces a non-zero exit code.  It
-      // kind of assumes monotonicity and if this is not the case might not
-      // yield the smallest value, but remains logarithmic.
+      // Now we do a delta-debugging inspired binary search for the
+      // smallest value for which the execution produces a non-zero exit
+      // code.  It kind of assumes monotonicity and if this is not the
+      // case might not yield the smallest value, but remains logarithmic.
       //
       int64_t granularity = ((old_val - (int64_t) lo) + 1l) / 2;
       assert (granularity > 0);
@@ -5316,7 +5355,8 @@ int Mobical::main (int argc, char **argv) {
       seed_str = argv[i];
     } else if (output_path) {
       assert (input_path);
-      die ("too many trace files specified: '%s', '%s' and '%s' (try '-h')",
+      die ("too many trace files specified: '%s', '%s' and '%s' (try "
+           "'-h')",
            input_path, output_path, argv[i]);
     } else if (input_path) {
       if (seed_str)
@@ -5335,9 +5375,9 @@ int Mobical::main (int argc, char **argv) {
 
   /*----------------------------------------------------------------------*/
 
-  // If a seed and a file (in that order) are specified the file is actually
-  // not an input file but an output file.  To streamline the code below
-  // swap input and output here.
+  // If a seed and a file (in that order) are specified the file is
+  // actually not an input file but an output file.  To streamline the
+  // code below swap input and output here.
   //
   if (input_path && seed_str) {
     assert (!output_path);

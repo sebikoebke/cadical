@@ -9,7 +9,7 @@ namespace CaDiCaL {
 Stats::Stats () {
   time.real = absolute_real_time ();
   time.process = absolute_process_time ();
-  walk_minimum = LONG_MAX;
+  walk_minimum = INT64_MAX;
   used[0].resize (127);
   used[1].resize (127);
 }
@@ -875,9 +875,9 @@ void Stats::print (Internal *internal) {
 #endif
       PRT ("  flips:         %15" PRId64 "   %10.2f    per walk",
            stats.walk_flips, relative (stats.walk_flips, stats.walk));
-    if (stats.walk_minimum < LONG_MAX)
+    if (stats.walk_minimum < INT64_MAX)
       PRT ("  minimum:       %15" PRId64 "   %10.2f %%  clauses",
-           (int64_t) stats.walk_minimum,
+           stats.walk_minimum,
            percent (stats.walk_minimum, stats.clauses_added_irredundant));
     PRT ("  broken:        %15" PRId64 "   %10.2f    per flip",
          stats.walk_broken, relative (stats.walk_broken, stats.walk_flips));
