@@ -505,8 +505,9 @@ void Internal::init_preprocessing_limits () {
   if (incremental)
     mode = "keeping";
   else {
-    double delta =
-        stats.clauses_added_irredundant ? log10 (stats.clauses_added_irredundant) : 100;
+    double delta = stats.clauses_added_irredundant
+                       ? log10 (stats.clauses_added_irredundant)
+                       : 100;
     delta = delta * delta;
     lim.inprobe = stats.conflicts + opts.inprobeint * delta;
     mode = "initial";
@@ -658,7 +659,8 @@ void Internal::init_search_limits () {
     lim.ticks = -1;
     LOG ("no limit on ticks");
   } else {
-    lim.ticks = stats.ticks_search_unstable + stats.ticks_search_stable + inc.ticks;
+    lim.ticks =
+        stats.ticks_search_unstable + stats.ticks_search_stable + inc.ticks;
     LOG ("ticks limit after %" PRId64 " ticks at %" PRId64 " ticks",
          inc.ticks, lim.ticks);
   }

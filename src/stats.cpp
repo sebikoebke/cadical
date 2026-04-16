@@ -419,12 +419,6 @@ void Stats::print (Internal *internal) {
     PRT ("  forwardzero    %15" PRId64 "   %10.2f %%  of tried",
          stats.lucky_forward_zero,
          percent (stats.lucky_forward_zero, stats.lucky_tried));
-    PRT ("  positivehorn   %15" PRId64 "   %10.2f %%  of tried",
-         stats.lucky_horn_positive,
-         percent (stats.lucky_horn_positive, stats.lucky_tried));
-    PRT ("  negativehorn   %15" PRId64 "   %10.2f %%  of tried",
-         stats.lucky_horn_negative,
-         percent (stats.lucky_horn_negative, stats.lucky_tried));
     PRT ("  units:         %15" PRId64 "   %10.2f  of tried",
          stats.lucky_units,
          relative (stats.lucky_units, stats.lucky_tried));

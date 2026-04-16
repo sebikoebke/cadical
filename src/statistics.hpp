@@ -160,8 +160,6 @@
   STATISTIC (lucky_constant_zero,                  2, CONFLICT_INTERVAL, "%",              "search") \
   STATISTIC (lucky_forward_one,                    2, CONFLICT_INTERVAL, "%",              "search") \
   STATISTIC (lucky_forward_zero,                   2, CONFLICT_INTERVAL, "%",              "search") \
-  STATISTIC (lucky_horn_negative,                  2, CONFLICT_INTERVAL, "%",              "search") \
-  STATISTIC (lucky_horn_positive,                  2, CONFLICT_INTERVAL, "%",              "search") \
   STATISTIC (lucky_random,                         2, CONFLICT_INTERVAL, "%",              "search") \
   STATISTIC (lucky_tried,                          2, CONFLICT_INTERVAL, "%",              "search") \
   STATISTIC (lucky_units,                          2, CONFLICT_INTERVAL, "%",              "search") \
