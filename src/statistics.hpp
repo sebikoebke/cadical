@@ -191,6 +191,8 @@
   STATISTIC (propagator_learned,                   1, NO_SECONDARY,        0,                     0) \
   STATISTIC (propagator_learned_conflict,          2, PCNT_EXT_LEARNED,  "%",  "propagator clauses") \
   STATISTIC (propagator_learned_elevating,         2, PCNT_EXT_LEARNED,  "%",  "propagator clauses") \
+  STATISTIC (propagator_learned_empty,             2, PCNT_EXT_LEARNED,  "%",  "propagator clauses") \
+  STATISTIC (propagator_learned_out_of_order,      2, PCNT_EXT_LEARNED,  "%",  "propagator clauses") \
   STATISTIC (propagator_learned_propagating,       2, PCNT_EXT_LEARNED,  "%",  "propagator clauses") \
   STATISTIC (propagator_learned_unit,              2, PCNT_EXT_LEARNED,  "%",  "propagator clauses") \
   STATISTIC (recomputed_tiers,                     1, CONFLICT_INTERVAL,  "",            "interval") \

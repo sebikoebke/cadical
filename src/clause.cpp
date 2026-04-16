@@ -454,7 +454,7 @@ void Internal::add_new_original_clause (int64_t id) {
   }
   if (skip) {
     if (from_propagator) {
-      stats.propagator_learned_conflict++;
+      stats.propagator_learned_empty++;
 
       // In case it was a skipped external forgettable, we need to mark it
       // immediately as removed
@@ -491,7 +491,7 @@ void Internal::add_new_original_clause (int64_t id) {
     lrat_chain.clear ();
     if (!size) {
       if (from_propagator)
-        stats.propagator_learned_conflict++;
+        stats.propagator_learned_empty++;
       assert (!unsat);
       if (!original.size ())
         VERBOSE (1, "found empty original clause");

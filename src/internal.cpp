@@ -373,7 +373,7 @@ int Internal::propagate_assumptions () {
     assert (opts.ilb == 2 || (size_t) level <= assumptions.size ());
     stats.ilb_triggers++;
     stats.ilb_success += (level > 0);
-    stats.reused_levels += level;
+    stats.ilb_reused_levels += level;
     if (level) {
       assert (control.size () > 1);
       stats.ilb_reused_literals += num_assigned - control[1].trail;
@@ -1003,7 +1003,7 @@ int Internal::solve (bool preprocess_only) {
     assert (opts.ilb || (size_t) level <= assumptions.size ());
     stats.ilb_triggers++;
     stats.ilb_success += (level > 0);
-    stats.reused_levels += level;
+    stats.ilb_reused_levels += level;
     if (level) {
       assert (control.size () > 1);
       stats.ilb_reused_literals += num_assigned - control[1].trail;

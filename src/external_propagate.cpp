@@ -831,6 +831,8 @@ Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
 void Internal::handle_external_clause (Clause *res, int64_t new_id) {
   if (from_propagator)
     stats.propagator_learned++;
+  if (from_propagator && !res)
+    stats.propagator_learned_unit++;
 
   // new unit clause. For now just backtrack.
   if (!res && (force_no_backtrack ||
@@ -888,6 +890,8 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
          "elevate assignment of %d from level %d to level %d with lazy "
          "reason clause",
          pos0, l0, l1);
+    if (v.level != l1)
+      stats.propagator_learned_elevating++;
     v.level = l1;
     return;
   }
@@ -931,6 +935,8 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
           res->literals[1] = highest_literal;
           res->literals[highest_idx] = pos1;
         }
+        if (from_propagator)
+          stats.propagator_learned_out_of_order++;
         LOG (res,
              "ignore out-of-order missed assignment of %d from level %d to "
              "level %d with new "
@@ -970,8 +976,10 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
     // but analyze with propagaor
     if (val (pos0) && !from_propagator)
       backtrack_without_updating_phases (l0 - 1);
-    else if (val (pos0) && from_propagator)
+    else if (val (pos0) && from_propagator) {
       conflict = res;
+      stats.propagator_learned_conflict++;
+    }
     if (val (pos1) < 0 && !val (pos0))
       search_assign_driving (pos0, res);
   } // else do nothing
