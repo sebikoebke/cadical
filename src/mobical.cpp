@@ -253,16 +253,14 @@ struct Shared {
   int64_t oom;
 
   struct {
-#define STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT) int64_t NAME = 0;
+
+#define STATISTIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL) int64_t NAME = 0;
 
     CADICAL_STATISTICS
-
-#undef STATISTIC
 
   } stats_sum;
 
   struct {
-#define STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT) int64_t NAME = 0;
 
     CADICAL_STATISTICS
 
@@ -3423,7 +3421,7 @@ void Mobical::print_statistics () {
 
   if (!mobical.donot.summary && mobical.shared) {
     section ("summary");
-#define STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT) \
+#define STATISTIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL) \
   PRINT_STATER (#NAME, shared->stats_sum.NAME, shared->stats_count.NAME, \
                 shared->executed);
 

@@ -14,7 +14,7 @@ struct Stats {
 
   Internal *internal;
 
-#define STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT) int64_t NAME = 0;
+#define STATISTIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL) int64_t NAME = 0;
 
   CADICAL_STATISTICS
 
@@ -27,6 +27,7 @@ struct Stats {
 
   uint64_t bump_used[2] = {0, 0};
   std::vector<uint64_t> used[2] = {{}, {}}; // used clauses in focused mode
+  int64_t walk_minimum;
 
   Stats ();
   ~Stats () = default;

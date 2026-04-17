@@ -891,84 +891,17 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
          "reason clause",
          pos0, l0, l1);
     if (v.level != l1)
-      stats.propagator_learned_elevating++;
+      stats.propagator_learned_lazy_elevate++;
     v.level = l1;
     return;
   }
-  if (val (pos0) > 0 && val (pos1) < 0) {
-    // It is a clause that would have propagated
+  assert (!force_no_backtrack);
 
-    if (l0 > l1) {
-      // It would have propagated pos0 on an earlier level than it is
-      // assigned
+  if (val (pos1) >= 0) // do nothing
+    return;
 
-      // Find the highest literal based on trail-position of the clause
-
-      size_t highest_idx = best_literal_to_watch (pos0, true);
-      assert (highest_idx != 0);
-      const int highest_literal = clause[highest_idx];
-
-      Var &m = var (highest_literal);
-      assert (l0 >= m.level);
-
-      Var &v = var (pos0);
-      if (v.trail > m.trail && opts.elevate > 0 &&
-          (opts.elevate > 1 || v.reason)) {
-        // If v.trail == m.trail, then the propagated literal is the
-        // maximum as well, so no need to backtrack we simply reassign the
-        // reason and level of the propagation
-        LOG (res,
-             "elevate assignment of %d from level %d to level %d with new "
-             "reason clause",
-             pos0, var (pos0).level, var (pos1).level);
-        v.level = l1;
-        v.reason = res;
-
-        if (out_of_order_level == -1 || l1 < out_of_order_level)
-          out_of_order_level = l1;
-        if (v.trail > out_of_order_trail)
-          out_of_order_trail = v.trail;
-
-      } else if (v.trail < m.trail && opts.elevate > 0) {
-        assert (highest_idx);
-        if (highest_idx != 1) {
-          res->literals[1] = highest_literal;
-          res->literals[highest_idx] = pos1;
-        }
-        if (from_propagator)
-          stats.propagator_learned_out_of_order++;
-        LOG (res,
-             "ignore out-of-order missed assignment of %d from level %d to "
-             "level %d with new "
-             "reason clause",
-             pos0, var (pos0).level, var (pos1).level);
-      } else {
-
-        LOG (res,
-             "backtrack due to missed assignment of %d from level %d to "
-             "level %d with new reason clause",
-             pos0, l0, l1);
-        assert (!force_no_backtrack);
-
-        if (opts.elevate == -1)
-          backtrack_without_updating_phases (l1);
-        else
-          backtrack_without_updating_phases (l0 - 1);
-
-        assert (!val (pos0) && val (pos1) < 0);
-        search_assign_driving (pos0, res);
-
-        assert (v.trail >= m.trail);
-        assert (v.level == l1);
-        assert (val (pos0) > 0 && val (pos1) < 0);
-      }
-    }
-  } else if (!val (pos0) && val (pos1) < 0) { // propagating
-    if (opts.elevate == -1)
-      backtrack_without_updating_phases (l1);
-    if (val (pos1) < 0 && !val (pos0))
-      search_assign_driving (pos0, res);
-  } else if (val (pos0) < 0) { // conflicting
+  if (val (pos0) < 0) { // conflicting
+    assert (val (pos1) < 0);
     assert (0 < l1 && l1 <= var (pos0).level);
     if (opts.elevate == -1)
       backtrack_without_updating_phases (l1);
@@ -982,7 +915,103 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
     }
     if (val (pos1) < 0 && !val (pos0))
       search_assign_driving (pos0, res);
-  } // else do nothing
+    return;
+  }
+
+  if (!val (pos0)) { // propagating
+    assert (val (pos1) < 0);
+    if (opts.elevate == -1)
+      backtrack_without_updating_phases (l1);
+    if (val (pos1) < 0 && !val (pos0))
+      search_assign_driving (pos0, res);
+    return;
+  }
+
+  if (l0 <= l1) // no alternative reason
+    return;
+
+  assert (val (pos0) > 0); // elevating
+  assert (val (pos1) < 0);
+
+  // It would have propagated pos0 on an earlier level than it is
+  // assigned
+
+  // Find the highest literal based on trail-position of the clause
+
+  size_t highest_idx = best_literal_to_watch (pos0, true);
+  assert (highest_idx != 0);
+  const int highest_literal = clause[highest_idx];
+
+  // highest trail level variable
+  Var &m = var (highest_literal);
+  assert (l0 >= m.level);
+
+  // best watch variable
+  Var &v = var (pos0);
+
+  // out-of-order if best watch smaller highest.
+  if (v.trail < m.trail && opts.elevate > 0) {
+    assert (highest_idx);
+    if (highest_idx != 1) {
+      res->literals[1] = highest_literal;
+      res->literals[highest_idx] = pos1;
+    }
+    if (from_propagator)
+      stats.propagator_learned_out_of_order++;
+    LOG (res,
+         "ignore out-of-order missed assignment of %d from level %d to "
+         "level %d with new "
+         "reason clause",
+         pos0, var (pos0).level, var (pos1).level);
+    return;
+  }
+
+  // in order
+  if (v.trail > m.trail && opts.elevate > 0 &&
+      (opts.elevate > 1 || v.reason)) {
+    // If v.trail == m.trail, then the propagated literal is the
+    // maximum as well, so no need to backtrack we simply reassign the
+    // reason and level of the propagation
+    LOG (res,
+         "elevate assignment of %d from level %d to level %d with new "
+         "reason clause",
+         pos0, var (pos0).level, var (pos1).level);
+
+    assert (l1 < l0);
+    assert (var (pos1).trail < var (pos0).trail);
+    assert (var (highest_literal).trail < var (pos0).trail);
+
+    v.level = l1;
+    v.reason = res;
+
+    if (from_propagator)
+      stats.propagator_learned_elevating++;
+
+    if (out_of_order_level == -1 || l1 < out_of_order_level)
+      out_of_order_level = l1;
+    if (v.trail > out_of_order_trail)
+      out_of_order_trail = v.trail;
+    return;
+  }
+
+  // backtrack instead
+  LOG (res,
+       "backtrack due to missed assignment of %d from level %d to "
+       "level %d with new reason clause",
+       pos0, l0, l1);
+  assert (!force_no_backtrack);
+
+  if (opts.elevate == -1)
+    backtrack_without_updating_phases (l1);
+  else
+    backtrack_without_updating_phases (l0 - 1);
+
+  assert (!val (pos0) && val (pos1) < 0);
+  search_assign_driving (pos0, res);
+
+  assert (v.trail >= m.trail);
+  assert (v.level == l1);
+  assert (val (pos0) > 0 && val (pos1) < 0);
 }
 
 /*----------------------------------------------------------------------------*/

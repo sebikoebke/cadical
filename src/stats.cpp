@@ -922,20 +922,24 @@ void Stats::print_old (Internal *internal) {
 }
 
 #define NAME_OFFSET "22"
-#define NUM_OFFSET "20"
+#define NUM_OFFSET "15"
+#define REF_OFFSET "10.2"
+#define SYMBOL_OFFSET "3"
+#define PRINT_OFFSET "22"
 
-#define PRINT_STATER(NAME, NUM, VERBOSE, REF, SYMBOL, PRINT) \
+#define PER_SECOND(FIRST, IGNORE) relative (FIRST, t)
+#define INTERVAL(FIRST, IGNORE) relative (stats.conflicts, FIRST)
+
+#define PRINT_STATER(NAME, NUM, VERBOSE, OTHER_NUM, SYMBOL, PRINT) \
   do { \
     if (VERBOSE > verbose) \
       break; \
-    const int RELATIVE = percent (NUM, 1); \
-    const size_t PNUMBER = std::to_string (NUM).length (); \
-    const size_t OFFSET1 = 55 - strlen (NAME) - PNUMBER; \
-    const size_t RNUMBER = std::to_string (RELATIVE).length (); \
-    const size_t OFFSET2 = 10 - RNUMBER; \
+    const double RELATIVE = OTHER_NUM; \
     const char *SAVED_SYMBOL = (const char *) (SYMBOL); \
     const char *SAVED_PRINT = (const char *) (PRINT); \
-    MSG ("%-" NAME_OFFSET "s %" NUM_OFFSET PRId64 "", NAME ":", NUM); \
+    MSG ("%-" NAME_OFFSET "s %" NUM_OFFSET PRId64 " %" REF_OFFSET \
+         "f %-" SYMBOL_OFFSET "s %-" PRINT_OFFSET "s", \
+         NAME ":", NUM, RELATIVE, SAVED_SYMBOL, SAVED_PRINT); \
   } while (0)
 
 void Stats::print_new (Internal *internal) {
@@ -948,15 +952,16 @@ void Stats::print_new (Internal *internal) {
     verbose = 3;
 #ifdef LOGGING
   if (internal->opts.log)
-    all = true;
+    verbose = 3;
 #endif // ifdef LOGGING
 
   double t = internal->solve_time ();
 
-#define STATISTIC(NAME, VERBOSE, REF, SYMBOL, PRINT) \
-  PRINT_STATER (#NAME, stats.NAME, VERBOSE, REF, SYMBOL, PRINT);
+#define STATISTIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL) \
+  PRINT_STATER (#NAME, stats.NAME, VERBOSE, \
+                COMMAND (stats.NAME, stats.OTHER), SYMBOL, #OTHER);
 
-  // CADICAL_STATISTICS
+  CADICAL_STATISTICS
 
 #undef STATISTIC
 }
