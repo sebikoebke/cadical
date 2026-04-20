@@ -7,7 +7,7 @@
 //      length 15,  (Always/!0/verbose/never), (relative/percent/MACRO)
 #define CADICAL_STATISTICS \
 \
-  STATISTIC (backbone_phases,        2, INTERVAL, interval, "") \
+  STATISTIC (backbone_phases,        1, INTERVAL, interval, "") \
   STATISTIC (backbone_probes,        1, percent, vars, "%") \
   STATISTIC (backbone_rounds,        2, relative, backbone_phases, "per") \
   STATISTIC (backbone_units,         1, relative, backbone_phases, "per") \
@@ -17,66 +17,66 @@
   STATISTIC (blocked_pure_clauses,   2, percent, blocked_pure_literals, "per") \
   STATISTIC (blocked_pure_literals,  2, percent, vars, "%") \
   STATISTIC (blocked_resolutions,    2, relative, blocked_candidates, "per") \
-  STATISTIC (blockings,              2, INTERVAL, interval, "") \
+  STATISTIC (blockings,              1, INTERVAL, interval, "") \
   STATISTIC (clause_added_irr,       2, percent, clause_added_total, "%") \
   STATISTIC (clause_added_red,       2, percent, clause_added_total, "%") \
   STATISTIC (clause_added_total,     2, relative, searches, "per") \
   STATISTIC (clause_current_irr,     3, NO_PRINTING, 0, 0) \
   STATISTIC (clause_current_red,     3, NO_PRINTING, 0, 0) \
   STATISTIC (clause_current_total,   3, NO_PRINTING, 0, 0) \
-  STATISTIC (clause_improved_glue,   2, relative, propagations, "per") \
-  STATISTIC (clause_promoted_tier1,  2, relative, propagations, "per") \
-  STATISTIC (clause_promoted_tier2,  2, relative, propagations, "per") \
-  STATISTIC (clause_recompute_glue,  2, relative, propagations, "per") \
-  STATISTIC (collected,              1, relative, propagations, "per") \
-  STATISTIC (collections,            2, relative, propagations, "per") \
-  STATISTIC (compacts,               1, relative, propagations, "per") \
-  STATISTIC (condition_active,       2, relative, propagations, "per") \
-  STATISTIC (condition_candidates,   2, relative, propagations, "per") \
-  STATISTIC (conditioned,            1, relative, propagations, "per") \
-  STATISTIC (conditioned_assign,     2, relative, propagations, "per") \
-  STATISTIC (conditioned_autarky,    2, relative, propagations, "per") \
-  STATISTIC (conditioned_cond,       2, relative, propagations, "per") \
-  STATISTIC (conditioned_initial,    2, relative, propagations, "per") \
-  STATISTIC (conditionings,          2, relative, propagations, "per") \
-  STATISTIC (condition_pre_assign,   2, relative, propagations, "per") \
-  STATISTIC (condition_pre_autarky,  2, relative, propagations, "per") \
-  STATISTIC (condition_pre_cond,     2, relative, propagations, "per") \
-  STATISTIC (condition_propagated,   2, relative, propagations, "per") \
-  STATISTIC (conflicts,              0, relative, propagations, "per") \
-  STATISTIC (conflicts_chrono,       2, relative, propagations, "per") \
-  STATISTIC (congruence_ands,        2, relative, propagations, "per") \
-  STATISTIC (congruence_dummy_ands,  2, relative, propagations, "per") \
-  STATISTIC (congruence_gates,       2, relative, propagations, "per") \
-  STATISTIC (congruence_gates_and,   2, relative, propagations, "per") \
-  STATISTIC (congruence_gates_ite,   2, relative, propagations, "per") \
-  STATISTIC (congruence_gates_xor,   2, relative, propagations, "per") \
-  STATISTIC (congruence_ites,        2, relative, propagations, "per") \
-  STATISTIC (congruence_rounds,      2, INTERVAL, interval, "") \
-  STATISTIC (congruence_rw_ands,     2, relative, propagations, "per") \
-  STATISTIC (congruence_rw_ites,     2, relative, propagations, "per") \
-  STATISTIC (congruence_rw_xors,     2, relative, propagations, "per") \
-  STATISTIC (congruence_simp_ands,   2, relative, propagations, "per") \
-  STATISTIC (congruence_simp_ites,   2, relative, propagations, "per") \
-  STATISTIC (congruence_simplified,  2, relative, propagations, "per") \
-  STATISTIC (congruence_simp_xors,   2, relative, propagations, "per") \
-  STATISTIC (congruence_subsumed,    2, relative, propagations, "per") \
-  STATISTIC (congruence_trite,       2, relative, propagations, "per") \
-  STATISTIC (congruence_unary,       2, relative, propagations, "per") \
-  STATISTIC (congruence_unary_and,   2, relative, propagations, "per") \
-  STATISTIC (congruence_unary_ite,   2, relative, propagations, "per") \
-  STATISTIC (congruence_units,       2, relative, propagations, "per") \
-  STATISTIC (congruence_xors,        2, relative, propagations, "per") \
-  STATISTIC (congruent,              1, relative, propagations, "per") \
-  STATISTIC (cover_asymmetric,       2, relative, propagations, "per") \
-  STATISTIC (cover_blocked,          2, relative, propagations, "per") \
-  STATISTIC (coverings,              2, relative, propagations, "per") \
-  STATISTIC (cover_total,            1, relative, propagations, "per") \
-  STATISTIC (decision_random,        2, relative, propagations, "per") \
-  STATISTIC (decision_random_phase,  2, relative, propagations, "per") \
-  STATISTIC (decisions,              0, relative, propagations, "per") \
-  STATISTIC (decision_searched,      2, relative, propagations, "per") \
-  STATISTIC (decompositions,         1, relative, propagations, "per") \
+  STATISTIC (clause_improved_glue,   2, relative, clause_added_red, "per") \
+  STATISTIC (clause_promoted_tier1,  2, relative, clause_improved_glue, "per") \
+  STATISTIC (clause_promoted_tier2,  2, relative, clause_improved_glue, "per") \
+  STATISTIC (clause_recompute_glue,  2, relative, clause_added_red, "per") \
+  STATISTIC (collected,              1, relative, collections, "per") \
+  STATISTIC (collections,            1, INTERVAL, interval, "") \
+  STATISTIC (compacts,               1, INTERVAL, interval, "per") \
+  STATISTIC (condition_active,       2, relative, conditionings, "per") \
+  STATISTIC (condition_candidates,   2, relative, conditionings, "per") \
+  STATISTIC (conditioned,            1, percent, clause_added_irr, "%") \
+  STATISTIC (conditioned_assign,     2, relative, conditioned, "per") \
+  STATISTIC (conditioned_autarky,    2, relative, conditioned, "per") \
+  STATISTIC (conditioned_cond,       2, relative, conditioned, "per") \
+  STATISTIC (conditioned_initial,    2, relative, conditioned, "per") \
+  STATISTIC (conditionings,          1, INTERVAL, interval, "") \
+  STATISTIC (condition_pre_assign,   2, relative, conditionings, "per") \
+  STATISTIC (condition_pre_autarky,  2, relative, conditionings, "per") \
+  STATISTIC (condition_pre_cond,     2, relative, conditionings, "per") \
+  STATISTIC (condition_propagated,   2, relative, conditionings, "per") \
+  STATISTIC (conflicts,              0, PER_SECOND, second, "per") \
+  STATISTIC (conflicts_chrono,       2, relative, conflicts, "per") \
+  STATISTIC (congruence_ands,        2, relative, congruent, "per") \
+  STATISTIC (congruence_dummy_ands,  2, relative, congruence_rounds, "per") \
+  STATISTIC (congruence_gates,       2, relative, congruence_rounds, "per") \
+  STATISTIC (congruence_gates_and,   2, relative, congruence_gates, "%") \
+  STATISTIC (congruence_gates_ite,   2, relative, congruence_gates, "%") \
+  STATISTIC (congruence_gates_xor,   2, relative, congruence_gates, "%") \
+  STATISTIC (congruence_ites,        2, relative, congruent, "%") \
+  STATISTIC (congruence_rounds,      1, INTERVAL, interval, "") \
+  STATISTIC (congruence_rw_ands,     2, relative, congruence_gates, "per") \
+  STATISTIC (congruence_rw_ites,     2, relative, congruence_gates, "per") \
+  STATISTIC (congruence_rw_xors,     2, relative, congruence_gates, "per") \
+  STATISTIC (congruence_simp_ands,   2, relative, congruence_rounds, "per") \
+  STATISTIC (congruence_simp_ites,   2, relative, congruence_rounds, "per") \
+  STATISTIC (congruence_simplified,  2, relative, congruence_rounds, "per") \
+  STATISTIC (congruence_simp_xors,   2, relative, congruence_rounds, "per") \
+  STATISTIC (congruence_subsumed,    2, relative, congruence_rounds, "per") \
+  STATISTIC (congruence_trite,       2, relative, congruence_rounds, "per") \
+  STATISTIC (congruence_unary,       2, relative, congruence_rounds, "per") \
+  STATISTIC (congruence_unary_and,   2, relative, congruence_rounds, "per") \
+  STATISTIC (congruence_unary_ite,   2, relative, congruence_rounds, "per") \
+  STATISTIC (congruence_units,       2, relative, congruent, "per") \
+  STATISTIC (congruence_xors,        2, relative, congruent, "per") \
+  STATISTIC (congruent,              1, relative, congruence_rounds, "per") \
+  STATISTIC (cover_asymmetric,       2, percent, cover_total, "%") \
+  STATISTIC (cover_blocked,          2, percent, cover_total, "%") \
+  STATISTIC (coverings,              2, INTERVAL, interval, "") \
+  STATISTIC (cover_total,            1, percent, clause_added_irr, "%") \
+  STATISTIC (decision_random,        2, percent, decisions, "%") \
+  STATISTIC (decision_random_phase,  2, INTERVAL, interval, "") \
+  STATISTIC (decisions,              0, PER_SECOND, second, "per") \
+  STATISTIC (decision_searched,      2, relative, decisions, "per") \
+  STATISTIC (decompositions,         1, INTERVAL, interval, "per") \
   STATISTIC (deduplicated,           1, relative, propagations, "per") \
   STATISTIC (deduplicate_init,       2, relative, propagations, "per") \
   STATISTIC (deduplicate_rounds,     2, relative, propagations, "per") \

@@ -53,8 +53,8 @@ void Internal::start_random_sequence () {
            stats.conflicts, length);
   randomized_deciding = length;
 
-  const double delta = stats.decision_random_phase *
-                       log (stats.decision_random_phase);
+  const double delta =
+      stats.decision_random_phase * log (stats.decision_random_phase);
   lim.random_decision = stats.conflicts + delta * opts.randecint;
   VERBOSE (3,
            "next random decision sequence "

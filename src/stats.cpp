@@ -99,14 +99,6 @@ void Stats::print_old (Internal *internal) {
          stats.incremental_decay,
          percent (stats.incremental_decay, stats.searches));
   }
-  if (all || stats.deduplicate_init) {
-    PRT ("dedup-init-rnds: %15" PRId64 "   %10.2f %%  of interval",
-         stats.deduplicate_rounds,
-         percent (stats.deduplicate_rounds, stats.conflicts));
-    PRT ("dedup-init:      %15" PRId64 "   %10.2f %%  of subsumed",
-         stats.deduplicate_init,
-         percent (stats.deduplicate_init, stats.deduplicate_init));
-  }
   if (all || stats.conditionings) {
     PRT ("conditioned:     %15" PRId64
          "   %10.2f %%  of irredundant clauses",
@@ -169,16 +161,16 @@ void Stats::print_old (Internal *internal) {
     PRT ("   rewri.-ands:  %15" PRId64 "   %10.2f    per rewritten",
          stats.congruence_rw_ands,
          percent (stats.congruence_rw_ands, rewritten));
-    PRT ("   rewri.-xors:  %15" PRId64 "   %10.2f%%  per rewritten",
+    PRT ("   rewri.-xors:  %15" PRId64 "   %10.2f%%   per rewritten",
          stats.congruence_rw_xors,
          percent (stats.congruence_rw_xors, rewritten));
-    PRT ("   rewri.-ites:  %15" PRId64 "   %10.2f%%  per rewritten",
+    PRT ("   rewri.-ites:  %15" PRId64 "   %10.2f%%   per rewritten",
          stats.congruence_rw_ites,
          percent (stats.congruence_rw_ites, rewritten));
-    PRT ("   subsumed:     %15" PRId64 "   %10.2f%%  per round",
+    PRT ("   subsumed:     %15" PRId64 "   %10.2f%%   per round",
          stats.congruence_subsumed,
          relative (stats.congruence_subsumed, stats.congruence_rounds));
-    PRT ("   dummy-ands:   %15" PRId64 "   %10.2f%%  per round",
+    PRT ("   dummy-ands:   %15" PRId64 "   %10.2f%%   per round",
          stats.congruence_dummy_ands,
          relative (stats.congruence_dummy_ands, stats.congruence_rounds));
   }
@@ -203,13 +195,26 @@ void Stats::print_old (Internal *internal) {
          stats.decision_searched,
          relative (stats.decision_searched, stats.decisions));
     if (all || stats.decision_random) {
-      PRT ("  random phase:  %15" PRId64 "   %10.2f    per interval",
+      PRT ("  random phase:  %15" PRId64 "   %10.2f    decision interval",
            stats.decision_random_phase,
-           relative (stats.decision_random_phase, stats.decisions));
+           relative (stats.decisions, stats.decision_random_phase));
       PRT ("  random decs:   %15" PRId64 "   %10.2f    per phase",
            stats.decision_random,
            relative (stats.decision_random, stats.decision_random_phase));
     }
+  }
+  if (all || stats.deduplicated) {
+    PRT ("deduplicated:    %15" PRId64 "   %10.2f %%  per subsumed",
+         stats.deduplicated, percent (stats.deduplicated, stats.subsumed));
+    PRT ("  deduplitions:  %15" PRId64 "   %10.2f    interval",
+         stats.deduplications,
+         relative (stats.conflicts, stats.deduplications));
+    PRT ("  dedup-init-rnd:%15" PRId64 "   %10.2f %%  of interval",
+         stats.deduplicate_rounds,
+         percent (stats.deduplicate_rounds, stats.conflicts));
+    PRT ("  dedup-init:    %15" PRId64 "   %10.2f %%  of subsumed",
+         stats.deduplicate_init,
+         percent (stats.deduplicate_init, stats.deduplicate_init));
   }
   if (all || stats.vars_all_elim) {
     PRT ("eliminated:      %15" PRId64 "   %10.2f %%  of all variables",
@@ -431,7 +436,7 @@ void Stats::print_old (Internal *internal) {
     PRT ("  forwardzero    %15" PRId64 "   %10.2f %%  of tried",
          stats.lucky_forward_zero,
          percent (stats.lucky_forward_zero, stats.lucky_tried));
-    PRT ("  units:         %15" PRId64 "   %10.2f  of tried",
+    PRT ("  units:         %15" PRId64 "   %10.2f    of tried",
          stats.lucky_units,
          relative (stats.lucky_units, stats.lucky_tried));
   }
@@ -588,10 +593,10 @@ void Stats::print_old (Internal *internal) {
     PRT ("    unknown:     %15" PRId64 "   %10.2f %%  backbone solved",
          stats.sweep_bb_solved_to,
          percent (stats.sweep_bb_solved_to, stats.sweep_bb_solved));
-    PRT ("    fixed:       %15" PRId64 "   %10.2f   per swept variable",
+    PRT ("    fixed:       %15" PRId64 "   %10.2f    per swept variable",
          stats.sweep_bb_fixed,
          relative (stats.sweep_bb_fixed, stats.sweep_variables));
-    PRT ("    flip:        %15" PRId64 "   %10.2f   per swept variable",
+    PRT ("    flip:        %15" PRId64 "   %10.2f    per swept variable",
          stats.sweep_bb_flip,
          relative (stats.sweep_bb_flip, stats.sweep_variables));
     PRT ("    flipped:     %15" PRId64 "   %10.2f %%  of backbone flip",
@@ -638,8 +643,6 @@ void Stats::print_old (Internal *internal) {
     PRT ("  subsumerounds: %15" PRId64 "   %10.2f    per phase",
          stats.subsume_rounds,
          relative (stats.subsume_rounds, stats.subsume_phases));
-    PRT ("  deduplicated:  %15" PRId64 "   %10.2f %%  per subsumed",
-         stats.deduplicated, percent (stats.deduplicated, stats.subsumed));
     PRT ("  transreds:     %15" PRId64 "   %10.2f    interval",
          stats.transitive_rounds,
          relative (stats.conflicts, stats.transitive_rounds));
