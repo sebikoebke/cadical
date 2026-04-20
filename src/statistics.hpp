@@ -280,6 +280,7 @@
   STATISTIC (up_learn_lazy_elevate,  2, relative, "per", propagations) \
   STATISTIC (up_learn_out_of_order,  2, relative, "per", propagations) \
   STATISTIC (up_learn_propagating,   2, relative, "per", propagations) \
+  STATISTIC (up_learn_satisfied,     2, relative, "per", propagations) \
   STATISTIC (up_learn_unit,          2, relative, "per", propagations) \
   STATISTIC (variables_extension,    2, relative, "per", propagations) \
   STATISTIC (variables_original,     1, relative, "per", propagations) \

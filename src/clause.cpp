@@ -454,7 +454,7 @@ void Internal::add_new_original_clause (int64_t id) {
   }
   if (skip) {
     if (from_propagator) {
-      stats.up_learn_empty++;
+      stats.up_learn_satisfied++;
 
       // In case it was a skipped external forgettable, we need to mark it
       // immediately as removed
