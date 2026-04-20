@@ -568,7 +568,7 @@ void WalkerFO::break_clauses (int lit) {
 #endif
   }
   LOG ("broken %zd clauses by flipping %d", broken, lit);
-  internal->stats.ticks_walk_flip_broken += ticks - old;
+  internal->stats.ticks_walk_flip_broke += ticks - old;
   STOP (walkflipbroken);
 }
 
@@ -829,8 +829,8 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
     PHASE ("walk", stats.walk,
            "starting with %zd unsatisfied clauses "
            "(%.0f%% out of %" PRId64 ")",
-           broken, percent (broken, stats.clauses_current_irredundant),
-           stats.clauses_current_irredundant);
+           broken, percent (broken, stats.clause_current_irr),
+           stats.clause_current_irr);
 
     walk_full_occs_save_minimum (walker);
     assert ((unsigned) stats.walk_minimum <= walker.minimum);

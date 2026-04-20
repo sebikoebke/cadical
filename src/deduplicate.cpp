@@ -158,7 +158,7 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
     if (unit) {
 
       stats.failed_literals++;
-      stats.deduplicate_hyper_unary++;
+      stats.deduplicate_unary++;
       assign_unit (unit);
       // lrat_chain.clear ();   done in search_assign
 
@@ -278,8 +278,8 @@ void Internal::deduplicate_all_clauses () {
 
   clauses.resize (j - clauses.begin ());
 
-  ++stats.deduplicate_init_rounds;
-  PHASE ("deduplicate-all", stats.deduplicate_init_rounds,
+  ++stats.deduplicate_rounds;
+  PHASE ("deduplicate-all", stats.deduplicate_rounds,
          "flushed %" PRId64 " subsumed clauses out of %zd", subsumed,
          clauses.end () - start);
   stats.subsumed += subsumed;

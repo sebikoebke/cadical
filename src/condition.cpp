@@ -52,12 +52,12 @@ bool Internal::conditioning () {
   if (level <= averages.current.jump)
     return false; // Main heuristic.
 
-  if (!stats.clauses_current_irredundant)
+  if (!stats.clause_current_irr)
     return false;
   double remain = active ();
   if (!remain)
     return false;
-  double ratio = stats.clauses_current_irredundant / remain;
+  double ratio = stats.clause_current_irr / remain;
   return ratio <= opts.conditionmaxrat;
 }
 
@@ -417,9 +417,9 @@ long Internal::condition_round (long delta) {
   assert (initial.conditional == conditional.size ());
   assert (initial.assigned == initial.conditional + initial.autarky);
 
-  stats.condition_init_assigned += initial.assigned;
-  stats.condition_init_conditional += initial.conditional;
-  stats.condition_init_autarky += initial.autarky;
+  stats.condition_pre_assign += initial.assigned;
+  stats.condition_pre_cond += initial.conditional;
+  stats.condition_pre_autarky += initial.autarky;
   stats.condition_active += active ();
 
   // To speed-up and particularly simplify the code we unassign all
@@ -794,10 +794,10 @@ long Internal::condition_round (long delta) {
 
       mark_garbage (c);
 
-      stats.condition_final_assigned += remain.assigned;
-      stats.condition_final_conditional += remain.conditional;
-      stats.condition_final_autarky += remain.autarky;
-      stats.condition_final_assigned_init += initial.assigned;
+      stats.conditioned_assign += remain.assigned;
+      stats.conditioned_cond += remain.conditional;
+      stats.conditioned_autarky += remain.autarky;
+      stats.conditioned_initial += initial.assigned;
     }
 
     // In this last part specific to one candidate clause, we have to get
@@ -896,7 +896,7 @@ void Internal::condition (bool update_limits) {
 
   if (unsat)
     return;
-  if (!stats.clauses_current_irredundant)
+  if (!stats.clause_current_irr)
     return;
 
   START_SIMPLIFIER (condition, CONDITION);
@@ -913,8 +913,8 @@ void Internal::condition (bool update_limits) {
     limit = opts.conditionmineff;
   if (limit > opts.conditionmaxeff)
     limit = opts.conditionmaxeff;
-  assert (stats.clauses_current_irredundant);
-  limit *= 2.0 * active () / (double) stats.clauses_current_irredundant;
+  assert (stats.clause_current_irr);
+  limit *= 2.0 * active () / (double) stats.clause_current_irr;
   limit = max (limit, 2l * active ());
 
   PHASE ("condition", stats.conditionings,

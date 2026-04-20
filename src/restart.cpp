@@ -60,7 +60,7 @@ bool Internal::stabilizing () {
     inc.stabilize = 1;
 
   int64_t next_delta_ticks = inc.stabilize;
-  int64_t stabphases = stats.stable_phases_incremental + 1;
+  int64_t stabphases = stats.stable_phases_current + 1;
   next_delta_ticks *= stabphases * stabphases;
 
   lim.stabilize = next_delta_ticks;
@@ -79,7 +79,7 @@ bool Internal::stabilizing () {
   stable = !stable; // Switch!!!!!
 
   if (stable)
-    ++stats.stable_phases_total, ++stats.stable_phases_incremental;
+    ++stats.stable_phases_total, ++stats.stable_phases_current;
 
   swap_averages ();
   report (stable ? '[' : '{');

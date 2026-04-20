@@ -262,8 +262,8 @@ void Internal::compact () {
       unit_clauses (2 * src + 1) = 0;
       assert (id);
     }
-    unit_clauses_idx.resize (2 * mapper.new_vsize);
-    shrink_vector (unit_clauses_idx);
+    unit_clause_idx.resize (2 * mapper.new_vsize);
+    shrink_vector (unit_clause_idx);
   }
   // Map the literals in all clauses.
   //

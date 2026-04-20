@@ -207,8 +207,7 @@ struct Internal {
   int64_t saved_decisions;    // to compute decision rate average
   bool concluded;             // keeps track of conclude
   vector<int64_t> conclusion; // store ids of conclusion clauses
-  vector<int64_t>
-      unit_clauses_idx;       // keep track of unit_clauses (LRAT/FRAT)
+  vector<int64_t> unit_clause_idx; // keep track of unit_clauses (LRAT/FRAT)
   vector<int64_t> lrat_chain; // create LRAT in solver: option lratdirect
   vector<int64_t> mini_chain; // used to create LRAT in minimize
   vector<int64_t> minimize_chain; // used to create LRAT in minimize
@@ -391,9 +390,9 @@ struct Internal {
 
   // Currently remaining active redundant and irredundant clauses.
 
-  int64_t redundant () const { return stats.clauses_current_redundant; }
+  int64_t redundant () const { return stats.clause_current_red; }
 
-  int64_t irredundant () const { return stats.clauses_current_irredundant; }
+  int64_t irredundant () const { return stats.clause_current_irr; }
 
   double clause_variable_ratio () const {
     return relative (irredundant (), active ());
@@ -450,7 +449,7 @@ struct Internal {
     assert (lrat || frat);
     assert (val (lit) > 0);
     const unsigned uidx = vlit (lit);
-    int64_t id = unit_clauses_idx[uidx];
+    int64_t id = unit_clause_idx[uidx];
     assert (id);
     return id;
   }
@@ -458,8 +457,8 @@ struct Internal {
   inline int64_t &unit_clauses (int uidx) {
     assert (lrat || frat);
     assert (uidx > 0);
-    assert ((size_t) uidx < unit_clauses_idx.size ());
-    return unit_clauses_idx[uidx];
+    assert ((size_t) uidx < unit_clause_idx.size ());
+    return unit_clause_idx[uidx];
   }
 
   // Helper functions to access variable and literal data.
@@ -827,7 +826,7 @@ struct Internal {
   int otfs_find_backtrack_level (int &forced);
   Clause *on_the_fly_strengthen (Clause *conflict, int lit);
   void update_decision_rate_average ();
-  void lazy_external_propagator_out_of_order_clause (int &);
+  void lazy_external_up_out_of_order_clause (int &);
   void analyze ();
   void iterate (); // report learned unit clause
 
@@ -863,8 +862,7 @@ struct Internal {
 
   // adds the assigned literals to assigned
   void renotify_full_trail_between_trail_pos (int start_level,
-                                              int end_level,
-                                              int propagator_level,
+                                              int end_level, int up_level,
                                               std::vector<int> &assigned,
                                               bool start_new_level);
   void connect_propagator ();
@@ -1315,7 +1313,7 @@ struct Internal {
   void sweep_refine_backbone (Sweeper &sweeper);
   void sweep_refine (Sweeper &sweeper);
   void flip_backbone_literals (struct Sweeper &sweeper);
-  bool sweep_backbone_candidate (Sweeper &sweeper, int lit);
+  bool sweep_bb_candidate (Sweeper &sweeper, int lit);
   int64_t add_sweep_binary (sweep_proof_clause, int lit, int other);
   bool scheduled_variable (Sweeper &sweeper, int idx);
   void schedule_inner (Sweeper &sweeper, int idx);
@@ -1747,7 +1745,7 @@ struct Internal {
   //
   void new_proof_on_demand ();
   void force_lrat ();                    // sets lrat=true
-  void resize_unit_clauses_idx ();       // resizes unit_clauses_idx
+  void resize_unit_clause_idx ();        // resizes unit_clause_idx
   void close_trace (bool stats = false); // Stop proof tracing.
   void flush_trace (bool stats = false); // Flush proof trace file.
   void trace (File *);                   // Start write proof file.

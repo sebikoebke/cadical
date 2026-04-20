@@ -211,7 +211,7 @@ void Internal::elim_propagate (Eliminator &eliminator, int root) {
 void Internal::elim_on_the_fly_self_subsumption (Eliminator &eliminator,
                                                  Clause *c, int pivot) {
   LOG (c, "pivot %d on-the-fly self-subsuming resolution", pivot);
-  stats.eliminate_otf_strengthened++;
+  stats.eliminate_otf_str++;
   stats.strengthened++;
   assert (clause.empty ());
   for (const auto &lit : *c) {
@@ -419,7 +419,7 @@ bool Internal::resolve_clauses (Eliminator &eliminator, Clause *c,
     // LRAT is c + d (+ eventual units)
     elim_on_the_fly_self_subsumption (eliminator, c, pivot);
     LOG (d, "double pivot %d on-the-fly self-subsuming resolution", -pivot);
-    stats.eliminate_otf_subsumed++;
+    stats.eliminate_otf_sub++;
     stats.subsumed++;
     elim_update_removed_clause (eliminator, d, -pivot);
     mark_garbage (d);
@@ -502,7 +502,7 @@ bool Internal::elim_resolvents_are_bounded (Eliminator &eliminator,
         continue;
       if (!resolve_gates && substitute && c->gate == d->gate)
         continue;
-      stats.eliminate_resolve_tried++;
+      stats.eliminate_tried_res++;
       if (resolve_clauses (eliminator, c, pivot, d, true)) {
         resolvents++;
         int size = clause.size ();
@@ -549,7 +549,7 @@ inline void Internal::elim_add_resolvents (Eliminator &eliminator,
   }
   switch (eliminator.gatetype) {
   case EQUI:
-    stats.eliminated_equivalence++;
+    stats.eliminated_equivalent++;
     break;
   case AND:
     stats.eliminated_and++;
@@ -874,7 +874,7 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
 #ifndef QUIET
   const int64_t old_resolutions = stats.eliminate_resolved;
 #endif
-  const int old_eliminated = stats.vars_all_eliminated;
+  const int old_eliminated = stats.vars_all_elim;
   const int old_fixed = stats.vars_all_fixed;
 
   // Limit on garbage literals during variable elimination. If the limit is
@@ -936,7 +936,7 @@ int Internal::elim_round (bool &completed, bool &deleted_binary_clause) {
   if (!unsat)
     mark_redundant_clauses_with_eliminated_variables_as_garbage ();
 
-  int eliminated = stats.vars_all_eliminated - old_eliminated;
+  int eliminated = stats.vars_all_elim - old_eliminated;
 #ifndef QUIET
   int64_t resolutions = stats.eliminate_resolved - old_resolutions;
   PHASE ("elim-round", stats.eliminations,
@@ -1041,7 +1041,7 @@ void Internal::elim (bool update_limits) {
 
 #ifndef QUIET
   int old_active_variables = active ();
-  int old_eliminated = stats.vars_all_eliminated;
+  int old_eliminated = stats.vars_all_elim;
 #endif
 
   // Make sure there was a complete subsumption phase since last
@@ -1153,7 +1153,7 @@ void Internal::elim (bool update_limits) {
     increase_elimination_bound ();
 
 #ifndef QUIET
-  eliminated = stats.vars_all_eliminated - old_eliminated;
+  eliminated = stats.vars_all_elim - old_eliminated;
   PHASE ("elim-phase", stats.eliminate_phases,
          "eliminated %d variables %.2f%%", eliminated,
          percent (eliminated, old_active_variables));

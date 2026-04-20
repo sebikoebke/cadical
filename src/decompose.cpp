@@ -510,11 +510,11 @@ bool Internal::decompose_round () {
   // Now go over all clauses and find clause which contain literals that
   // should be substituted by their representative.
 
-  size_t clauses_size = clauses.size ();
+  size_t clause_size = clauses.size ();
 #ifndef QUIET
   size_t garbage = 0, replaced = 0;
 #endif
-  for (size_t i = 0; substituted && !unsat && i < clauses_size; i++) {
+  for (size_t i = 0; substituted && !unsat && i < clause_size; i++) {
     Clause *c = clauses[i];
     if (c->garbage)
       continue;
@@ -717,7 +717,7 @@ bool Internal::decompose_round () {
 
   PHASE ("decompose", stats.decompositions,
          "%zd clauses replaced %.2f%% producing %zd garbage clauses %.2f%%",
-         replaced, percent (replaced, clauses_size), garbage,
+         replaced, percent (replaced, clause_size), garbage,
          percent (garbage, replaced));
 
   erase_vector (scc);

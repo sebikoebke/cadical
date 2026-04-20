@@ -384,7 +384,7 @@ bool Internal::ternary () {
   // number of added clauses too (actually the number of 'htrs').
   //
   int64_t htrs_limit =
-      stats.clauses_current_redundant + stats.clauses_current_irredundant;
+      stats.clause_current_red + stats.clause_current_irr;
   htrs_limit *= opts.ternarymaxadd;
   htrs_limit /= 100;
 

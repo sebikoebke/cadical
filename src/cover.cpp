@@ -595,7 +595,7 @@ int64_t Internal::cover_round () {
   const size_t scheduled = schedule.size ();
   PHASE ("cover", stats.coverings,
          "scheduled %zd clauses %.0f%% with %" PRId64 " untried %.0f%%",
-         scheduled, percent (scheduled, stats.clauses_current_irredundant),
+         scheduled, percent (scheduled, stats.clause_current_irr),
          untried, percent (untried, scheduled));
 #endif
 
@@ -651,7 +651,7 @@ bool Internal::cover () {
     return false;
   if (terminated_asynchronously ())
     return false;
-  if (!stats.clauses_current_irredundant)
+  if (!stats.clause_current_irr)
     return false;
 
   // TODO: Our current algorithm for producing the necessary clauses on the

@@ -14,7 +14,7 @@ namespace CaDiCaL {
 bool Internal::reducing () {
   if (!opts.reduce)
     return false;
-  if (!stats.clauses_current_redundant)
+  if (!stats.clause_current_red)
     return false;
   return stats.conflicts >= lim.reduce;
 }
@@ -97,7 +97,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
   const int tier1limit = tier1[false];
   const int tier2limit = max (tier1limit, tier2[false]);
 
-  stack.reserve (stats.clauses_current_redundant);
+  stack.reserve (stats.clause_current_red);
 
   for (const auto &c : clauses) {
     if (!c->redundant)
@@ -133,7 +133,7 @@ void Internal::mark_useless_redundant_clauses_as_garbage () {
     target = stack.size ();
 
   PHASE ("reduce", stats.reductions, "reducing %zd clauses %.0f%%", target,
-         percent (target, stats.clauses_current_redundant));
+         percent (target, stats.clause_current_red));
 
   auto i = stack.begin ();
   const auto t = i + target;

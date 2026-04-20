@@ -422,10 +422,10 @@ static void save_core_clause (void *state, unsigned id, bool learned,
 }
 
 static void save_core_clause_with_lrat (void *state, unsigned cid,
-                                        unsigned id, bool learned,
-                                        size_t size, const unsigned *lits,
-                                        size_t chain_size,
-                                        const unsigned *chain) {
+                                         unsigned id, bool learned,
+                                         size_t size, const unsigned *lits,
+                                         size_t chain_size,
+                                         const unsigned *chain) {
   Sweeper *sweeper = (Sweeper *) state;
   Internal *internal = sweeper->internal;
   if (internal->unsat)
@@ -789,7 +789,7 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
     bool limit_hit = false;
     while (p != end) {
       const int lit = *p++;
-      stats.sweep_backbone_flip++;
+      stats.sweep_bb_flip++;
       if (limit_hit || terminated_asynchronously ()) {
         break;
       } else if (sweep_flip (lit)) {
@@ -797,7 +797,7 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
 #ifdef LOGGING
         total_flipped++;
 #endif
-        stats.sweep_backbone_flipped++;
+        stats.sweep_bb_flipped++;
         flipped++;
       } else {
         LOG ("flipping backbone candidate %d failed", lit);
@@ -824,25 +824,25 @@ void Internal::flip_backbone_literals (Sweeper &sweeper) {
 
 bool Internal::sweep_extract_fixed (Sweeper &sweeper, int lit) {
   const int not_lit = -lit;
-  stats.sweep_backbone_solved++;
+  stats.sweep_bb_solved++;
   kitten_assume_signed (citten, not_lit);
   int res = sweep_solve ();
   if (!res) {
-    stats.sweep_backbone_solved_unknown++;
+    stats.sweep_bb_solved_to++;
     return false;
   }
   assert (res == 20);
   LOG ("sweep unit %d", lit);
   save_add_clear_core (sweeper);
-  stats.sweep_backbone_solved_unsat++;
+  stats.sweep_bb_solved_unsat++;
   return true;
 }
 
-bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
+bool Internal::sweep_bb_candidate (Sweeper &sweeper, int lit) {
   LOG ("trying backbone candidate %d", lit);
   signed char value = kitten_fixed_signed (citten, lit);
   if (value) {
-    stats.sweep_backbone_fixed++;
+    stats.sweep_bb_fixed++;
     assert (value > 0);
     if (val (lit) <= 0) {
       return sweep_extract_fixed (sweeper, lit);
@@ -855,9 +855,9 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
   if (res != 10) {
     LOG ("not flipping due to status %d != 10", res);
   }
-  stats.sweep_backbone_flip++;
+  stats.sweep_bb_flip++;
   if (res == 10 && sweep_flip (lit)) {
-    stats.sweep_backbone_flipped++;
+    stats.sweep_bb_flipped++;
     LOG ("flipping %d succeeded", lit);
     // LOGBACKBONE ("refined backbone candidates");
     return false;
@@ -865,13 +865,13 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
 
   LOG ("flipping %d failed", lit);
   const int not_lit = -lit;
-  stats.sweep_backbone_solved++;
+  stats.sweep_bb_solved++;
   kitten_assume_signed (citten, not_lit);
   res = sweep_solve ();
   if (res == 10) {
     LOG ("sweeping backbone candidate %d failed", lit);
     sweep_refine (sweeper);
-    stats.sweep_backbone_solved_sat++;
+    stats.sweep_bb_solved_sat++;
     return false;
   }
 
@@ -879,11 +879,11 @@ bool Internal::sweep_backbone_candidate (Sweeper &sweeper, int lit) {
     LOG ("sweep unit %d", lit);
     save_add_clear_core (sweeper);
     assert (val (lit));
-    stats.sweep_backbone_solved_unsat++;
+    stats.sweep_bb_solved_unsat++;
     return true;
   }
 
-  stats.sweep_backbone_solved_unknown++;
+  stats.sweep_bb_solved_to++;
 
   LOG ("sweeping backbone candidate %d failed", lit);
   return false;
@@ -1321,7 +1321,7 @@ void Internal::flip_partition_literals (Sweeper &sweeper) {
           LOG ("flipping equivalence candidate %d failed", lit);
           *q++ = lit;
         }
-        stats.sweep_equivalences_flip++;
+        stats.sweep_eq_flip++;
       }
       if (size > 1) {
         *q++ = 0;
@@ -1329,7 +1329,7 @@ void Internal::flip_partition_literals (Sweeper &sweeper) {
       }
       src = end_src + 1;
     }
-    stats.sweep_equivalences_flipped += flipped;
+    stats.sweep_eq_flipped += flipped;
     sweeper.partition.resize (dst - sweeper.partition.begin ());
     LOG ("flipped %u equivalence candidates in round %u", flipped, round);
     if (terminated_asynchronously ())
@@ -1354,9 +1354,9 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   const int third = (end - begin == 3) ? 0 : end[-4];
   int res = kitten_status (citten);
   if (res == 10) {
-    stats.sweep_equivalences_flip++;
+    stats.sweep_eq_flip++;
     if (sweep_flip (lit)) {
-      stats.sweep_equivalences_flipped++;
+      stats.sweep_eq_flipped++;
       LOG ("flipping %d succeeded", lit);
       if (third == 0) {
         LOG ("squashing equivalence class of %d", lit);
@@ -1369,9 +1369,9 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
       }
       return false;
     }
-    stats.sweep_equivalences_flip++;
+    stats.sweep_eq_flip++;
     if (sweep_flip (other)) {
-      stats.sweep_equivalences_flipped++;
+      stats.sweep_eq_flipped++;
       LOG ("flipping %d succeeded", other);
       if (third == 0) {
         LOG ("squashing equivalence class of %d", lit);
@@ -1417,21 +1417,21 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   LOG ("flipping %d and %d both failed", lit, other);
   kitten_assume_signed (citten, not_lit);
   kitten_assume_signed (citten, other);
-  stats.sweep_equivalences_solved++;
+  stats.sweep_eq_solved++;
   res = sweep_solve ();
   if (res == 10) {
-    stats.sweep_equivalences_solved_sat++;
+    stats.sweep_eq_solved_sat++;
     LOG ("first sweeping implication %d -> %d failed", other, lit);
     sweep_refine (sweeper);
   } else if (!res) {
-    stats.sweep_equivalences_solved_unknown++;
+    stats.sweep_eq_solved_to++;
     LOG ("first sweeping implication %d -> %d hit ticks limit", other, lit);
   }
 
   if (res != 20)
     return false;
 
-  stats.sweep_equivalences_solved_unsat++;
+  stats.sweep_eq_solved_unsat++;
   LOG ("first sweeping implication %d -> %d succeeded", other, lit);
 
   save_core (sweeper, 0);
@@ -1439,13 +1439,13 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   kitten_assume_signed (citten, lit);
   kitten_assume_signed (citten, not_other);
   res = sweep_solve ();
-  stats.sweep_equivalences_solved++;
+  stats.sweep_eq_solved++;
   if (res == 10) {
-    stats.sweep_equivalences_solved_sat++;
+    stats.sweep_eq_solved_sat++;
     LOG ("second sweeping implication %d <- %d failed", other, lit);
     sweep_refine (sweeper);
   } else if (!res) {
-    stats.sweep_equivalences_solved_unknown++;
+    stats.sweep_eq_solved_to++;
     LOG ("second sweeping implication %d <- %d hit ticks limit", other,
          lit);
   }
@@ -1457,7 +1457,7 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
 
   assert (res == 20);
 
-  stats.sweep_equivalences_solved_unsat++;
+  stats.sweep_eq_solved_unsat++;
   LOG ("second sweeping implication %d <- %d succeeded too", other, lit);
 
   save_core (sweeper, 1);
@@ -1473,7 +1473,7 @@ bool Internal::sweep_equivalence_candidates (Sweeper &sweeper, int lit,
   if (!val (lit) && !val (other)) {
     assert (sweeper.core[0].size ());
     assert (sweeper.core[1].size ());
-    stats.sweep_equivalences++;
+    stats.sweep_eq++;
     sweep_binary bin1;
     sweep_binary bin2;
     if (abs (lit) > abs (other)) {
@@ -1636,7 +1636,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
       sweeper.backbone.pop_back ();
       if (!active (lit))
         continue;
-      if (sweep_backbone_candidate (sweeper, lit))
+      if (sweep_bb_candidate (sweeper, lit))
         success = true;
     }
     STOP (sweepbackbone);
@@ -1650,7 +1650,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
              externalize (idx), units, solved);
     assert (sweeper.backbone.empty ());
 #ifndef QUIET
-    uint64_t equivalences = stats.sweep_equivalences;
+    uint64_t equivalences = stats.sweep_eq;
     solved = stats.sweep_solved;
 #endif
     START (sweepequivalences);
@@ -1682,7 +1682,7 @@ const char *Internal::sweep_variable (Sweeper &sweeper, int idx) {
     }
     STOP (sweepequivalences);
 #ifndef QUIET
-    equivalences = stats.sweep_equivalences - equivalences;
+    equivalences = stats.sweep_eq - equivalences;
     solved = stats.sweep_solved - solved;
     if (equivalences)
       VERBOSE (3,
@@ -1885,7 +1885,8 @@ bool Internal::sweep () {
   if (terminated_asynchronously ())
     return false;
   if (delaying_sweep.bumpreasons.delay ()) { // TODO need to fix Delay
-    last.sweep.ticks = stats.ticks_search_unstable + stats.ticks_search_stable;
+    last.sweep.ticks =
+        stats.ticks_search_unstable + stats.ticks_search_stable;
     return false;
   }
   delaying_sweep.bumpreasons.bypass_delay ();
@@ -1895,7 +1896,7 @@ bool Internal::sweep () {
   assert (!level);
   START_SIMPLIFIER (sweep, SWEEP);
   stats.sweep++;
-  uint64_t equivalences = stats.sweep_equivalences;
+  uint64_t equivalences = stats.sweep_eq;
   uint64_t units = stats.sweep_units;
   Sweeper sweeper = Sweeper (this);
   if (opts.sweepcomplete)
@@ -1926,13 +1927,13 @@ bool Internal::sweep () {
       VERBOSE (2,
                "found %" PRIu64 " equivalences and %" PRIu64
                " units after sweeping %" PRIu64 " variables ",
-               stats.sweep_equivalences - equivalences,
-               stats.sweep_units - units, swept);
+               stats.sweep_eq - equivalences, stats.sweep_units - units,
+               swept);
       limit *= 10;
     }
   }
   VERBOSE (2, "swept %" PRIu64 " variables", swept);
-  equivalences = stats.sweep_equivalences - equivalences,
+  equivalences = stats.sweep_eq - equivalences,
   units = stats.sweep_units - units;
   PHASE ("sweep", stats.sweep,
          "found %" PRIu64 " equivalences and %" PRIu64 " units",

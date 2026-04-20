@@ -1116,10 +1116,11 @@ void Internal::delete_unfactored (Quotient *q) {
   for (auto c : q->qlauses) {
     eagerly_remove_from_occurences (c);
     mark_garbage (c);
-    stats.factor_removed_literals += c->size;
-    stats.factor_removed_clauses++;
+    stats.factor_removed_lits += c->size;
     if (c->redundant)
-      stats.factor_removed_redundant++;
+      stats.factor_removed_red++;
+    else
+      stats.factor_removed_irr++;
   }
 }
 
@@ -1555,7 +1556,7 @@ bool Internal::factor () {
   } before, after, delta;
   before.variables = stats.variables_extension + stats.variables_original;
   before.ticks = stats.ticks_factor;
-  before.clauses = stats.clauses_current_irredundant;
+  before.clauses = stats.clause_current_irr;
 #endif
 
   // TODO: redundant mode sometimes?
@@ -1570,7 +1571,7 @@ bool Internal::factor () {
 
 #ifndef QUIET
   after.variables = stats.variables_extension + stats.variables_original;
-  after.clauses = stats.clauses_current_irredundant;
+  after.clauses = stats.clause_current_irr;
   after.ticks = stats.ticks_factor;
   delta.variables = after.variables - before.variables;
   delta.clauses = before.clauses - after.clauses;

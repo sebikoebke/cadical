@@ -131,7 +131,7 @@ void Internal::enlarge (int new_max_var) {
   LOG ("enlarge internal size from %zd to new size %zd", vsize, new_vsize);
   // Ordered in the size of allocated memory (larger block first).
   if (lrat || frat)
-    enlarge_zero (unit_clauses_idx, 2 * new_vsize);
+    enlarge_zero (unit_clause_idx, 2 * new_vsize);
   if (!vsize || watching ())
     enlarge_init (wtab, 2 * new_vsize, {});
   if (!otab.empty ())
@@ -178,7 +178,7 @@ void Internal::reserve_vars (int new_min_vsize) {
   while (new_vsize <= (size_t) new_min_vsize)
     new_vsize *= 2;
   if (lrat || frat)
-    enlarge_zero (unit_clauses_idx, 2 * new_vsize);
+    enlarge_zero (unit_clause_idx, 2 * new_vsize);
   enlarge_only (ftab, new_vsize);
   enlarge_zero (marks, new_vsize);
   enlarge_vals (new_vsize);
@@ -373,10 +373,10 @@ int Internal::propagate_assumptions () {
     assert (opts.ilb == 2 || (size_t) level <= assumptions.size ());
     stats.ilb_triggers++;
     stats.ilb_success += (level > 0);
-    stats.ilb_reused_levels += level;
+    stats.ilb_reuse_levels += level;
     if (level) {
       assert (control.size () > 1);
-      stats.ilb_reused_literals += num_assigned - control[1].trail;
+      stats.ilb_reuse_literals += num_assigned - control[1].trail;
     }
   }
   init_search_limits ();
@@ -505,8 +505,8 @@ void Internal::init_preprocessing_limits () {
   if (incremental)
     mode = "keeping";
   else {
-    double delta = stats.clauses_added_irredundant
-                       ? log10 (stats.clauses_added_irredundant)
+    double delta = stats.clause_added_irr
+                       ? log10 (stats.clause_added_irr)
                        : 100;
     delta = delta * delta;
     lim.inprobe = stats.conflicts + opts.inprobeint * delta;
@@ -620,7 +620,7 @@ void Internal::init_search_limits () {
   last.stabilize.conflicts = stats.conflicts;
   lim.stabilize = stats.conflicts + opts.stabilizeinit;
   last.stabilize.ticks = stats.ticks_search_unstable;
-  stats.stable_phases_incremental = 0;
+  stats.stable_phases_current = 0;
   LOG ("new ticks-based stabilize limit %" PRId64 " after %d conflicts",
        lim.stabilize, (int) opts.stabilizeinit);
 
@@ -689,7 +689,7 @@ void Internal::init_search_limits () {
       tier1[u] = max (tier1[u], opts.tier1minglue ? opts.tier1minglue : 2);
       tier2[u] = max (tier2[u], opts.tier2minglue ? opts.tier2minglue : 6);
     }
-    stats.clauses_recomputed_glue = 0;
+    stats.clause_recompute_glue = 0;
   }
 
   /*----------------------------------------------------------------------*/
@@ -733,7 +733,7 @@ bool Internal::preprocess_round (int round, bool &triggered) {
     int64_t vars, clauses;
   } before, after;
   before.vars = active ();
-  before.clauses = stats.clauses_current_irredundant;
+  before.clauses = stats.clause_current_irr;
   stats.preprocessings++;
   assert (!preprocessing);
   preprocessing = true;
@@ -742,7 +742,7 @@ bool Internal::preprocess_round (int round, bool &triggered) {
          " clauses",
          round, before.vars, before.clauses);
   int old_elimbound = lim.elimbound;
-  int old_eliminated = stats.vars_all_eliminated;
+  int old_eliminated = stats.vars_all_elim;
 
   if (opts.inprobing)
     inprobe (false);
@@ -752,7 +752,7 @@ bool Internal::preprocess_round (int round, bool &triggered) {
     condition (false);
 
   after.vars = active ();
-  after.clauses = stats.clauses_current_irredundant;
+  after.clauses = stats.clause_current_irr;
   assert (preprocessing);
   preprocessing = false;
   PHASE ("preprocessing", stats.preprocessings,
@@ -767,7 +767,7 @@ bool Internal::preprocess_round (int round, bool &triggered) {
     return true;
   if (old_elimbound < lim.elimbound)
     return true;
-  if (old_eliminated < stats.vars_all_eliminated)
+  if (old_eliminated < stats.vars_all_elim)
     return true;
   return false;
 }
@@ -788,7 +788,7 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
     int64_t vars, clauses;
   } before, after;
   before.vars = active ();
-  before.clauses = stats.clauses_current_irredundant;
+  before.clauses = stats.clause_current_irr;
 #endif
   // stats.preprocessings++;
   assert (!preprocessing);
@@ -818,7 +818,7 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
   // condition (false);
 #ifndef QUIET
   after.vars = active ();
-  after.clauses = stats.clauses_current_irredundant;
+  after.clauses = stats.clause_current_irr;
 #endif
   assert (preprocessing);
   preprocessing = false;
@@ -835,7 +835,7 @@ int Internal::preprocess (bool always) {
     return res;
   bool preprecessing_triggered = false;
 
-  if (opts.deduplicateallinit && !stats.deduplicate_init_rounds)
+  if (opts.deduplicateallinit && !stats.deduplicate_rounds)
     deduplicate_all_clauses ();
   preprocess_quickly (always, preprecessing_triggered);
   for (int i = 0; i < lim.preprocessing; i++)
@@ -1003,10 +1003,10 @@ int Internal::solve (bool preprocess_only) {
     assert (opts.ilb || (size_t) level <= assumptions.size ());
     stats.ilb_triggers++;
     stats.ilb_success += (level > 0);
-    stats.ilb_reused_levels += level;
+    stats.ilb_reuse_levels += level;
     if (level) {
       assert (control.size () > 1);
-      stats.ilb_reused_literals += num_assigned - control[1].trail;
+      stats.ilb_reuse_literals += num_assigned - control[1].trail;
     }
     if (external->propagator)
       renotify_trail_after_ilb ();

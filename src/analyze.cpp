@@ -215,7 +215,7 @@ void Internal::bump_variables () {
 
 int Internal::recompute_glue (Clause *c) {
   int res = 0;
-  const int64_t stamp = ++stats.clauses_recomputed_glue;
+  const int64_t stamp = ++stats.clause_recompute_glue;
   for (const auto &lit : *c) {
     assert (val (lit));
     int level = var (lit).level;
@@ -1215,7 +1215,7 @@ void Internal::analyze () {
     uip = 0;
     while (!uip) {
       if (!i) {
-        lazy_external_propagator_out_of_order_clause (uip);
+        lazy_external_up_out_of_order_clause (uip);
         if (unsat)
           return;
         else if (uip) {
@@ -1369,7 +1369,7 @@ void Internal::analyze () {
 //
 // TODO: we do not really need to keep the clause longer than the conflict
 // analysis.
-void Internal::lazy_external_propagator_out_of_order_clause (int &uip) {
+void Internal::lazy_external_up_out_of_order_clause (int &uip) {
   assert (!opts.exteagerreasons);
   assert (external_prop);
   LOG (clause, "out-of-order conflict");

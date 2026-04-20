@@ -369,7 +369,7 @@ int Internal::elimfast_round (bool &completed,
 #ifndef QUIET
   const int64_t old_resolutions = stats.eliminate_resolved;
 #endif
-  const int old_eliminated = stats.vars_all_eliminated;
+  const int old_eliminated = stats.vars_all_elim;
   const int old_fixed = stats.vars_all_fixed;
 
   // Limit on garbage literals during variable elimination. If the limit is
@@ -419,8 +419,8 @@ int Internal::elimfast_round (bool &completed,
   if (!unsat)
     mark_redundant_clauses_with_eliminated_variables_as_garbage ();
 
-  int eliminated = stats.vars_all_eliminated - old_eliminated;
-  stats.vars_all_eliminated_fast += eliminated;
+  int eliminated = stats.vars_all_elim - old_eliminated;
+  stats.vars_all_elim_fast += eliminated;
 #ifndef QUIET
   int64_t resolutions = stats.eliminate_resolved - old_resolutions;
   PHASE ("fastelim-round", stats.eliminate_fast_rounds,
@@ -461,7 +461,7 @@ void Internal::elimfast () {
 
 #ifndef QUIET
   int old_active_variables = active ();
-  int old_eliminated = stats.vars_all_eliminated;
+  int old_eliminated = stats.vars_all_elim;
 #endif
 
   reset_watches (); // saves lots of memory
@@ -559,7 +559,7 @@ void Internal::elimfast () {
   }
 
 #ifndef QUIET
-  eliminated = stats.vars_all_eliminated - old_eliminated;
+  eliminated = stats.vars_all_elim - old_eliminated;
   PHASE ("fastelim-phase", stats.eliminate_phases,
          "eliminated %d variables %.2f%%", eliminated,
          percent (eliminated, old_active_variables));

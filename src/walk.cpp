@@ -606,7 +606,7 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
     }
   }
 
-  stats.ticks_walk_flip_broken += walker.ticks - old;
+  stats.ticks_walk_flip_broke += walker.ticks - old;
 
   const int64_t old_after_broken = walker.ticks;
 
@@ -952,8 +952,8 @@ int Internal::walk_round (int64_t limit, bool prev) {
     PHASE ("walk", stats.walk,
            "starting with %zd unsatisfied clauses "
            "(%.0f%% out of %" PRId64 ")",
-           broken, percent (broken, stats.clauses_current_irredundant),
-           stats.clauses_current_irredundant);
+           broken, percent (broken, stats.clause_current_irr),
+           stats.clause_current_irr);
 
     walk_save_minimum (walker);
     assert (stats.walk_minimum <= (int64_t) walker.minimum);

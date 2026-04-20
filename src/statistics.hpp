@@ -17,30 +17,30 @@
   STATISTIC (blocked_pure_literals,                1, relative, propagations, "per") \
   STATISTIC (blocked_resolutions,                  1, relative, propagations, "per") \
   STATISTIC (blockings,                            1, relative, propagations, "per") \
-  STATISTIC (clauses_added_irredundant,            3, percent, clauses_added_total, "%") \
-  STATISTIC (clauses_added_redundant,              3, relative, propagations, "per") \
-  STATISTIC (clauses_added_total,                  3, relative, propagations, "per") \
-  STATISTIC (clauses_current_irredundant,          3, relative, propagations, "per") \
-  STATISTIC (clauses_current_redundant,            3, relative, propagations, "per") \
-  STATISTIC (clauses_current_total,                3, relative, propagations, "per") \
-  STATISTIC (clauses_improved_glue,                3, relative, propagations, "per") \
-  STATISTIC (clauses_promoted_tier1,               3, relative, propagations, "per") \
-  STATISTIC (clauses_promoted_tier2,               3, relative, propagations, "per") \
-  STATISTIC (clauses_recomputed_glue,              3, relative, propagations, "per") \
+  STATISTIC (clause_added_irr,            3, percent, clause_added_total, "%") \
+  STATISTIC (clause_added_red,              3, relative, propagations, "per") \
+  STATISTIC (clause_added_total,                  3, relative, propagations, "per") \
+  STATISTIC (clause_current_irr,          3, relative, propagations, "per") \
+  STATISTIC (clause_current_red,            3, relative, propagations, "per") \
+  STATISTIC (clause_current_total,                3, relative, propagations, "per") \
+  STATISTIC (clause_improved_glue,                3, relative, propagations, "per") \
+  STATISTIC (clause_promoted_tier1,               3, relative, propagations, "per") \
+  STATISTIC (clause_promoted_tier2,               3, relative, propagations, "per") \
+  STATISTIC (clause_recompute_glue,              3, relative, propagations, "per") \
   STATISTIC (collected,                            1, relative, propagations, "per") \
   STATISTIC (collections,                          1, relative, propagations, "per") \
   STATISTIC (compacts,                             1, relative, propagations, "per") \
   STATISTIC (condition_active,                     2, relative, propagations, "per") \
   STATISTIC (condition_candidates,                 2, relative, propagations, "per") \
   STATISTIC (conditioned,                          1, relative, propagations, "per") \
-  STATISTIC (condition_final_assigned_init,        2, relative, propagations, "per") \
-  STATISTIC (condition_final_assigned,             2, relative, propagations, "per") \
-  STATISTIC (condition_final_autarky,              2, relative, propagations, "per") \
-  STATISTIC (condition_final_conditional,          2, relative, propagations, "per") \
+  STATISTIC (conditioned_initial,        2, relative, propagations, "per") \
+  STATISTIC (conditioned_assign,             2, relative, propagations, "per") \
+  STATISTIC (conditioned_autarky,              2, relative, propagations, "per") \
+  STATISTIC (conditioned_cond,          2, relative, propagations, "per") \
   STATISTIC (conditionings,                        2, relative, propagations, "per") \
-  STATISTIC (condition_init_assigned,              2, relative, propagations, "per") \
-  STATISTIC (condition_init_autarky,               2, relative, propagations, "per") \
-  STATISTIC (condition_init_conditional,           2, relative, propagations, "per") \
+  STATISTIC (condition_pre_assign,              2, relative, propagations, "per") \
+  STATISTIC (condition_pre_autarky,               2, relative, propagations, "per") \
+  STATISTIC (condition_pre_cond,           2, relative, propagations, "per") \
   STATISTIC (condition_propagated,                 2, relative, propagations, "per") \
   STATISTIC (conflicts,                            0, relative, propagations, "per") \
   STATISTIC (conflicts_chrono,                     3, relative, propagations, "per") \
@@ -51,16 +51,16 @@
   STATISTIC (congruence_gates_ite,                 1, relative, propagations, "per") \
   STATISTIC (congruence_gates_xor,                 1, relative, propagations, "per") \
   STATISTIC (congruence_ites,                      1, relative, propagations, "per") \
-  STATISTIC (congruence_rewritten_ands,            1, relative, propagations, "per") \
-  STATISTIC (congruence_rewritten_ites,            1, relative, propagations, "per") \
-  STATISTIC (congruence_rewritten_xors,            1, relative, propagations, "per") \
+  STATISTIC (congruence_rw_ands,            1, relative, propagations, "per") \
+  STATISTIC (congruence_rw_ites,            1, relative, propagations, "per") \
+  STATISTIC (congruence_rw_xors,            1, relative, propagations, "per") \
   STATISTIC (congruence_rounds,                    1, INTERVAL, interval, "") \
   STATISTIC (congruence_simplified,                1, relative, propagations, "per") \
-  STATISTIC (congruence_simplified_ands,           1, relative, propagations, "per") \
-  STATISTIC (congruence_simplified_ites,           1, relative, propagations, "per") \
-  STATISTIC (congruence_simplified_xors,           1, relative, propagations, "per") \
+  STATISTIC (congruence_simp_ands,           1, relative, propagations, "per") \
+  STATISTIC (congruence_simp_ites,           1, relative, propagations, "per") \
+  STATISTIC (congruence_simp_xors,           1, relative, propagations, "per") \
   STATISTIC (congruence_subsumed,                  1, relative, propagations, "per") \
-  STATISTIC (congruence_trivial_ite,               1, relative, propagations, "per") \
+  STATISTIC (congruence_trite,               1, relative, propagations, "per") \
   STATISTIC (congruence_unary,                     1, relative, propagations, "per") \
   STATISTIC (congruence_unary_and,                 1, relative, propagations, "per") \
   STATISTIC (congruence_unary_ite,                 1, relative, propagations, "per") \
@@ -72,14 +72,14 @@
   STATISTIC (coverings,                            2, relative, propagations, "per") \
   STATISTIC (cover_total,                          2, relative, propagations, "per") \
   STATISTIC (decisions,                            0, relative, propagations, "per") \
-  STATISTIC (decisions_random,                     1, relative, propagations, "per") \
-  STATISTIC (decisions_random_phases,              1, relative, propagations, "per") \
-  STATISTIC (decisions_searched,                   0, relative, propagations, "per") \
+  STATISTIC (decision_random,                     1, relative, propagations, "per") \
+  STATISTIC (decision_random_phase,              1, relative, propagations, "per") \
+  STATISTIC (decision_searched,                   0, relative, propagations, "per") \
   STATISTIC (decompositions,                       1, relative, propagations, "per") \
   STATISTIC (deduplicated,                         1, relative, propagations, "per") \
   STATISTIC (deduplicate_init,                     1, relative, propagations, "per") \
-  STATISTIC (deduplicate_init_rounds,              1, relative, propagations, "per") \
-  STATISTIC (deduplicate_hyper_unary,              1, relative, propagations, "per") \
+  STATISTIC (deduplicate_rounds,              1, relative, propagations, "per") \
+  STATISTIC (deduplicate_unary,              1, relative, propagations, "per") \
   STATISTIC (deduplications,                       1, relative, propagations, "per") \
   STATISTIC (eager_subsumed,                       1, relative, propagations, "per") \
   STATISTIC (eager_subsumtions,                    1, relative, propagations, "per") \
@@ -88,11 +88,11 @@
   STATISTIC (eliminated,                           1, relative, propagations, "per") \
   STATISTIC (eliminated_and,                       1, relative, propagations, "per") \
   STATISTIC (eliminated_defs,                      1, relative, propagations, "per") \
-  STATISTIC (eliminate_defs_checked,               1, relative, propagations, "per") \
-  STATISTIC (eliminate_defs_extracted,             1, relative, propagations, "per") \
-  STATISTIC (eliminate_defs_ticks,                 1, relative, propagations, "per") \
-  STATISTIC (eliminate_defs_unit,                  1, relative, propagations, "per") \
-  STATISTIC (eliminated_equivalence,               1, relative, propagations, "per") \
+  STATISTIC (eliminate_def_check,               1, relative, propagations, "per") \
+  STATISTIC (eliminate_def_success,             1, relative, propagations, "per") \
+  STATISTIC (eliminate_def_ticks,                 1, relative, propagations, "per") \
+  STATISTIC (eliminate_def_unit,                  1, relative, propagations, "per") \
+  STATISTIC (eliminated_equivalent,               1, relative, propagations, "per") \
   STATISTIC (eliminated_ite,                       1, relative, propagations, "per") \
   STATISTIC (eliminated_xor,                       1, relative, propagations, "per") \
   STATISTIC (eliminate_equivalence,                1, relative, propagations, "per") \
@@ -100,12 +100,12 @@
   STATISTIC (eliminate_fast_rounds,                1, relative, propagations, "per") \
   STATISTIC (eliminate_gates,                      1, relative, propagations, "per") \
   STATISTIC (eliminate_ite,                        1, relative, propagations, "per") \
-  STATISTIC (eliminate_otf_strengthened,           1, relative, propagations, "per") \
-  STATISTIC (eliminate_otf_subsumed,               1, relative, propagations, "per") \
+  STATISTIC (eliminate_otf_str,           1, relative, propagations, "per") \
+  STATISTIC (eliminate_otf_sub,               1, relative, propagations, "per") \
   STATISTIC (eliminate_phases,                     1, relative, propagations, "per") \
   STATISTIC (eliminate_resolved,                   1, relative, propagations, "per") \
-  STATISTIC (eliminate_resolve_tried,              1, relative, propagations, "per") \
-  STATISTIC (eliminate_strengthened_bw,            1, relative, propagations, "per") \
+  STATISTIC (eliminate_tried_res,              1, relative, propagations, "per") \
+  STATISTIC (eliminate_strength_bw,            1, relative, propagations, "per") \
   STATISTIC (eliminate_substituted,                1, relative, propagations, "per") \
   STATISTIC (eliminate_subsumed_bw,                1, relative, propagations, "per") \
   STATISTIC (eliminate_tried,                      1, relative, propagations, "per") \
@@ -121,9 +121,9 @@
   STATISTIC (factored_ite,                         1, relative, propagations, "per") \
   STATISTIC (factored_xor,                         1, relative, propagations, "per") \
   STATISTIC (factorings,                           1, relative, propagations, "per") \
-  STATISTIC (factor_removed_clauses,               1, relative, propagations, "per") \
-  STATISTIC (factor_removed_literals,              1, relative, propagations, "per") \
-  STATISTIC (factor_removed_redundant,             1, relative, propagations, "per") \
+  STATISTIC (factor_removed_irr,               1, relative, propagations, "per") \
+  STATISTIC (factor_removed_lits,              1, relative, propagations, "per") \
+  STATISTIC (factor_removed_red,             1, relative, propagations, "per") \
   STATISTIC (failed_literals,                      1, relative, propagations, "per") \
   STATISTIC (flush_hyper,                          2, relative, propagations, "per") \
   STATISTIC (flushings,                            2, relative, propagations, "per") \
@@ -135,9 +135,9 @@
   STATISTIC (hbrs,                                 1, relative, propagations, "per") \
   STATISTIC (hbr_sizes,                            1, relative, propagations, "per") \
   STATISTIC (hbr_subsuming,                        1, relative, propagations, "per") \
-  STATISTIC (ilb_reused_assumptions,               1, relative, propagations, "per") \
-  STATISTIC (ilb_reused_levels,                    1, relative, propagations, "per") \
-  STATISTIC (ilb_reused_literals,                  1, relative, propagations, "per") \
+  STATISTIC (ilb_reuse_assumptions,               1, relative, propagations, "per") \
+  STATISTIC (ilb_reuse_levels,                    1, relative, propagations, "per") \
+  STATISTIC (ilb_reuse_literals,                  1, relative, propagations, "per") \
   STATISTIC (ilb_success,                          1, relative, propagations, "per") \
   STATISTIC (ilb_triggers,                         1, relative, propagations, "per") \
   STATISTIC (incremental_decay,                    1, relative, propagations, "per") \
@@ -176,26 +176,11 @@
   STATISTIC (propagations,                         0, PER_SECOND, second, "per") \
   STATISTIC (propagations_backbone,                2, relative, propagations, "per") \
   STATISTIC (propagations_cover,                   2, relative, propagations, "per") \
-  STATISTIC (propagations_instantiate,             2, relative, propagations, "per") \
+  STATISTIC (propagations_inst,             2, relative, propagations, "per") \
   STATISTIC (propagations_probe,                   2, relative, propagations, "per") \
   STATISTIC (propagations_search,                  2, relative, propagations, "per") \
   STATISTIC (propagations_transred,                2, relative, propagations, "per") \
   STATISTIC (propagations_vivify,                  2, relative, propagations, "per") \
-  STATISTIC (propagator_cb,                        1, relative, propagations, "per") \
-  STATISTIC (propagator_cb_add,                    1, relative, propagations, "per") \
-  STATISTIC (propagator_cb_check_model,            1, relative, propagations, "per") \
-  STATISTIC (propagator_cb_propagate,              1, relative, propagations, "per") \
-  STATISTIC (propagator_cb_propagate_assign,       2, relative, propagations, "per") \
-  STATISTIC (propagator_cb_propagate_clash,        2, relative, propagations, "per") \
-  STATISTIC (propagator_cb_propagate_explain,      2, relative, propagations, "per") \
-  STATISTIC (propagator_learned,                   1, relative, propagations, "per") \
-  STATISTIC (propagator_learned_conflict,          2, relative, propagations, "per") \
-  STATISTIC (propagator_learned_elevating,         2, relative, propagations, "per") \
-  STATISTIC (propagator_learned_empty,             2, relative, propagations, "per") \
-  STATISTIC (propagator_learned_lazy_elevate,      2, relative, propagations, "per") \
-  STATISTIC (propagator_learned_out_of_order,      2, relative, propagations, "per") \
-  STATISTIC (propagator_learned_propagating,       2, relative, propagations, "per") \
-  STATISTIC (propagator_learned_unit,              2, relative, propagations, "per") \
   STATISTIC (recomputed_tiers,                     1, relative, propagations, "per") \
   STATISTIC (reduced,                              1, relative, propagations, "per") \
   STATISTIC (reductions,                           1, relative, propagations, "per") \
@@ -222,7 +207,7 @@
   STATISTIC (shrunken,                             1, relative, propagations, "per") \
   STATISTIC (shrunken_minimize,                    1, relative, propagations, "per") \
   STATISTIC (stable_conflicts,                     2, relative, propagations, "per") \
-  STATISTIC (stable_phases_incremental,            2, relative, propagations, "per") \
+  STATISTIC (stable_phases_current,            2, relative, propagations, "per") \
   STATISTIC (stable_phases_total,                  1, relative, propagations, "per") \
   STATISTIC (strengthened,                         1, relative, propagations, "per") \
   STATISTIC (subsume_checks,                       1, relative, propagations, "per") \
@@ -234,24 +219,24 @@
   STATISTIC (subsume_rounds,                       1, relative, propagations, "per") \
   STATISTIC (subsume_tried,                        1, relative, propagations, "per") \
   STATISTIC (sweep,                                1, relative, propagations, "per") \
-  STATISTIC (sweep_backbone_fixed,                 1, relative, propagations, "per") \
-  STATISTIC (sweep_backbone_flip,                  1, relative, propagations, "per") \
-  STATISTIC (sweep_backbone_flipped,               1, relative, propagations, "per") \
-  STATISTIC (sweep_backbone_solved,                1, relative, propagations, "per") \
-  STATISTIC (sweep_backbone_solved_sat,            1, relative, propagations, "per") \
-  STATISTIC (sweep_backbone_solved_unknown,        1, relative, propagations, "per") \
-  STATISTIC (sweep_backbone_solved_unsat,          1, relative, propagations, "per") \
+  STATISTIC (sweep_bb_fixed,                 1, relative, propagations, "per") \
+  STATISTIC (sweep_bb_flip,                  1, relative, propagations, "per") \
+  STATISTIC (sweep_bb_flipped,               1, relative, propagations, "per") \
+  STATISTIC (sweep_bb_solved,                1, relative, propagations, "per") \
+  STATISTIC (sweep_bb_solved_sat,            1, relative, propagations, "per") \
+  STATISTIC (sweep_bb_solved_to,        1, relative, propagations, "per") \
+  STATISTIC (sweep_bb_solved_unsat,          1, relative, propagations, "per") \
   STATISTIC (sweep_clauses,                        1, relative, propagations, "per") \
   STATISTIC (sweep_completed,                      1, relative, propagations, "per") \
   STATISTIC (sweep_depth,                          1, relative, propagations, "per") \
   STATISTIC (sweep_environment,                    1, relative, propagations, "per") \
-  STATISTIC (sweep_equivalences,                   1, relative, propagations, "per") \
-  STATISTIC (sweep_equivalences_flip,              1, relative, propagations, "per") \
-  STATISTIC (sweep_equivalences_flipped,           1, relative, propagations, "per") \
-  STATISTIC (sweep_equivalences_solved,            1, relative, propagations, "per") \
-  STATISTIC (sweep_equivalences_solved_sat,        1, relative, propagations, "per") \
-  STATISTIC (sweep_equivalences_solved_unknown,    1, relative, propagations, "per") \
-  STATISTIC (sweep_equivalences_solved_unsat,      1, relative, propagations, "per") \
+  STATISTIC (sweep_eq,                   1, relative, propagations, "per") \
+  STATISTIC (sweep_eq_flip,              1, relative, propagations, "per") \
+  STATISTIC (sweep_eq_flipped,           1, relative, propagations, "per") \
+  STATISTIC (sweep_eq_solved,            1, relative, propagations, "per") \
+  STATISTIC (sweep_eq_solved_sat,        1, relative, propagations, "per") \
+  STATISTIC (sweep_eq_solved_to,    1, relative, propagations, "per") \
+  STATISTIC (sweep_eq_solved_unsat,      1, relative, propagations, "per") \
   STATISTIC (sweep_solved,                         1, relative, propagations, "per") \
   STATISTIC (sweep_solved_sat,                     1, relative, propagations, "per") \
   STATISTIC (sweep_solved_unsat,                   1, relative, propagations, "per") \
@@ -274,18 +259,33 @@
   STATISTIC (ticks_walk,                           2, relative, propagations, "per") \
   STATISTIC (ticks_walk_break,                     2, relative, propagations, "per") \
   STATISTIC (ticks_walk_flip,                      2, relative, propagations, "per") \
-  STATISTIC (ticks_walk_flip_broken,               2, relative, propagations, "per") \
+  STATISTIC (ticks_walk_flip_broke,               2, relative, propagations, "per") \
   STATISTIC (ticks_walk_flip_wl,                   2, relative, propagations, "per") \
   STATISTIC (ticks_walk_pick,                      2, relative, propagations, "per") \
   STATISTIC (transitive_rounds,                    1, relative, propagations, "per") \
   STATISTIC (transitive_clauses,                   1, relative, propagations, "per") \
   STATISTIC (transitive_units,                     1, relative, propagations, "per") \
+  STATISTIC (up_cb,                        1, relative, propagations, "per") \
+  STATISTIC (up_cb_add,                    1, relative, propagations, "per") \
+  STATISTIC (up_cb_check_model,            1, relative, propagations, "per") \
+  STATISTIC (up_cb_prop,              1, relative, propagations, "per") \
+  STATISTIC (up_cb_prop_assign,       2, relative, propagations, "per") \
+  STATISTIC (up_cb_prop_clash,        2, relative, propagations, "per") \
+  STATISTIC (up_cb_prop_explain,      2, relative, propagations, "per") \
+  STATISTIC (up_learn,                   1, relative, propagations, "per") \
+  STATISTIC (up_learn_conflict,          2, relative, propagations, "per") \
+  STATISTIC (up_learn_elevating,         2, relative, propagations, "per") \
+  STATISTIC (up_learn_empty,             2, relative, propagations, "per") \
+  STATISTIC (up_learn_lazy_elevate,      2, relative, propagations, "per") \
+  STATISTIC (up_learn_out_of_order,      2, relative, propagations, "per") \
+  STATISTIC (up_learn_propagating,       2, relative, propagations, "per") \
+  STATISTIC (up_learn_unit,              2, relative, propagations, "per") \
   STATISTIC (variables_extension,                  1, relative, propagations, "per") \
   STATISTIC (variables_original,                   1, relative, propagations, "per") \
   STATISTIC (vars,                                 2, relative, propagations, "per") \
   STATISTIC (vars_active,                          1, relative, propagations, "per") \
-  STATISTIC (vars_all_eliminated,                  1, relative, propagations, "per") \
-  STATISTIC (vars_all_eliminated_fast,             1, relative, propagations, "per") \
+  STATISTIC (vars_all_elim,                  1, relative, propagations, "per") \
+  STATISTIC (vars_all_elim_fast,             1, relative, propagations, "per") \
   STATISTIC (vars_all_fixed,                       1, relative, propagations, "per") \
   STATISTIC (vars_all_pure,                        1, relative, propagations, "per") \
   STATISTIC (vars_all_substituted,                 1, relative, propagations, "per") \
@@ -300,10 +300,10 @@
   STATISTIC (vars_unused,                          1, relative, propagations, "per") \
   STATISTIC (vivifications,                        1, relative, propagations, "per") \
   STATISTIC (vivified,                             1, relative, propagations, "per") \
-  STATISTIC (vivified_irredundant,                 1, relative, propagations, "per") \
-  STATISTIC (vivified_redundant_tier1,             1, relative, propagations, "per") \
-  STATISTIC (vivified_redundant_tier2,             1, relative, propagations, "per") \
-  STATISTIC (vivified_redundant_tier3,             1, relative, propagations, "per") \
+  STATISTIC (vivified_irr,                 1, relative, propagations, "per") \
+  STATISTIC (vivified_tier1,             1, relative, propagations, "per") \
+  STATISTIC (vivified_tier2,             1, relative, propagations, "per") \
+  STATISTIC (vivified_tier3,             1, relative, propagations, "per") \
   STATISTIC (vivify_checks,                        1, relative, propagations, "per") \
   STATISTIC (vivify_decisions,                     1, relative, propagations, "per") \
   STATISTIC (vivify_demote,                        1, relative, propagations, "per") \
@@ -312,14 +312,14 @@
   STATISTIC (vivify_instantiated,                  1, relative, propagations, "per") \
   STATISTIC (vivify_reused,                        1, relative, propagations, "per") \
   STATISTIC (vivify_scheduled,                     1, relative, propagations, "per") \
-  STATISTIC (vivify_strengthened,                  1, relative, propagations, "per") \
-  STATISTIC (vivify_strengthened_irredundant,      1, relative, propagations, "per") \
-  STATISTIC (vivify_strengthened_redundant_tier1,  1, relative, propagations, "per") \
-  STATISTIC (vivify_strengthened_redundant_tier2,  1, relative, propagations, "per") \
-  STATISTIC (vivify_strengthened_redundant_tier3,  1, relative, propagations, "per") \
+  STATISTIC (vivify_strength,                  1, relative, propagations, "per") \
+  STATISTIC (vivify_strength_irr,      1, relative, propagations, "per") \
+  STATISTIC (vivify_strength_tier1,  1, relative, propagations, "per") \
+  STATISTIC (vivify_strength_tier2,  1, relative, propagations, "per") \
+  STATISTIC (vivify_strength_tier3,  1, relative, propagations, "per") \
   STATISTIC (vivify_subsumed,                      1, relative, propagations, "per") \
-  STATISTIC (vivify_subsumed_irredundant,          1, relative, propagations, "per") \
-  STATISTIC (vivify_subsumed_redundant,            1, relative, propagations, "per") \
+  STATISTIC (vivify_subsumed_irr,          1, relative, propagations, "per") \
+  STATISTIC (vivify_subsumed_red,            1, relative, propagations, "per") \
   STATISTIC (vivify_units,                         1, relative, propagations, "per") \
   STATISTIC (walk,                                 1, relative, propagations, "per") \
   STATISTIC (walk_broken,                          2, relative, propagations, "per") \
@@ -329,8 +329,8 @@
   STATISTIC (walk_warmup,                          2, relative, propagations, "per") \
   STATISTIC (walk_warmup_conflicts,                2, relative, propagations, "per") \
   STATISTIC (walk_warmup_decision,                 2, relative, propagations, "per") \
-  STATISTIC (walk_warmup_decision_dummy,           2, relative, propagations, "per") \
-  STATISTIC (walk_warmup_propagated,               2, relative, propagations, "per") \
+  STATISTIC (walk_warmup_dummy,           2, relative, propagations, "per") \
+  STATISTIC (walk_warmup_propagate,               2, relative, propagations, "per") \
   STATISTIC (walk_weight_reducing,                 2, relative, propagations, "per") \
   STATISTIC (walk_weight_transfer,                 2, relative, propagations, "per") \
   STATISTIC (weakened,                             1, relative, propagations, "per") \

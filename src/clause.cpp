@@ -122,16 +122,16 @@ Clause *Internal::new_clause (bool red, int glue) {
   //
   assert (c->bytes () == bytes);
 
-  stats.clauses_current_total++;
-  stats.clauses_added_total++;
+  stats.clause_current_total++;
+  stats.clause_added_total++;
 
   if (red) {
-    stats.clauses_current_redundant++;
-    stats.clauses_added_redundant++;
+    stats.clause_current_red++;
+    stats.clause_added_red++;
   } else {
     stats.irredundant_literals += size;
-    stats.clauses_current_irredundant++;
-    stats.clauses_added_irredundant++;
+    stats.clause_current_irr++;
+    stats.clause_added_irr++;
   }
   if (size == 2)
     new_binary_since_dedup = true;
@@ -163,15 +163,15 @@ void Internal::promote_clause (Clause *c, int new_glue) {
   c->used = max_used;
   if (old_glue > tier1limit && new_glue <= tier1limit) {
     LOG (c, "promoting with new glue %d to tier1", new_glue);
-    stats.clauses_promoted_tier1++;
+    stats.clause_promoted_tier1++;
   } else if (old_glue > tier2limit && new_glue <= tier2limit) {
     LOG (c, "promoting with new glue %d to tier2", new_glue);
-    stats.clauses_promoted_tier2++;
+    stats.clause_promoted_tier2++;
   } else if (old_glue <= tier2limit)
     LOG (c, "keeping with new glue %d in tier2", new_glue);
   else
     LOG (c, "keeping with new glue %d in tier3", new_glue);
-  stats.clauses_improved_glue++;
+  stats.clause_improved_glue++;
   c->glue = new_glue;
 }
 /*------------------------------------------------------------------------*/
@@ -188,15 +188,15 @@ void Internal::promote_clause_glue_only (Clause *c, int new_glue) {
     return;
   if (new_glue <= tier1limit) {
     LOG (c, "promoting with new glue %d to tier1", new_glue);
-    stats.clauses_promoted_tier1++;
+    stats.clause_promoted_tier1++;
   } else if (old_glue > tier2limit && new_glue <= tier2limit) {
     LOG (c, "promoting with new glue %d to tier2", new_glue);
-    stats.clauses_promoted_tier2++;
+    stats.clause_promoted_tier2++;
   } else if (old_glue <= tier2limit)
     LOG (c, "keeping with new glue %d in tier2", new_glue);
   else
     LOG (c, "keeping with new glue %d in tier3", new_glue);
-  stats.clauses_improved_glue++;
+  stats.clause_improved_glue++;
   c->glue = new_glue;
 }
 
@@ -251,14 +251,14 @@ void Internal::make_irredundant (Clause *subsuming) {
   subsuming->redundant = false;
   if (proof)
     proof->strengthen (subsuming->id);
-  stats.clauses_current_irredundant++;
-  stats.clauses_added_irredundant++;
+  stats.clause_current_irr++;
+  stats.clause_added_irr++;
   stats.irredundant_literals += subsuming->size;
-  assert (stats.clauses_current_redundant > 0);
-  stats.clauses_current_redundant--;
-  assert (stats.clauses_added_redundant > 0);
-  stats.clauses_added_redundant--;
-  // ... and keep 'stats.clauses_added_total'.
+  assert (stats.clause_current_red > 0);
+  stats.clause_current_red--;
+  assert (stats.clause_added_red > 0);
+  stats.clause_added_red--;
+  // ... and keep 'stats.clause_added_total'.
 }
 
 // This is the 'raw' deallocation of a clause.  If the clause is in the
@@ -334,16 +334,16 @@ void Internal::mark_garbage (Clause *c) {
   if (opts.check && is_external_forgettable (c->id))
     mark_garbage_external_forgettable (c->id);
 
-  assert (stats.clauses_current_total > 0);
-  stats.clauses_current_total--;
+  assert (stats.clause_current_total > 0);
+  stats.clause_current_total--;
 
   size_t bytes = c->bytes ();
   if (c->redundant) {
-    assert (stats.clauses_current_redundant > 0);
-    stats.clauses_current_redundant--;
+    assert (stats.clause_current_red > 0);
+    stats.clause_current_red--;
   } else {
-    assert (stats.clauses_current_irredundant > 0);
-    stats.clauses_current_irredundant--;
+    assert (stats.clause_current_irr > 0);
+    stats.clause_current_irr--;
     assert (stats.irredundant_literals >= c->size);
     stats.irredundant_literals -= c->size;
     mark_removed (c);
@@ -454,7 +454,7 @@ void Internal::add_new_original_clause (int64_t id) {
   }
   if (skip) {
     if (from_propagator) {
-      stats.propagator_learned_empty++;
+      stats.up_learn_empty++;
 
       // In case it was a skipped external forgettable, we need to mark it
       // immediately as removed
@@ -491,7 +491,7 @@ void Internal::add_new_original_clause (int64_t id) {
     lrat_chain.clear ();
     if (!size) {
       if (from_propagator)
-        stats.propagator_learned_empty++;
+        stats.up_learn_empty++;
       assert (!unsat);
       if (!original.size ())
         VERBOSE (1, "found empty original clause");

@@ -50,7 +50,7 @@ void Internal::mark_eliminated (int lit) {
   LOG ("eliminated %d", abs (lit));
   if (f.factored)
     stats.factored_eliminated++;
-  stats.vars_all_eliminated++;
+  stats.vars_all_elim++;
   stats.vars_now_eliminated++;
   stats.vars_inactive++;
   assert (stats.vars_active);

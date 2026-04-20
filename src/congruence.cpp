@@ -1830,14 +1830,14 @@ inline void Closure::promote_clause (Clause *c) {
   c->redundant = false;
   if (internal->proof)
     internal->proof->strengthen (c->id);
-  internal->stats.clauses_current_irredundant++;
-  internal->stats.clauses_added_irredundant++;
+  internal->stats.clause_current_irr++;
+  internal->stats.clause_added_irr++;
   internal->stats.irredundant_literals += c->size;
-  assert (internal->stats.clauses_current_redundant > 0);
-  internal->stats.clauses_current_redundant--;
-  assert (internal->stats.clauses_added_redundant > 0);
-  internal->stats.clauses_added_redundant--;
-  // ... and keep 'stats.clauses_added_total'.
+  assert (internal->stats.clause_current_red > 0);
+  internal->stats.clause_current_red--;
+  assert (internal->stats.clause_added_red > 0);
+  internal->stats.clause_added_red--;
+  // ... and keep 'stats.clause_added_total'.
 }
 
 // This function is rather tricky for LRAT. If you have 2 = 1 and 3=4 you
@@ -2704,7 +2704,7 @@ void Closure::simplify_and_gate (Gate *g) {
   std::vector<LRAT_ID> reasons_lrat_src, reasons_lrat_usrc;
 
   update_and_gate (g, git, 0, 0, 0, 0, falsifies, 0);
-  ++internal->stats.congruence_simplified_ands;
+  ++internal->stats.congruence_simp_ands;
   ++internal->stats.congruence_simplified;
 }
 
@@ -4110,7 +4110,7 @@ void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
 
   VERBOSE (2, "connected %zu large clauses %.0f%%", candidates.size (),
            percent (candidates.size (),
-                    internal->stats.clauses_current_irredundant));
+                    internal->stats.clause_current_irr));
 }
 
 Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
@@ -4613,7 +4613,7 @@ void Closure::rewrite_and_gate (Gate *g, int dst, int src, LRAT_ID id1,
            g->degenerated_gate == Special_Gate::DEGENERATED_AND_LHS_FALSE));
   //  check_and_gate_implied (g);
   update_and_gate (g, git, src, dst, id1, id2, falsifies, clashing);
-  ++internal->stats.congruence_rewritten_ands;
+  ++internal->stats.congruence_rw_ands;
 }
 
 bool Closure::rewrite_gate (Gate *g, int dst, int src, LRAT_ID id1,
@@ -4740,7 +4740,7 @@ void Closure::rewrite_xor_gate (Gate *g, int dst, int src) {
   }
 
   check_xor_gate_implied (g);
-  ++internal->stats.congruence_rewritten_xors;
+  ++internal->stats.congruence_rw_xors;
 }
 
 void Closure::simplify_xor_gate (Gate *g) {
@@ -4780,7 +4780,7 @@ void Closure::simplify_xor_gate (Gate *g) {
   LOG (g, "simplified");
   check_xor_gate_implied (g);
   internal->stats.congruence_simplified++;
-  internal->stats.congruence_simplified_xors++;
+  internal->stats.congruence_simp_xors++;
 }
 
 /*------------------------------------------------------------------------*/
@@ -5143,14 +5143,14 @@ void Closure::subsume_clause (Clause *subsuming, Clause *subsumed) {
   if (internal->proof)
     internal->proof->strengthen (subsuming->id);
   internal->mark_garbage (subsumed);
-  stats.clauses_current_irredundant++;
-  stats.clauses_added_irredundant++;
+  stats.clause_current_irr++;
+  stats.clause_added_irr++;
   stats.irredundant_literals += subsuming->size;
-  assert (stats.clauses_current_redundant > 0);
-  stats.clauses_current_redundant--;
-  assert (stats.clauses_added_redundant > 0);
-  stats.clauses_added_redundant--;
-  // ... and keep 'stats.clauses_added_total'.
+  assert (stats.clause_current_red > 0);
+  stats.clause_current_red--;
+  assert (stats.clause_added_red > 0);
+  stats.clause_added_red--;
+  // ... and keep 'stats.clause_added_total'.
 }
 
 bool Closure::find_subsuming_clause (Clause *subsumed) {
@@ -6328,7 +6328,7 @@ void Closure::rewrite_ite_gate (Gate *g, int dst, int src) {
     mark_garbage (g);
 
   assert (chain.empty ());
-  ++internal->stats.congruence_rewritten_ites;
+  ++internal->stats.congruence_rw_ites;
 }
 
 void Closure::simplify_ite_gate_produce_unit_lrat (Gate *g, int lit,
@@ -6773,7 +6773,7 @@ void Closure::simplify_ite_gate (Gate *g) {
   if (garbage && !internal->unsat)
     mark_garbage (g);
   ++internal->stats.congruence_simplified;
-  ++internal->stats.congruence_simplified_ites;
+  ++internal->stats.congruence_simp_ites;
 }
 
 void Closure::add_ite_matching_proof_chain (
@@ -7136,7 +7136,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
           clauses, reasons_implication, reasons_back);
     }
     if (merge_literals (lhs, then_lit, reasons_implication, reasons_back))
-      ++internal->stats.congruence_trivial_ite;
+      ++internal->stats.congruence_trite;
     return 0;
   }
 
@@ -7291,8 +7291,8 @@ void Closure::init_ite_gate_extraction (
            "(%.0f%% of %" PRIu64 " irredundant clauses)",
            ternary.size (),
            percent (ternary.size (),
-                    internal->stats.clauses_current_irredundant),
-           internal->stats.clauses_current_irredundant);
+                    internal->stats.clause_current_irr),
+           internal->stats.clause_current_irr);
 #ifndef QUIET
   size_t connected = 0;
 #endif
@@ -7332,7 +7332,7 @@ void Closure::init_ite_gate_extraction (
 
   VERBOSE (4, "connected %zu large clauses %.0f%%", candidates.size (),
            percent (candidates.size (),
-                    internal->stats.clauses_current_irredundant));
+                    internal->stats.clause_current_irr));
 
 #ifndef QUIET
   size_t size_candidates = candidates.size ();

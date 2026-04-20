@@ -134,15 +134,15 @@ void Internal::renotify_trail_after_local_search () {
 }
 
 void Internal::renotify_full_trail_between_trail_pos (
-    int start_level, int end_level, int propagator_level,
+    int start_level, int end_level, int up_level,
     std::vector<int> &assigned, bool start_new_level) {
   assert (assigned.empty ());
   int j = start_level;
 #ifdef LOGGING
   LOG ("starting notification of level %d from trail %d .. %d",
-       propagator_level, start_level, end_level);
+       up_level, start_level, end_level);
 #else
-  (void) propagator_level;
+  (void) up_level;
 #endif
   if (start_new_level) {
     if (assigned.size ())
@@ -161,7 +161,7 @@ void Internal::renotify_full_trail_between_trail_pos (
 
     int elit = externalize (ilit); // TODO: double-check tainting
 
-    LOG ("notifying elit %d @ %d aka %s", propagator_level, elit,
+    LOG ("notifying elit %d @ %d aka %s", up_level, elit,
          LOGLIT (ilit));
     assert (elit);
     // Fixed variables might get mapped (during compact) to another
@@ -193,7 +193,7 @@ void Internal::renotify_full_trail () {
   }
   std::vector<int> assigned;
 
-  int propagator_level = 0;
+  int up_level = 0;
 
   const int c_size = control.size ();
   { // first all root-level literals
@@ -201,28 +201,28 @@ void Internal::renotify_full_trail () {
     const int end_level =
         (control.size () > 1 ? control[1].trail : end_of_trail);
     renotify_full_trail_between_trail_pos (
-        start_level, end_level, propagator_level, assigned, false);
+        start_level, end_level, up_level, assigned, false);
   }
 
   // notify all intermediate levels
   for (int i = 2; i < c_size; ++i) {
     const int start_level = control[i - 1].trail;
     const int end_level = control[i].trail;
-    propagator_level++;
-    LOG ("notification of %d", propagator_level);
+    up_level++;
+    LOG ("notification of %d", up_level);
 
     renotify_full_trail_between_trail_pos (
-        start_level, end_level, propagator_level, assigned, true);
+        start_level, end_level, up_level, assigned, true);
   }
 
   // and the current level if there is non-root level one
   if (level) {
     const int start_level = control.back ().trail;
-    propagator_level++;
+    up_level++;
     renotify_full_trail_between_trail_pos (
-        start_level, end_of_trail, propagator_level, assigned, true);
+        start_level, end_of_trail, up_level, assigned, true);
   }
-  assert (propagator_level == level);
+  assert (up_level == level);
   notified = trail.size ();
 
   return;
@@ -302,8 +302,8 @@ bool Internal::external_propagate () {
                   external->is_observed[abs (elit)]),
         "external propagations are only allowed over observed variables.");
 
-    stats.propagator_cb++;
-    stats.propagator_cb_propagate++;
+    stats.up_cb++;
+    stats.up_cb_prop++;
     while (elit) {
       assert (external->is_observed[abs (elit)]);
       int ilit = external->e2i[abs (elit)];
@@ -324,7 +324,7 @@ bool Internal::external_propagate () {
           (void) res;
         } else
           search_assign_external (ilit);
-        stats.propagator_cb_propagate_assign++;
+        stats.up_cb_prop_assign++;
 
         if (unsat || conflict)
           break;
@@ -335,7 +335,7 @@ bool Internal::external_propagate () {
       } else if (tmp < 0) {
         LOG ("External propgation of %d is falsified under current trail",
              ilit);
-        stats.propagator_cb_propagate_clash++;
+        stats.up_cb_prop_clash++;
         int level_before = level;
         size_t assigned = num_assigned;
         Clause *res = learn_external_reason_clause (ilit, elit);
@@ -358,8 +358,8 @@ bool Internal::external_propagate () {
         }
       } // else (tmp > 0) -> the case of a satisfied literal is ignored
       elit = external->propagator->cb_propagate ();
-      stats.propagator_cb++;
-      stats.propagator_cb_propagate++;
+      stats.up_cb++;
+      stats.up_cb_prop++;
     }
 
 #ifndef NDEBUG
@@ -373,8 +373,8 @@ bool Internal::external_propagate () {
       bool has_external_clause = ask_external_clause ();
       // New observed variable might have triggered a backtrack during this
       // ask_external_clause call, so we need to propagate before continuing
-      stats.propagator_cb++;
-      stats.propagator_cb_add++;
+      stats.up_cb++;
+      stats.up_cb_add++;
 
       bool trail_changed =
           (num_assigned != assigned || level != level_before ||
@@ -417,8 +417,8 @@ bool Internal::external_propagate () {
           notify_assignments ();
         }
         has_external_clause = ask_external_clause ();
-        stats.propagator_cb++;
-        stats.propagator_cb_add++;
+        stats.up_cb++;
+        stats.up_cb_add++;
       }
     }
 #ifndef NDEBUG
@@ -762,7 +762,7 @@ Clause *Internal::learn_external_reason_clause (int ilit,
   assert (clause.empty ());
   assert (original.empty ());
 
-  stats.propagator_cb_propagate_explain++;
+  stats.up_cb_prop_explain++;
 
   int elit = 0;
   if (!falsified_elit) {
@@ -830,9 +830,9 @@ Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
 //
 void Internal::handle_external_clause (Clause *res, int64_t new_id) {
   if (from_propagator)
-    stats.propagator_learned++;
+    stats.up_learn++;
   if (from_propagator && !res)
-    stats.propagator_learned_unit++;
+    stats.up_learn_unit++;
 
   // new unit clause. For now just backtrack.
   if (!res && (force_no_backtrack ||
@@ -858,7 +858,7 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
 
   if (!res) {
     if (from_propagator)
-      stats.propagator_learned_propagating++;
+      stats.up_learn_propagating++;
     const int lit = clause[0];
     assert (!val (lit) || var (lit).level);
     if (val (lit))
@@ -891,7 +891,7 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
          "reason clause",
          pos0, l0, l1);
     if (v.level != l1)
-      stats.propagator_learned_lazy_elevate++;
+      stats.up_learn_lazy_elevate++;
     v.level = l1;
     return;
   }
@@ -911,7 +911,7 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
       backtrack_without_updating_phases (l0 - 1);
     else if (val (pos0) && from_propagator) {
       conflict = res;
-      stats.propagator_learned_conflict++;
+      stats.up_learn_conflict++;
     }
     if (val (pos1) < 0 && !val (pos0))
       search_assign_driving (pos0, res);
@@ -957,7 +957,7 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
       res->literals[highest_idx] = pos1;
     }
     if (from_propagator)
-      stats.propagator_learned_out_of_order++;
+      stats.up_learn_out_of_order++;
     LOG (res,
          "ignore out-of-order missed assignment of %d from level %d to "
          "level %d with new "
@@ -985,7 +985,7 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
     v.reason = res;
 
     if (from_propagator)
-      stats.propagator_learned_elevating++;
+      stats.up_learn_elevating++;
 
     if (out_of_order_level == -1 || l1 < out_of_order_level)
       out_of_order_level = l1;
@@ -1052,7 +1052,7 @@ bool Internal::external_check_solution () {
     if (!satisfied ())
       break;
     LOG ("Final check by external propagator is invoked.");
-    stats.propagator_cb_check_model++;
+    stats.up_cb_check_model++;
     external->reset_extended ();
     external->extend ();
 
@@ -1091,7 +1091,7 @@ bool Internal::external_check_solution () {
     bool is_consistent =
         external->propagator->cb_check_found_model (notification_trail);
     notification_trail.clear ();
-    stats.propagator_cb++;
+    stats.up_cb++;
     forced_backt_allowed = false;
 
     if (num_assigned != assigned || level != level_before ||
@@ -1109,8 +1109,8 @@ bool Internal::external_check_solution () {
 
     bool has_external_clause = ask_external_clause ();
 
-    stats.propagator_cb++;
-    stats.propagator_cb_add++;
+    stats.up_cb++;
+    stats.up_cb_add++;
 
     if (has_external_clause)
       LOG ("Found solution triggered new clauses from external "
@@ -1148,8 +1148,8 @@ bool Internal::external_check_solution () {
       if (unsat || conflict || trail_changed)
         break;
       has_external_clause = ask_external_clause ();
-      stats.propagator_cb++;
-      stats.propagator_cb_add++;
+      stats.up_cb++;
+      stats.up_cb_add++;
     }
     LOG ("No more external clause to add.");
     if (unsat || conflict)
@@ -1249,7 +1249,7 @@ int Internal::ask_decision () {
   forced_backt_allowed = true;
   int elit = external->propagator->cb_decide ();
   forced_backt_allowed = false;
-  stats.propagator_cb++;
+  stats.up_cb++;
 
   if (level_before != level) {
 
