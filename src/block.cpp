@@ -274,7 +274,7 @@ void Internal::block_pure_literal (Blocker &blocker, int lit) {
       proof->weaken_minus (c);
     }
     external->push_clause_on_extension_stack (c, lit);
-    stats.blocked_pure++;
+    stats.blocked_pure_clauses++;
     mark_garbage (c);
 #ifdef LOGGING
     pured++;
@@ -285,7 +285,7 @@ void Internal::block_pure_literal (Blocker &blocker, int lit) {
   erase_vector (nos);
 
   mark_pure (lit);
-  stats.blocked_pure++;
+  stats.blocked_pure_clauses++;
   LOG ("blocking %" PRId64 " clauses on pure literal %d", pured, lit);
 }
 
@@ -781,7 +781,7 @@ bool Internal::block () {
   int64_t blocked = stats.blocked;
   int64_t resolutions = stats.blocked_resolutions;
   int64_t purelits = stats.blocked_pure_literals;
-  int64_t pured = stats.blocked_pure;
+  int64_t pured = stats.blocked_pure_clauses;
 
   while (!terminated_asynchronously () && !blocker.schedule.empty ()) {
     int lit = u2i (blocker.schedule.front ());
@@ -801,7 +801,7 @@ bool Internal::block () {
          "blocked %" PRId64 " clauses in %" PRId64 " resolutions", blocked,
          resolutions);
 
-  pured = stats.blocked_pure - pured;
+  pured = stats.blocked_pure_clauses - pured;
   purelits = stats.blocked_pure_literals - purelits;
 
   if (pured)

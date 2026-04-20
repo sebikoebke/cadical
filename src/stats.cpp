@@ -78,8 +78,8 @@ void Stats::print_old (Internal *internal) {
     PRT ("  pure:          %15" PRId64 "   %10.2f %%  of all variables",
          stats.vars_all_pure, percent (stats.vars_all_pure, stats.vars));
     PRT ("  pureclauses:   %15" PRId64 "   %10.2f    per pure literal",
-         stats.blocked_pure,
-         relative (stats.blocked_pure, stats.vars_all_pure));
+         stats.blocked_pure_clauses,
+         relative (stats.blocked_pure_clauses, stats.vars_all_pure));
   }
   if (all || stats.conflicts_chrono)
     PRT ("chronological:   %15" PRId64 "   %10.2f %%  of conflicts",
@@ -890,6 +890,7 @@ void Stats::print_old (Internal *internal) {
 
 #define PER_SECOND(FIRST, IGNORE) relative (FIRST, t)
 #define INTERVAL(FIRST, IGNORE) relative (stats.conflicts, FIRST)
+#define NO_PRINTING(FIRST, IGNORE) 0
 
 #define PRINT_STATER(NAME, NUM, VERBOSE, OTHER_NUM, SYMBOL, PRINT) \
   do { \
@@ -898,9 +899,12 @@ void Stats::print_old (Internal *internal) {
     const double RELATIVE = OTHER_NUM; \
     const char *SAVED_SYMBOL = (const char *) (SYMBOL); \
     const char *SAVED_PRINT = (const char *) (PRINT); \
-    MSG ("%-" NAME_OFFSET "s %" NUM_OFFSET PRId64 " %" REF_OFFSET \
-         "f %-" SYMBOL_OFFSET "s %-" PRINT_OFFSET "s", \
-         NAME ":", NUM, RELATIVE, SAVED_SYMBOL, SAVED_PRINT); \
+    if (SYMBOL == 0) \
+      MSG ("%-" NAME_OFFSET "s %" NUM_OFFSET PRId64, NAME ":", NUM); \
+    else \
+      MSG ("%-" NAME_OFFSET "s %" NUM_OFFSET PRId64 " %" REF_OFFSET \
+           "f %-" SYMBOL_OFFSET "s %-" PRINT_OFFSET "s", \
+           NAME ":", NUM, RELATIVE, SAVED_SYMBOL, SAVED_PRINT); \
   } while (0)
 
 void Stats::print_new (Internal *internal) {
