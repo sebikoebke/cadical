@@ -885,11 +885,16 @@ void Stats::print_old (Internal *internal) {
   }
 }
 
+// Names are shortened to be 21 chars (22 with ':')
+// absolute numbers may be higher then 15 (should be rare though)
+// REF_OFFSET is 12 for old stat format but that spills over
+// PREFIX, NAME, SPACE, NUM, SPACE, REF, SPACE, SYMBOL, SPACE, PRINT
+// 2 + 22 + 1 + 15 + 1 + 11 + 1 + 3 + 1 + 21 = 80
 #define NAME_OFFSET "22"
 #define NUM_OFFSET "15"
-#define REF_OFFSET "10.2"
+#define REF_OFFSET "11.2"
 #define SYMBOL_OFFSET "3"
-#define PRINT_OFFSET "22"
+#define PRINT_OFFSET "21"
 
 #define SECONDS(FIRST, IGNORE) relative (FIRST, t)
 #define INTERVAL(FIRST, IGNORE) relative (stats.conflicts, FIRST)
@@ -897,7 +902,9 @@ void Stats::print_old (Internal *internal) {
 
 #define PRINT_STATER(NAME, NUM, VERBOSE, OTHER_NUM, SYMBOL, PRINT) \
   do { \
-    if (VERBOSE > verbose) \
+    if (VERBOSE > 1 && VERBOSE > verbose) \
+      break; \
+    if (VERBOSE == 1 && !NUM && VERBOSE > verbose) \
       break; \
     const double RELATIVE = OTHER_NUM; \
     const char *SAVED_SYMBOL = (const char *) (SYMBOL); \
@@ -916,8 +923,8 @@ void Stats::print_new (Internal *internal) {
   int verbose = internal->opts.verbose;
 
   // TODO: verbosity is always 3 like this.
-  if (internal->opts.stats)
-    verbose = 3;
+  if (internal->opts.stats == 3)
+    verbose = 2;
 #ifdef LOGGING
   if (internal->opts.log)
     verbose = 3;
@@ -946,7 +953,7 @@ void Stats::print (Internal *internal) {
 
   SECTION ("statistics");
 
-  if (internal->opts.stats == 2)
+  if (internal->opts.stats > 1)
     print_new (internal);
   else
     print_old (internal);

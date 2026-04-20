@@ -8,7 +8,7 @@
 #define CADICAL_STATISTICS \
 \
   STATISTIC (backbone_phases,        1, INTERVAL, "",    interval) \
-  STATISTIC (backbone_probes,        1, percent,  "%",   vars) \
+  STATISTIC (backbone_probes,        1, relative, "per",   vars) \
   STATISTIC (backbone_rounds,        2, relative, "per", backbone_phases) \
   STATISTIC (backbone_units,         1, relative, "per", backbone_phases) \
   STATISTIC (backtracked,            3, NOTHING,  0, 0) \
@@ -28,7 +28,7 @@
   STATISTIC (clause_promoted_tier1,  2, relative, "per", clause_improved_glue) \
   STATISTIC (clause_promoted_tier2,  2, relative, "per", clause_improved_glue) \
   STATISTIC (clause_recompute_glue,  2, relative, "per", clause_added_red) \
-  STATISTIC (collected,              1, relative, "per", collections) \
+  STATISTIC (collected,              2, relative, "per", collections) \
   STATISTIC (collections,            1, INTERVAL, "", interval) \
   STATISTIC (compacts,               1, INTERVAL, "per", interval) \
   STATISTIC (condition_active,       2, relative, "per", conditionings) \
@@ -114,9 +114,9 @@
   STATISTIC (eliminations,           1, INTERVAL, "", interval) \
   STATISTIC (extended,               1, relative, "per", extensions) \
   STATISTIC (extensions,             1, relative, "per", searches) \
-  STATISTIC (factor_added_clauses,   2, relative, "per", propagations) \
-  STATISTIC (factor_added_literals,  2, relative, "per", propagations) \
-  STATISTIC (factored,               1, relative, "per", propagations) \
+  STATISTIC (factor_added_clauses,   2, relative, "per", factored) \
+  STATISTIC (factor_added_literals,  2, relative, "per", factored) \
+  STATISTIC (factored,               1, percent, "%", vars) \
   STATISTIC (factored_and,           2, relative, "per", propagations) \
   STATISTIC (factored_eliminated,    2, relative, "per", propagations) \
   STATISTIC (factored_ite,           2, relative, "per", propagations) \
