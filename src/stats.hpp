@@ -14,7 +14,7 @@ struct Stats {
 
   Internal *internal;
 
-#define STATISTIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL) int64_t NAME = 0;
+#define STATISTIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER) int64_t NAME = 0;
 
   CADICAL_STATISTICS
 

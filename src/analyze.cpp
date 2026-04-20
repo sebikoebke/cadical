@@ -738,13 +738,13 @@ void Internal::eagerly_subsume_recently_learned_clauses (Clause *c) {
   assert (opts.eagersubsume);
   LOG (c, "trying eager subsumption with");
   mark (c);
-  int64_t lim = stats.eager_subsumtions + opts.eagersubsumelim;
+  int64_t lim = stats.eager_subsumptions + opts.eagersubsumelim;
   const auto begin = clauses.begin ();
   auto it = clauses.end ();
 #ifdef LOGGING
   int64_t before = stats.eager_subsumed;
 #endif
-  while (it != begin && stats.eager_subsumtions++ <= lim) {
+  while (it != begin && stats.eager_subsumptions++ <= lim) {
     Clause *d = *--it;
     if (c == d)
       continue;

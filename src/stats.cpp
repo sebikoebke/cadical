@@ -195,9 +195,9 @@ void Stats::print_old (Internal *internal) {
          stats.decision_searched,
          relative (stats.decision_searched, stats.decisions));
     if (all || stats.decision_random) {
-      PRT ("  random phase:  %15" PRId64 "   %10.2f    decision interval",
+      PRT ("  random phase:  %15" PRId64 "   %10.2f    interval",
            stats.decision_random_phase,
-           relative (stats.decisions, stats.decision_random_phase));
+           relative (stats.conflicts, stats.decision_random_phase));
       PRT ("  random decs:   %15" PRId64 "   %10.2f    per phase",
            stats.decision_random,
            relative (stats.decision_random, stats.decision_random_phase));
@@ -674,8 +674,8 @@ void Stats::print_old (Internal *internal) {
          stats.eager_subsumed,
          percent (stats.eager_subsumed, stats.subsumed));
     PRT ("  eagertried:    %15" PRId64 "   %10.2f    tried per eagersub",
-         stats.eager_subsumtions,
-         relative (stats.eager_subsumtions, stats.eager_subsumed));
+         stats.eager_subsumptions,
+         relative (stats.eager_subsumptions, stats.eager_subsumed));
   }
   if (all || stats.strengthened) {
     PRT ("strengthened:    %15" PRId64 "   %10.2f %%  of all clauses",
@@ -891,9 +891,9 @@ void Stats::print_old (Internal *internal) {
 #define SYMBOL_OFFSET "3"
 #define PRINT_OFFSET "22"
 
-#define PER_SECOND(FIRST, IGNORE) relative (FIRST, t)
+#define SECONDS(FIRST, IGNORE) relative (FIRST, t)
 #define INTERVAL(FIRST, IGNORE) relative (stats.conflicts, FIRST)
-#define NO_PRINTING(FIRST, IGNORE) 0
+#define NOTHING(FIRST, IGNORE) 0
 
 #define PRINT_STATER(NAME, NUM, VERBOSE, OTHER_NUM, SYMBOL, PRINT) \
   do { \
@@ -925,7 +925,7 @@ void Stats::print_new (Internal *internal) {
 
   double t = internal->solve_time ();
 
-#define STATISTIC(NAME, VERBOSE, COMMAND, OTHER, SYMBOL) \
+#define STATISTIC(NAME, VERBOSE, COMMAND, SYMBOL, OTHER) \
   PRINT_STATER (#NAME, stats.NAME, VERBOSE, \
                 COMMAND (stats.NAME, stats.OTHER), SYMBOL, #OTHER);
 
