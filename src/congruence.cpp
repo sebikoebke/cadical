@@ -1998,7 +1998,7 @@ bool Closure::merge_literals_from_clauses (int lit, int other, Clause *c1,
 
 /*------------------------------------------------------------------------*/
 inline Gate_Occurrence &Closure::goccs (int lit) {
-  return gtab[internal->vlit (lit)];
+  return gatetab[internal->vlit (lit)];
 }
 
 void Closure::connect_goccs (Gate *g, int lit) {
@@ -2042,7 +2042,7 @@ void Closure::init_closure () {
     it.current_lit = 0, it.clause = nullptr;
 #endif
   scheduled.resize (internal->max_var + 1);
-  gtab.resize (2 * internal->max_var + 3);
+  gatetab.resize (2 * internal->max_var + 3);
   for (auto v : internal->vars) {
     representative (v) = v;
     representative (-v) = -v;
@@ -4108,9 +4108,9 @@ void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
       internal->occs (lit).push_back (c);
   }
 
-  VERBOSE (2, "connected %zu large clauses %.0f%%", candidates.size (),
-           percent (candidates.size (),
-                    internal->stats.clause_current_irr));
+  VERBOSE (
+      2, "connected %zu large clauses %.0f%%", candidates.size (),
+      percent (candidates.size (), internal->stats.clause_current_irr));
 }
 
 Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
@@ -4648,7 +4648,7 @@ bool Closure::rewrite_gates (int dst, int src, LRAT_ID id1, LRAT_ID id2) {
   goccs (src).clear ();
 
 #ifndef NDEBUG
-  for (const auto &occs : gtab) {
+  for (const auto &occs : gatetab) {
     for (auto g : occs) {
       assert (g);
       assert (g->garbage || !gate_contains (g, src));
@@ -4917,7 +4917,7 @@ size_t Closure::propagate_units_and_equivalences () {
 
 #ifndef NDEBUG
   if (!internal->unsat) {
-    for (const auto &occs : gtab) {
+    for (const auto &occs : gatetab) {
       for (auto g : occs) {
         if (g->garbage)
           continue;
@@ -4963,10 +4963,10 @@ void Closure::reset_closure () {
   }
   table.clear ();
 
-  for (auto &occ : gtab) {
+  for (auto &occ : gatetab) {
     occ.clear ();
   }
-  gtab.clear ();
+  gatetab.clear ();
 
   for (auto gate : garbage)
     Gate::delete_gate (gate);
@@ -7290,8 +7290,7 @@ void Closure::init_ite_gate_extraction (
            "counted %zu ternary ITE gates"
            "(%.0f%% of %" PRIu64 " irredundant clauses)",
            ternary.size (),
-           percent (ternary.size (),
-                    internal->stats.clause_current_irr),
+           percent (ternary.size (), internal->stats.clause_current_irr),
            internal->stats.clause_current_irr);
 #ifndef QUIET
   size_t connected = 0;
@@ -7330,9 +7329,9 @@ void Closure::init_ite_gate_extraction (
 
   ternary.clear ();
 
-  VERBOSE (4, "connected %zu large clauses %.0f%%", candidates.size (),
-           percent (candidates.size (),
-                    internal->stats.clause_current_irr));
+  VERBOSE (
+      4, "connected %zu large clauses %.0f%%", candidates.size (),
+      percent (candidates.size (), internal->stats.clause_current_irr));
 
 #ifndef QUIET
   size_t size_candidates = candidates.size ();

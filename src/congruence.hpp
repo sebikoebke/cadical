@@ -14,8 +14,8 @@
 #include <vector>
 
 #include "clause.hpp"
-#include "inttypes.hpp"
 #include "hash.hpp"
+#include "inttypes.hpp"
 #include "util.hpp"
 #include "watch.hpp"
 
@@ -576,7 +576,7 @@ struct Closure {
   std::vector<std::pair<size_t, size_t>> offsetsize;
   bool full_watching = false;
   std::array<uint64_t, 16> nonces; // for better hashing
-  typedef hash<Gate *, Hash, GateEqualTo, std::equal_to<Gate*>> GatesTable;
+  typedef hash<Gate *, Hash, GateEqualTo, std::equal_to<Gate *>> GatesTable;
 
   vector<signed char> marks; // marking structure
   // remember the ids and the literal. 2 and 4 are
@@ -780,7 +780,7 @@ struct Closure {
       std::vector<LRAT_ID> &extra_reasons_lit,
       std::vector<LRAT_ID> &extra_reasons_ulit);
   // occs
-  Gate_Occurrences gtab;
+  Gate_Occurrences gatetab;
   Gate_Occurrence &goccs (int lit);
   void connect_goccs (Gate *g, int lit);
   vector<Gate *> garbage;
