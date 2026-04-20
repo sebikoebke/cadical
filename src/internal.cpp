@@ -505,9 +505,8 @@ void Internal::init_preprocessing_limits () {
   if (incremental)
     mode = "keeping";
   else {
-    double delta = stats.clause_added_irr
-                       ? log10 (stats.clause_added_irr)
-                       : 100;
+    double delta =
+        stats.clause_added_irr ? log10 (stats.clause_added_irr) : 100;
     delta = delta * delta;
     lim.inprobe = stats.conflicts + opts.inprobeint * delta;
     mode = "initial";
@@ -689,7 +688,7 @@ void Internal::init_search_limits () {
       tier1[u] = max (tier1[u], opts.tier1minglue ? opts.tier1minglue : 2);
       tier2[u] = max (tier2[u], opts.tier2minglue ? opts.tier2minglue : 6);
     }
-    stats.clause_recompute_glue = 0;
+    stats.recomputed_tiers = 0;
   }
 
   /*----------------------------------------------------------------------*/
