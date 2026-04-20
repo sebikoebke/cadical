@@ -59,6 +59,10 @@ static const char *USAGE =
 "  -L[ ]<r>          execute '<r>' runs\n"
 "  -X[ ]<r>          execute '<r>' bugs\n"
 "\n"
+"Fix solver options independent of the (generated) trace content:\n"
+"\n"
+"  -F[ ]<option>     with '<option>' as in cadical but without '--' prefix\n"
+"\n"
 "The output trace is not shrunken if it is not failing.  However, before\n"
 "it is written it is executed, unless '--do-not-execute' is specified:\n"
 "\n"
@@ -239,6 +243,168 @@ struct DoNot {
   bool summary = false;
   bool ignore_resource_limits = false;
 };
+
+/*------------------------------------------------------------------------*/
+
+class Mopts;
+
+struct Mopt {
+  const char *name;
+  int value;
+  bool fixed;
+  int &val (Mopts *);
+  bool &fix (Mopts *);
+  Mopt (const char *n) : name (n), value (0), fixed (0) {};
+};
+
+class Mopts {
+
+  void set (Mopt *o, int val) {
+    o->fix (this) = true;
+    o->val (this) = val;
+  };
+
+  friend struct Mopt;
+  static Mopt table[];
+
+public:
+  Mopts ()
+      : __start_of_options__ (Mopt ("__start_of_options__"))
+#define OPTION(N, V, L, H, O, P, R, D) , N (Mopt (#N))
+            OPTIONS
+#undef OPTION
+  {
+    size_t i = 0;
+#define OPTION(N, V, L, H, O, P, R, D) table[i] = Mopt (#N);
+    OPTIONS
+#undef OPTION
+  };
+
+  // Makes options directly accessible, e.g., for instance declares the
+  // member 'int restart' here.  This will give fast access to option values
+  // internally in the solver and thus can also be used in tight loops.
+  //
+private:
+  Mopt __start_of_options__;
+
+public:
+#define OPTION(N, V, L, H, O, P, R, D) \
+  Mopt N; // Access option values by name.
+  OPTIONS
+#undef OPTION
+
+  // It would be more elegant to use an anonymous 'struct' of the actual
+  // option values overlayed with an 'int values[number_of_options]' array
+  // but that is not proper ISO C++ and produces a warning.  Instead we use
+  // the following construction which relies on '__start_of_options__' and
+  // that the following options are really allocated directly after it.
+  //
+  inline Mopt &val (size_t idx) {
+    assert (idx < number_of_options);
+    return (&__start_of_options__ + 1)[idx];
+  }
+
+  // With the following function we can get rather fast access to the option
+  // limits, the default value and the description.  The code uses binary
+  // search over the sorted option 'table'.  This static data is shared
+  // among different instances of the solver.  The actual current option
+  // values are here in the 'Mopts' class.  They can be accessed by the
+  // offset of the static options using 'Mopt::val' if you have an
+  // 'Mopt' or to have even faster access directly by the member function
+  // (the 'N' above, e.g., 'restart').
+  //
+  static Mopt *has (const char *name) {
+    size_t l = 0, r = number_of_options;
+    while (l < r) {
+      size_t m = l + (r - l) / 2;
+      Mopt *res = &table[m];
+      int tmp = strcmp (name, res->name);
+      if (!tmp)
+        return res;
+      if (tmp < 0)
+        r = m;
+      if (tmp > 0)
+        l = m + 1;
+    }
+    return 0;
+  }
+
+  // Explicit option value setting.
+
+  bool set (const char *name, int val) {
+    Mopt *o = has (name);
+    if (!o)
+      return false;
+    set (o, val);
+    return true;
+  }
+
+  int get (const char *name) {
+    Mopt *o = has (name);
+    return o ? o->val (this) : 0;
+  }
+
+  int get_fixed (const char *name) {
+    Mopt *o = has (name);
+    return o ? o->fix (this) : 0;
+  }
+
+  // Parse long option argument
+  //
+  //   (-F[ ])<name>
+  //   (-F[ ])<name>=<val>
+  //   (-F[ ])no-<name>
+  //
+  // where '<val>' is as in 'parse_option_value'.  If parsing succeeds,
+  // 'true' is returned and the string will be set to the name of the
+  // option.  Additionally the parsed value is set (last argument).
+  //
+  static bool parse_long_option (const char *arg, std::string &name,
+                                 int &val) {
+    if (arg[0] == '-')
+      return false;
+    const bool has_no_prefix =
+        (arg[0] == 'n' && arg[1] == 'o' && arg[2] == '-');
+    const size_t offset = has_no_prefix ? 3 : 0;
+    name = arg + offset;
+    const size_t pos = name.find_first_of ('=');
+    if (pos != string::npos)
+      name[pos] = 0;
+    if (!Options::has (name.c_str ()))
+      return false;
+    if (pos == string::npos)
+      val = !has_no_prefix;
+    else {
+      const char *val_str = name.c_str () + pos + 1;
+      if (!parse_int_str (val_str, val))
+        return false;
+    }
+    return true;
+  };
+
+  // Iterating options.
+
+  typedef Mopt *iterator;
+  typedef const Mopt *const_iterator;
+
+  static iterator begin () { return table; }
+  static iterator end () { return table + number_of_options; }
+};
+
+Mopt Mopts::table[] = {
+#define OPTION(N, V, L, H, O, P, R, D) {#N},
+    OPTIONS
+#undef OPTION
+};
+
+inline int &Mopt::val (Mopts *opts) {
+  assert (Mopts::table <= this && this < Mopts::table + number_of_options);
+  return opts->val (this - Mopts::table).value;
+}
+inline bool &Mopt::fix (Mopts *opts) {
+  assert (Mopts::table <= this && this < Mopts::table + number_of_options);
+  return opts->val (this - Mopts::table).fixed;
+}
 
 /*------------------------------------------------------------------------*/
 
@@ -1131,6 +1297,7 @@ class Mobical : public Handler {
 
   DoNot donot;
   Force force;
+  Mopts mopts;
 
   bool verbose = false;
   bool quiet = false;
@@ -2171,8 +2338,12 @@ public:
       delete c;
       calls.pop_back ();
     }
-    if (solver)
+    if (solver) {
+      if (!mobical.donot.summary && mobical.shared) {
+        mobical.add_statistics (solver);
+      }
       delete solver;
+    }
     solver = 0;
   }
 
@@ -2303,6 +2474,11 @@ public:
         }
 #endif
 
+        if (c->type == Call::SET) {
+          // ignore fixed options
+          if (mobical.mopts.get_fixed (c->name))
+            continue;
+        }
         if (c->type == Call::SOLVE) {
           // Look ahead and collect LemmaCalls to be executed
           // before solve is executed
@@ -2332,6 +2508,16 @@ public:
             mobical.shared->unsat++;
         } else
           c->execute (solver, extendmap);
+        // initialize options after INIT or CONFIGURE
+        if (c->type == Call::INIT || c->type == Call::CONFIGURE) {
+          for (auto &o : mobical.mopts) {
+            if (o.fix (&mobical.mopts)) {
+              solver->set (o.name, o.val (&mobical.mopts));
+              if (!strcmp (o.name, "factorcheck"))
+                extendmap.factor_check = o.val (&mobical.mopts);
+            }
+          }
+        }
       } catch (const std::bad_alloc &e) {
         // Ignore out-of-memory errors and assume solver state is
         // consistent.
@@ -5315,6 +5501,20 @@ int Mobical::main (int argc, char **argv) {
       if (!is_unsigned_str (argv[i] + 2) ||
           (bug_limit = atol (argv[i] + 2)) < 0)
         die ("invalid argument in '%s' (try '-h')", argv[i]);
+    } else if (!strcmp (argv[i], "-F")) {
+      if (++i == argc)
+        die ("argument to '-F' missing (try '-h')");
+      string parse_name;
+      int parse_value;
+      if (!mopts.parse_long_option (argv[i], parse_name, parse_value))
+        die ("invalid argument '%s' to '-F' (try '-h')", argv[i]);
+      mopts.set (parse_name.c_str (), parse_value);
+    } else if (argv[i][0] == '-' && argv[i][1] == 'F') {
+      string parse_name;
+      int parse_value;
+      if (!mopts.parse_long_option (argv[i] + 2, parse_name, parse_value))
+        die ("invalid argument '%s' to '-F' (try '-h')", argv[i]);
+      mopts.set (parse_name.c_str (), parse_value);
     } else if (!strcmp (argv[i], "--time")) {
       if (++i == argc)
         die ("argument to '--time' missing (try '-h')");
