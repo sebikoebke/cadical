@@ -1550,14 +1550,19 @@ bool Internal::factor () {
   START_SIMPLIFIER (factor, FACTOR);
   stats.factorings++;
 
-#ifndef QUIET
   struct {
-    int64_t variables, clauses, ticks;
+    int64_t
+#ifndef QUIET
+        variables,
+        clauses,
+#endif
+        ticks;
   } before, after, delta;
+#ifndef QUIET
   before.variables = stats.variables_extension + stats.variables_original;
-  before.ticks = stats.ticks_factor;
   before.clauses = stats.clause_current_irr;
 #endif
+  before.ticks = stats.ticks_factor;
 
   // TODO: redundant mode sometimes?
   factor_mode (!is_preprocessing && opts.factorredundant == 3);
@@ -1569,13 +1574,13 @@ bool Internal::factor () {
     learn_empty_clause ();
   }
 
+  after.ticks = stats.ticks_factor;
+  delta.ticks = after.ticks - before.ticks;
 #ifndef QUIET
   after.variables = stats.variables_extension + stats.variables_original;
   after.clauses = stats.clause_current_irr;
-  after.ticks = stats.ticks_factor;
   delta.variables = after.variables - before.variables;
   delta.clauses = before.clauses - after.clauses;
-  delta.ticks = after.ticks - before.ticks;
   VERBOSE (2, "used %f million factorization ticks", delta.ticks * 1e-6);
   phase ("factorization", stats.factorings,
          "introduced %" PRId64 " extension variables %.0f%%",
@@ -1584,6 +1589,7 @@ bool Internal::factor () {
          "removed %" PRId64 " irredundant clauses %.0f%%", delta.clauses,
          percent (delta.clauses, before.clauses));
 #endif
+  stats.ticks += delta.ticks;
 
   if (completed)
     last.factor.marked = stats.mark_factor;

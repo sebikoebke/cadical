@@ -378,6 +378,7 @@ inline void Internal::bump_also_reason_literals (int lit, int depth_limit,
   if (!reason || reason == external_reason)
     return;
   stable ? stats.ticks_search_stable++ : stats.ticks_search_unstable++;
+  stats.ticks++;
   for (const auto &other : *reason) {
     if (other == lit)
       continue;

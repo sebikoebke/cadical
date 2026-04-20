@@ -45,6 +45,7 @@ void Stats::print_old (Internal *internal) {
                          stats.ticks_factor + stats.ticks_ternary +
                          stats.ticks_sweep + stats.ticks_backbone;
   int64_t totalticks = searchticks + inprobeticks;
+  assert (totalticks == stats.ticks);
 
   size_t extendbytes = internal->external->extension.size ();
   extendbytes *= sizeof (int);

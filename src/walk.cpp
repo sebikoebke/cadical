@@ -1053,6 +1053,7 @@ int Internal::walk_round (int64_t limit, bool prev) {
   }
 #endif
   stats.ticks_walk += walker.ticks;
+  stats.ticks += walker.ticks;
   return res;
 }
 

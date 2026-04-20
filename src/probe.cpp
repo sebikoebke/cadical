@@ -815,6 +815,11 @@ bool Internal::probe () {
 #endif
   int64_t old_hbrs = stats.hbrs;
 
+  struct {
+    int64_t ticks;
+  } before, after;
+  before.ticks = stats.ticks_probe;
+
   if (!probes.empty ())
     flush_probes ();
 
@@ -859,7 +864,9 @@ bool Internal::probe () {
   int64_t probed = stats.probed - old_probed;
 #endif
   int64_t hbrs = stats.hbrs - old_hbrs;
+  after.ticks = stats.ticks_probe;
 
+  stats.ticks += after.ticks - before.ticks;
   PHASE ("probe-round", stats.probingrounds,
          "probed %" PRId64 " and found %d failed literals", probed, failed);
 

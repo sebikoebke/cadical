@@ -1708,6 +1708,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
   stats.subsumed += subsumed;
   stats.strengthened += strengthened;
   stats.ticks_vivify += vivifier.ticks;
+  stats.ticks += vivifier.ticks;
 
   const bool unsuccessful = !(subsumed + strengthened + units);
   report (vivifier.tag, unsuccessful);
@@ -1809,6 +1810,7 @@ bool Internal::vivify () {
   // shifting.
   vivify_initialize (vivifier, init_ticks);
   stats.ticks_vivify += init_ticks;
+  stats.ticks += init_ticks;
   int64_t limit = stats.ticks_vivify;
   const int64_t shared_effort = (double) init_ticks / 4.0;
   if (opts.vivifytier1) {

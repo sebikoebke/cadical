@@ -383,15 +383,16 @@ bool Internal::ternary () {
   // substantially, particularly for random formulas.  Thus we limit the
   // number of added clauses too (actually the number of 'htrs').
   //
-  int64_t htrs_limit =
-      stats.clause_current_red + stats.clause_current_irr;
+  int64_t htrs_limit = stats.clause_current_red + stats.clause_current_irr;
   htrs_limit *= opts.ternarymaxadd;
   htrs_limit /= 100;
 
   // approximation of ternary ticks.
   // TODO: count with ternary.ticks directly.
   int64_t steps_limit = limit - stats.ticks_ternary;
+  assert (steps_limit >= 0);
   stats.ticks_ternary = limit;
+  stats.ticks += steps_limit;
 
   // With 'stats.ternary' we actually count the number of calls to
   // 'ternary_round' and not the number of calls to 'ternary'. But before

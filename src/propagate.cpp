@@ -474,6 +474,7 @@ bool Internal::propagate () {
     stats.propagations += propagated - before;
     stable ? stats.ticks_search_stable += ticks
            : stats.ticks_search_unstable += ticks;
+    stats.ticks += ticks;
 
     if (!conflict)
       no_conflict_until = propagated;

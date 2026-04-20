@@ -599,6 +599,7 @@ unsigned Internal::compute_backbone () {
     }
   }
   stats.ticks_backbone += ticks;
+  stats.ticks += ticks;
   return failed;
 }
 
