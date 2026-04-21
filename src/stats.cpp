@@ -639,7 +639,7 @@ void Stats::print_old (Internal *internal) {
   if (all || stats.subsumed) {
     PRT ("subsumed:        %15" PRId64 "   %10.2f %%  of all clauses",
          stats.subsumed,
-         percent (stats.subsumed, stats.clauses_total));
+         percent (stats.subsumed, stats.clauses));
     PRT ("  subsumephases: %15" PRId64 "   %10.2f    interval",
          stats.subsume_phases,
          relative (stats.conflicts, stats.subsume_phases));
@@ -683,7 +683,7 @@ void Stats::print_old (Internal *internal) {
   if (all || stats.strengthened) {
     PRT ("strengthened:    %15" PRId64 "   %10.2f %%  of all clauses",
          stats.strengthened,
-         percent (stats.strengthened, stats.clauses_total));
+         percent (stats.strengthened, stats.clauses));
     PRT ("  elimotfstr:    %15" PRId64 "   %10.2f %%  of strengthened",
          stats.eliminate_otf_str,
          percent (stats.eliminate_otf_str, stats.strengthened));
@@ -765,7 +765,7 @@ void Stats::print_old (Internal *internal) {
   }
   if (all || vivified) {
     PRT ("vivified:        %15" PRId64 "   %10.2f %%  of all clauses",
-         vivified, percent (vivified, stats.clauses_total));
+         vivified, percent (vivified, stats.clauses));
     PRT ("  vivifications: %15" PRId64 "   %10.2f    interval",
          stats.vivifications,
          relative (stats.conflicts, stats.vivifications));

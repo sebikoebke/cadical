@@ -11,23 +11,23 @@
   STATISTIC (backbone_probes,        2, relative, "per", vars) \
   STATISTIC (backbone_rounds,        2, relative, "per", backbone_phases) \
   STATISTIC (backbone_units,         1, relative, "per", backbone_phases) \
-  STATISTIC (backtracked,            3, NOTHING,  0, 0) \
-  STATISTIC (blocked,                1, percent,  "%",   clauses_irredundant) \
+  STATISTIC (backtracked,            3, NOTHING, 0, 0) \
+  STATISTIC (blocked,                1, percent, "%",   clauses_irredundant) \
   STATISTIC (blocked_candidates,     2, relative, "per", blockings) \
-  STATISTIC (blocked_pure_clauses,   2, percent,  "%", blocked_pure_literals) \
-  STATISTIC (blocked_pure_literals,  2, percent,  "%",   vars) \
+  STATISTIC (blocked_pure_clauses,   2, percent, "%", blocked_pure_literals) \
+  STATISTIC (blocked_pure_literals,  2, percent, "%",   vars) \
   STATISTIC (blocked_resolutions,    2, relative, "per", blocked_candidates) \
   STATISTIC (blockings,              1, INTERVAL, "", interval) \
   STATISTIC (clause_improved_glue,   2, relative, "per", clauses_redundant) \
   STATISTIC (clause_promoted_tier1,  2, relative, "per", clause_improved_glue) \
   STATISTIC (clause_promoted_tier2,  2, relative, "per", clause_improved_glue) \
   STATISTIC (clause_recompute_glue,  2, relative, "per", clauses_redundant) \
-  STATISTIC (clauses_now_irr,        3, NOTHING,  0, 0) \
-  STATISTIC (clauses_now_red,        3, NOTHING,  0, 0) \
-  STATISTIC (clauses_now_total,      3, NOTHING,  0, 0) \
-  STATISTIC (clauses_irredundant,    2, percent,  "%",  clauses_total) \
-  STATISTIC (clauses_redundant,      2, percent,  "%",  clauses_total) \
-  STATISTIC (clauses_total,          1, relative, "per", searches) \
+  STATISTIC (clauses,                0, NOTHING, 0, 0) \
+  STATISTIC (clauses_irredundant,    2, percent, "%",  clauses) \
+  STATISTIC (clauses_now_irr,        3, NOTHING, 0, 0) \
+  STATISTIC (clauses_now_red,        3, NOTHING, 0, 0) \
+  STATISTIC (clauses_now_total,      3, NOTHING, 0, 0) \
+  STATISTIC (clauses_redundant,      2, percent, "%",  clauses) \
   STATISTIC (collected,              2, relative, "per", collections) \
   STATISTIC (collections,            1, INTERVAL, "", interval) \
   STATISTIC (compacts,               1, INTERVAL, "", interval) \
@@ -148,10 +148,10 @@
   STATISTIC (instantiate_tried,      2, relative, "per", instantiations) \
   STATISTIC (instantiations,         1, INTERVAL, "", interval) \
   STATISTIC (irredundant_literals,   3, NOTHING, 0, 0) \
-  STATISTIC (learned_binaries,       2, percent, "%", clauses_total) \
-  STATISTIC (learned_clauses,        2, percent, "%", clauses_total) \
-  STATISTIC (learned_literals,       2, percent, "%", clauses_total) \
-  STATISTIC (learned_units,          2, percent, "%", clauses_total) \
+  STATISTIC (learned_binaries,       2, percent, "%", learned_clauses) \
+  STATISTIC (learned_clauses,        2, percent, "%", clauses) \
+  STATISTIC (learned_literals,       2, relative, "per", learned_clauses) \
+  STATISTIC (learned_units,          2, percent, "%", learned_clauses) \
   STATISTIC (lucky,                  1, percent, "%", lucky_tried) \
   STATISTIC (lucky_backward_one,     2, percent, "%", lucky_tried) \
   STATISTIC (lucky_backward_zero,    2, percent, "%", lucky_tried) \
@@ -210,10 +210,10 @@
   STATISTIC (stable_conflicts,       2, percent, "%", conflicts) \
   STATISTIC (stable_phases_current,  2, INTERVAL, "", interval) \
   STATISTIC (stable_phases_total,    1, INTERVAL, "", interval) \
-  STATISTIC (strengthened,           1, percent, "%", clauses_total) \
+  STATISTIC (strengthened,           1, percent, "%", clauses) \
   STATISTIC (subsume_checks,         2, relative, "per", subsume_tried) \
   STATISTIC (subsume_checks_binary,  2, percent, "%", subsume_checks) \
-  STATISTIC (subsumed,               1, percent, "%", clauses_total) \
+  STATISTIC (subsumed,               1, percent, "%", clauses) \
   STATISTIC (subsumed_irredundant,   2, percent, "%", subsumed) \
   STATISTIC (subsumed_redundant,     2, percent, "%", subsumed) \
   STATISTIC (subsume_phases,         2, relative, "per", subsume_rounds) \
@@ -274,7 +274,7 @@
   STATISTIC (up_cb_prop_assign,      2, percent, "%", up_cb_prop) \
   STATISTIC (up_cb_prop_clash,       2, percent, "%", up_cb_prop) \
   STATISTIC (up_cb_prop_explain,     2, percent, "%", up_cb_prop) \
-  STATISTIC (up_learn,               1, percent, "%", clauses_total) \
+  STATISTIC (up_learn,               1, percent, "%", clauses) \
   STATISTIC (up_learn_conflict,      2, percent, "%", up_learn) \
   STATISTIC (up_learn_elevating,     2, percent, "%", up_learn) \
   STATISTIC (up_learn_empty,         2, percent, "%", up_learn) \
@@ -302,7 +302,7 @@
   STATISTIC (vars_reactivated,       2, percent, "%", vars) \
   STATISTIC (vars_unused,            2, percent, "%", vars) \
   STATISTIC (vivifications,          1, INTERVAL, "", interval) \
-  STATISTIC (vivified,               1, percent, "%", clauses_total) \
+  STATISTIC (vivified,               1, percent, "%", clauses) \
   STATISTIC (vivified_irr,           2, percent, "%", vivified) \
   STATISTIC (vivified_tier1,         2, percent, "%", vivified) \
   STATISTIC (vivified_tier2,         2, percent, "%", vivified) \
@@ -336,7 +336,7 @@
   STATISTIC (walk_warmup_decision,   2, relative, "per", walk_warmup) \
   STATISTIC (walk_warmup_dummy,      2, relative, "per", walk_warmup) \
   STATISTIC (walk_warmup_propagate,  2, relative, "per", walk_warmup) \
-  STATISTIC (weakened,               1, percent, "%", clauses_total) \
+  STATISTIC (weakened,               1, percent, "%", clauses) \
   STATISTIC (weakened_lengths,       2, relative, "per", weakened)
 
 // clang-format on

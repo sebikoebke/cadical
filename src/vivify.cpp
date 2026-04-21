@@ -140,7 +140,7 @@ inline void Internal::demote_clause (Clause *c) {
   stats.clauses_now_red++;
   stats.clauses_redundant++;
   c->glue = c->size - 1;
-  // ... and keep 'stats.clauses_total'.
+  // ... and keep 'stats.clauses'.
 }
 
 /*------------------------------------------------------------------------*/

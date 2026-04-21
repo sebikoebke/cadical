@@ -1837,7 +1837,7 @@ inline void Closure::promote_clause (Clause *c) {
   internal->stats.clauses_now_red--;
   assert (internal->stats.clauses_redundant > 0);
   internal->stats.clauses_redundant--;
-  // ... and keep 'stats.clauses_total'.
+  // ... and keep 'stats.clauses'.
 }
 
 // This function is rather tricky for LRAT. If you have 2 = 1 and 3=4 you
@@ -5150,7 +5150,7 @@ void Closure::subsume_clause (Clause *subsuming, Clause *subsumed) {
   stats.clauses_now_red--;
   assert (stats.clauses_redundant > 0);
   stats.clauses_redundant--;
-  // ... and keep 'stats.clauses_total'.
+  // ... and keep 'stats.clauses'.
 }
 
 bool Closure::find_subsuming_clause (Clause *subsumed) {

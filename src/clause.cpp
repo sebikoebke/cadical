@@ -123,7 +123,7 @@ Clause *Internal::new_clause (bool red, int glue) {
   assert (c->bytes () == bytes);
 
   stats.clauses_now_total++;
-  stats.clauses_total++;
+  stats.clauses++;
 
   if (red) {
     stats.clauses_now_red++;
@@ -258,7 +258,7 @@ void Internal::make_irredundant (Clause *subsuming) {
   stats.clauses_now_red--;
   assert (stats.clauses_redundant > 0);
   stats.clauses_redundant--;
-  // ... and keep 'stats.clauses_total'.
+  // ... and keep 'stats.clauses'.
 }
 
 // This is the 'raw' deallocation of a clause.  If the clause is in the
