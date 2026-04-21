@@ -205,49 +205,50 @@
   STATISTIC (scores_shuffled,        2, relative, "per", rephased) \
   STATISTIC (searches,               0, NOTHING, 0, 0) \
   STATISTIC (sections,               3, NOTHING, 0, 0) \
-  STATISTIC (shrunken,               1, relative, "per", propagations) \
-  STATISTIC (shrunken_minimize,      1, relative, "per", propagations) \
-  STATISTIC (stable_conflicts,       2, relative, "per", propagations) \
+  STATISTIC (shrunken,               1, percent, "%", learned_literals) \
+  STATISTIC (shrunken_minimize,      1, percent, "%", learned_literals) \
+  STATISTIC (stable_conflicts,       2, percent, "%", conflicts) \
   STATISTIC (stable_phases_current,  2, INTERVAL, "", interval) \
   STATISTIC (stable_phases_total,    1, INTERVAL, "", interval) \
-  STATISTIC (strengthened,           1, relative, "per", propagations) \
-  STATISTIC (subsume_checks,         2, relative, "per", propagations) \
-  STATISTIC (subsume_checks_binary,  2, relative, "per", propagations) \
-  STATISTIC (subsumed,               1, relative, "per", propagations) \
-  STATISTIC (subsumed_irredundant,   2, relative, "per", propagations) \
-  STATISTIC (subsumed_redundant,     2, relative, "per", propagations) \
+  STATISTIC (strengthened,           1, percent, "%", clause_added_total) \
+  STATISTIC (subsume_checks,         2, relative, "per", subsume_tried) \
+  STATISTIC (subsume_checks_binary,  2, percent, "%", subsume_checks) \
+  STATISTIC (subsumed,               1, percent, "%", clause_added_total) \
+  STATISTIC (subsumed_irredundant,   2, percent, "%", subsumed) \
+  STATISTIC (subsumed_redundant,     2, percent, "%", subsumed) \
   STATISTIC (subsume_phases,         2, relative, "per", subsume_rounds) \
   STATISTIC (subsume_rounds,         2, INTERVAL, "", interval) \
-  STATISTIC (subsume_tried,          2, relative, "per", propagations) \
-  STATISTIC (sweep,                  1, INTERVAL, "", interval) \
-  STATISTIC (sweep_bb_fixed,         2, relative, "per", propagations) \
-  STATISTIC (sweep_bb_flip,          2, relative, "per", propagations) \
-  STATISTIC (sweep_bb_flipped,       2, relative, "per", propagations) \
-  STATISTIC (sweep_bb_solved,        2, relative, "per", propagations) \
-  STATISTIC (sweep_bb_solved_sat,    2, relative, "per", propagations) \
-  STATISTIC (sweep_bb_solved_to,     2, relative, "per", propagations) \
-  STATISTIC (sweep_bb_solved_unsat,  2, relative, "per", propagations) \
-  STATISTIC (sweep_clauses,          2, relative, "per", propagations) \
-  STATISTIC (sweep_completed,        2, relative, "per", propagations) \
-  STATISTIC (sweep_depth,            2, relative, "per", propagations) \
-  STATISTIC (sweep_environment,      2, relative, "per", propagations) \
-  STATISTIC (sweep_eq,               1, relative, "per", propagations) \
-  STATISTIC (sweep_eq_flip,          2, relative, "per", propagations) \
-  STATISTIC (sweep_eq_flipped,       2, relative, "per", propagations) \
-  STATISTIC (sweep_eq_solved,        2, relative, "per", propagations) \
-  STATISTIC (sweep_eq_solved_sat,    2, relative, "per", propagations) \
-  STATISTIC (sweep_eq_solved_to,     2, relative, "per", propagations) \
-  STATISTIC (sweep_eq_solved_unsat,  2, relative, "per", propagations) \
-  STATISTIC (sweep_solved,           2, relative, "per", propagations) \
-  STATISTIC (sweep_solved_sat,       2, relative, "per", propagations) \
-  STATISTIC (sweep_solved_unsat,     2, relative, "per", propagations) \
-  STATISTIC (sweep_units,            1, relative, "per", propagations) \
-  STATISTIC (sweep_variables,        2, relative, "per", propagations) \
+  STATISTIC (subsume_tried,          2, relative, "per", subsumed) \
+  STATISTIC (sweepings,              1, INTERVAL, "", interval) \
+  STATISTIC (sweep_bb_fixed,         2, relative, "per", sweep_variables) \
+  STATISTIC (sweep_bb_flip,          2, relative, "per", sweep_variables) \
+  STATISTIC (sweep_bb_flipped,       2, percent, "%", sweep_bb_flip) \
+  STATISTIC (sweep_bb_solved,        2, percent, "%", sweep_solved) \
+  STATISTIC (sweep_bb_solved_sat,    2, percent, "%", sweep_bb_solved) \
+  STATISTIC (sweep_bb_solved_to,     2, percent, "%", sweep_bb_solved) \
+  STATISTIC (sweep_bb_solved_unsat,  2, percent, "%", sweep_bb_solved) \
+  STATISTIC (sweep_clauses,          2, relative, "per", sweep_variables) \
+  STATISTIC (sweep_completed,        2, relative, "per", sweepings) \
+  STATISTIC (sweep_depth,            2, relative, "per", sweep_variables) \
+  STATISTIC (sweep_environment,      2, relative, "per", sweep_variables) \
+  STATISTIC (sweep_eq,               1, relative, "per", sweep_variables) \
+  STATISTIC (sweep_eq_flip,          2, relative, "per", sweep_variables) \
+  STATISTIC (sweep_eq_flipped,       2, percent, "%", sweep_eq_flip) \
+  STATISTIC (sweep_eq_solved,        2, percent, "%", sweep_solved) \
+  STATISTIC (sweep_eq_solved_sat,    2, percent, "%", sweep_eq_solved) \
+  STATISTIC (sweep_eq_solved_to,     2, percent, "%", sweep_eq_solved) \
+  STATISTIC (sweep_eq_solved_unsat,  2, percent, "%", sweep_eq_solved) \
+  STATISTIC (sweep_solved,           2, relative, "per", sweep_variables) \
+  STATISTIC (sweep_solved_sat,       2, percent, "%", sweep_solved) \
+  STATISTIC (sweep_solved_to,        2, percent, "%", sweep_solved) \
+  STATISTIC (sweep_solved_unsat,     2, percent, "%", sweep_solved) \
+  STATISTIC (sweep_units,            1, percent, "%", vars) \
+  STATISTIC (sweep_variables,        2, relative, "per", vars) \
   STATISTIC (ternary,                1, INTERVAL, "", interval) \
-  STATISTIC (ternary_htrs,           1, relative, "per", propagations) \
-  STATISTIC (ternary_htrs_binary,    2, relative, "per", propagations) \
-  STATISTIC (ternary_htrs_ternary,   2, relative, "per", propagations) \
-  STATISTIC (ternary_resolutions,    2, relative, "per", propagations) \
+  STATISTIC (ternary_htrs,           1, percent, "%", ternary_resolutions) \
+  STATISTIC (ternary_htrs_binary,    2, percent, "%", ternary_htrs) \
+  STATISTIC (ternary_htrs_ternary,   2, percent, "%", ternary_htrs) \
+  STATISTIC (ternary_resolutions,    2, relative, "per", ternary) \
   STATISTIC (ticks,                  0, SECONDS, "per", second) \
   STATISTIC (ticks_backbone,         2, percent, "%", ticks) \
   STATISTIC (ticks_factor,           2, percent, "%", ticks) \
@@ -263,65 +264,65 @@
   STATISTIC (ticks_walk_flip_broke,  2, percent, "%", ticks_walk) \
   STATISTIC (ticks_walk_flip_wl,     2, percent, "%", ticks_walk) \
   STATISTIC (ticks_walk_pick,        2, percent, "%", ticks_walk) \
-  STATISTIC (transitive_clauses,     1, relative, "per", propagations) \
+  STATISTIC (transitive_clauses,     1, percent, "%", subsumed) \
   STATISTIC (transitive_rounds,      1, INTERVAL, "", interval) \
-  STATISTIC (transitive_units,       2, relative, "per", propagations) \
-  STATISTIC (up_cb,                  2, relative, "per", propagations) \
-  STATISTIC (up_cb_add,              1, relative, "per", propagations) \
-  STATISTIC (up_cb_check_model,      1, relative, "per", propagations) \
-  STATISTIC (up_cb_prop,             1, relative, "per", propagations) \
-  STATISTIC (up_cb_prop_assign,      2, relative, "per", propagations) \
-  STATISTIC (up_cb_prop_clash,       2, relative, "per", propagations) \
-  STATISTIC (up_cb_prop_explain,     2, relative, "per", propagations) \
-  STATISTIC (up_learn,               1, relative, "per", propagations) \
-  STATISTIC (up_learn_conflict,      2, relative, "per", propagations) \
-  STATISTIC (up_learn_elevating,     2, relative, "per", propagations) \
-  STATISTIC (up_learn_empty,         2, relative, "per", propagations) \
-  STATISTIC (up_learn_lazy_elevate,  2, relative, "per", propagations) \
-  STATISTIC (up_learn_out_of_order,  2, relative, "per", propagations) \
-  STATISTIC (up_learn_propagating,   2, relative, "per", propagations) \
-  STATISTIC (up_learn_satisfied,     2, relative, "per", propagations) \
-  STATISTIC (up_learn_unit,          2, relative, "per", propagations) \
-  STATISTIC (variables_extension,    2, relative, "per", propagations) \
-  STATISTIC (variables_original,     1, relative, "per", propagations) \
-  STATISTIC (vars,                   3, relative, "per", propagations) \
-  STATISTIC (vars_active,            2, relative, "per", propagations) \
-  STATISTIC (vars_all_elim,          2, relative, "per", propagations) \
-  STATISTIC (vars_all_elim_fast,     2, relative, "per", propagations) \
-  STATISTIC (vars_all_fixed,         2, relative, "per", propagations) \
-  STATISTIC (vars_all_pure,          2, relative, "per", propagations) \
-  STATISTIC (vars_all_substituted,   2, relative, "per", propagations) \
-  STATISTIC (vars_bumped,            2, relative, "per", propagations) \
-  STATISTIC (vars_declared,          2, relative, "per", propagations) \
-  STATISTIC (vars_inactive,          2, relative, "per", propagations) \
-  STATISTIC (vars_now_eliminated,    3, relative, "per", propagations) \
-  STATISTIC (vars_now_fixed,         3, relative, "per", propagations) \
-  STATISTIC (vars_now_pure,          3, relative, "per", propagations) \
-  STATISTIC (vars_now_substituted,   3, relative, "per", propagations) \
-  STATISTIC (vars_reactivated,       2, relative, "per", propagations) \
-  STATISTIC (vars_unused,            2, relative, "per", propagations) \
+  STATISTIC (transitive_units,       2, percent, "%", failed_literals) \
+  STATISTIC (up_cb,                  2, relative, "per", searches) \
+  STATISTIC (up_cb_add,              1, percent, "%", up_cb) \
+  STATISTIC (up_cb_check_model,      1, percent, "%", up_cb) \
+  STATISTIC (up_cb_prop,             1, percent, "%", up_cb) \
+  STATISTIC (up_cb_prop_assign,      2, percent, "%", up_cb_prob) \
+  STATISTIC (up_cb_prop_clash,       2, percent, "%", up_cb_prob) \
+  STATISTIC (up_cb_prop_explain,     2, percent, "%", up_cb_prob) \
+  STATISTIC (up_learn,               1, percent, "%", clause_added_total) \
+  STATISTIC (up_learn_conflict,      2, percent, "%", up_learn) \
+  STATISTIC (up_learn_elevating,     2, percent, "%", up_learn) \
+  STATISTIC (up_learn_empty,         2, percent, "%", up_learn) \
+  STATISTIC (up_learn_lazy_elevate,  2, percent, "%", up_learn) \
+  STATISTIC (up_learn_out_of_order,  2, percent, "%", up_learn) \
+  STATISTIC (up_learn_propagating,   2, percent, "%", up_learn) \
+  STATISTIC (up_learn_satisfied,     2, percent, "%", up_learn) \
+  STATISTIC (up_learn_unit,          2, percent, "%", up_learn) \
+  STATISTIC (variables_extension,    2, percent, "%", vars) \
+  STATISTIC (variables_original,     1, percent, "%", vars) \
+  STATISTIC (vars,                   0, NOTHING, 0, 0) \
+  STATISTIC (vars_active,            2, percent, "%", vars) \
+  STATISTIC (vars_all_elim,          2, percent, "%", vars) \
+  STATISTIC (vars_all_elim_fast,     2, percent, "%", vars) \
+  STATISTIC (vars_all_fixed,         2, percent, "%", vars) \
+  STATISTIC (vars_all_pure,          2, percent, "%", vars) \
+  STATISTIC (vars_all_substituted,   2, percent, "%", vars) \
+  STATISTIC (vars_bumped,            2, percent, "%", vars) \
+  STATISTIC (vars_declared,          2, percent, "%", vars) \
+  STATISTIC (vars_inactive,          2, percent, "%", vars) \
+  STATISTIC (vars_now_eliminated,    3, NOTHING, 0, 0) \
+  STATISTIC (vars_now_fixed,         3, NOTHING, 0, 0) \
+  STATISTIC (vars_now_pure,          3, NOTHING, 0, 0) \
+  STATISTIC (vars_now_substituted,   3, NOTHING, 0, 0) \
+  STATISTIC (vars_reactivated,       2, percent, "%", vars) \
+  STATISTIC (vars_unused,            2, percent, "%", vars) \
   STATISTIC (vivifications,          1, INTERVAL, "", interval) \
-  STATISTIC (vivified,               1, relative, "per", propagations) \
-  STATISTIC (vivified_irr,           2, relative, "per", propagations) \
-  STATISTIC (vivified_tier1,         2, relative, "per", propagations) \
-  STATISTIC (vivified_tier2,         2, relative, "per", propagations) \
-  STATISTIC (vivified_tier3,         2, relative, "per", propagations) \
-  STATISTIC (vivify_checks,          2, relative, "per", propagations) \
-  STATISTIC (vivify_decisions,       2, relative, "per", propagations) \
-  STATISTIC (vivify_demote,          2, relative, "per", propagations) \
-  STATISTIC (vivify_flushed,         2, relative, "per", propagations) \
-  STATISTIC (vivify_implied,         2, relative, "per", propagations) \
-  STATISTIC (vivify_instantiated,    2, relative, "per", propagations) \
-  STATISTIC (vivify_reused,          2, relative, "per", propagations) \
-  STATISTIC (vivify_scheduled,       2, relative, "per", propagations) \
-  STATISTIC (vivify_strength,        2, relative, "per", propagations) \
-  STATISTIC (vivify_strength_irr,    2, relative, "per", propagations) \
-  STATISTIC (vivify_strength_tier1,  2, relative, "per", propagations) \
-  STATISTIC (vivify_strength_tier2,  2, relative, "per", propagations) \
-  STATISTIC (vivify_strength_tier3,  2, relative, "per", propagations) \
-  STATISTIC (vivify_subsumed,        2, relative, "per", propagations) \
-  STATISTIC (vivify_subsumed_irr,    2, relative, "per", propagations) \
-  STATISTIC (vivify_subsumed_red,    2, relative, "per", propagations) \
+  STATISTIC (vivified,               1, percent, "%", clause_added_total) \
+  STATISTIC (vivified_irr,           2, percent, "%", vivified) \
+  STATISTIC (vivified_tier1,         2, percent, "%", vivified) \
+  STATISTIC (vivified_tier2,         2, percent, "%", vivified) \
+  STATISTIC (vivified_tier3,         2, percent, "%", vivified) \
+  STATISTIC (vivify_checks,          2, percent, "%", vivify_scheduled) \
+  STATISTIC (vivify_decisions,       2, relative, "per", vivify_checks) \
+  STATISTIC (vivify_demote,          2, percent, "%", vivify_strength) \
+  STATISTIC (vivify_flushed,         2, percent, "%", vivify_subsumed) \
+  STATISTIC (vivify_implied,         2, percent, "%", vivify_checks) \
+  STATISTIC (vivify_instantiated,    2, percent, "%", vivify_checks) \
+  STATISTIC (vivify_reused,          2, percent, "%", vivify_decisions) \
+  STATISTIC (vivify_scheduled,       2, relative, "per", vivifications) \
+  STATISTIC (vivify_strength,        2, percent, "%", strengthened) \
+  STATISTIC (vivify_strength_irr,    2, percent, "%", vivify_strength) \
+  STATISTIC (vivify_strength_tier1,  2, percent, "%", vivify_strength) \
+  STATISTIC (vivify_strength_tier2,  2, percent, "%", vivify_strength) \
+  STATISTIC (vivify_strength_tier3,  2, percent, "%", vivify_strength) \
+  STATISTIC (vivify_subsumed,        2, percent, "%", subsumed) \
+  STATISTIC (vivify_subsumed_irr,    2, percent, "%", vivify_subsumed) \
+  STATISTIC (vivify_subsumed_red,    2, percent, "%", vivify_subsumed) \
   STATISTIC (vivify_units,           2, relative, "per", propagations) \
   STATISTIC (walk,                   1, INTERVAL, "", interval) \
   STATISTIC (walk_broken,            2, relative, "per", propagations) \

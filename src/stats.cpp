@@ -44,7 +44,8 @@ void Stats::print_old (Internal *internal) {
   int64_t inprobeticks = stats.ticks_vivify + stats.ticks_probe +
                          stats.ticks_factor + stats.ticks_ternary +
                          stats.ticks_sweep + stats.ticks_backbone;
-  int64_t totalticks = searchticks + inprobeticks;
+  int64_t local_search_ticks = stats.ticks_walk;
+  int64_t totalticks = searchticks + inprobeticks + local_search_ticks;
   assert (totalticks == stats.ticks);
 
   size_t extendbytes = internal->external->extension.size ();
@@ -567,7 +568,8 @@ void Stats::print_old (Internal *internal) {
     PRT ("sweep equivs:    %15" PRId64 "   %10.2f %%  of swept variables",
          stats.sweep_eq, percent (stats.sweep_eq, stats.sweep_variables));
     PRT ("  sweepings:     %15" PRId64 "   %10.2f    vars per sweeping",
-         stats.sweep, relative (stats.sweep_variables, stats.sweep));
+         stats.sweepings,
+         relative (stats.sweep_variables, stats.sweepings));
     PRT ("  swept vars:    %15" PRId64 "   %10.2f %%  of all variables",
          stats.sweep_variables,
          percent (stats.sweep_variables, stats.vars));

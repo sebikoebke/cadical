@@ -4,7 +4,7 @@ namespace CaDiCaL {
 
 Sweeper::Sweeper (Internal *i)
     : internal (i), random (internal->opts.seed) {
-  random += internal->stats.sweep; // different seed every time
+  random += internal->stats.sweepings; // different seed every time
   internal->init_sweeper (*this);
 }
 
@@ -24,8 +24,10 @@ int Internal::sweep_solve () {
   int res = kitten_solve (citten);
   if (res == 10)
     stats.sweep_solved_sat++;
-  if (res == 20)
+  else if (res == 20)
     stats.sweep_solved_unsat++;
+  else
+    stats.sweep_solved_to++;
   STOP (sweepsolve);
   return res;
 }
@@ -289,6 +291,7 @@ void Internal::release_sweeper (Sweeper &sweeper) {
   kitten_release (citten);
   citten = 0;
   stats.ticks_sweep += sweeper.current_ticks;
+  stats.ticks += sweeper.current_ticks;
   sweep_sparse_mode ();
   return;
 }
@@ -422,10 +425,10 @@ static void save_core_clause (void *state, unsigned id, bool learned,
 }
 
 static void save_core_clause_with_lrat (void *state, unsigned cid,
-                                         unsigned id, bool learned,
-                                         size_t size, const unsigned *lits,
-                                         size_t chain_size,
-                                         const unsigned *chain) {
+                                        unsigned id, bool learned,
+                                        size_t size, const unsigned *lits,
+                                        size_t chain_size,
+                                        const unsigned *chain) {
   Sweeper *sweeper = (Sweeper *) state;
   Internal *internal = sweeper->internal;
   if (internal->unsat)
@@ -1830,7 +1833,7 @@ unsigned Internal::schedule_sweeping (Sweeper &sweeper) {
   const unsigned scheduled = fresh + rescheduled;
   const unsigned incomplete = incomplete_variables ();
 #ifndef QUIET
-  PHASE ("sweep", stats.sweep,
+  PHASE ("sweep", stats.sweepings,
          "scheduled %u variables %.0f%% "
          "(%u rescheduled %.0f%%, %u incomplete %.0f%%)",
          scheduled, percent (scheduled, active ()), rescheduled,
@@ -1873,7 +1876,7 @@ void Internal::unschedule_sweeping (Sweeper &sweeper, unsigned swept,
     sweep_incomplete = false;
     stats.sweep_completed++;
   }
-  PHASE ("sweep", stats.sweep, "swept %u variables (%u remain %.0f%%)",
+  PHASE ("sweep", stats.sweepings, "swept %u variables (%u remain %.0f%%)",
          swept, incomplete, percent (incomplete, scheduled));
 }
 
@@ -1895,7 +1898,7 @@ bool Internal::sweep () {
 
   assert (!level);
   START_SIMPLIFIER (sweep, SWEEP);
-  stats.sweep++;
+  stats.sweepings++;
   uint64_t equivalences = stats.sweep_eq;
   uint64_t units = stats.sweep_units;
   Sweeper sweeper = Sweeper (this);
@@ -1935,7 +1938,7 @@ bool Internal::sweep () {
   VERBOSE (2, "swept %" PRIu64 " variables", swept);
   equivalences = stats.sweep_eq - equivalences,
   units = stats.sweep_units - units;
-  PHASE ("sweep", stats.sweep,
+  PHASE ("sweep", stats.sweepings,
          "found %" PRIu64 " equivalences and %" PRIu64 " units",
          equivalences, units);
   unschedule_sweeping (sweeper, swept, scheduled);
