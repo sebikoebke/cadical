@@ -952,8 +952,8 @@ int Internal::walk_round (int64_t limit, bool prev) {
     PHASE ("walk", stats.walk,
            "starting with %zd unsatisfied clauses "
            "(%.0f%% out of %" PRId64 ")",
-           broken, percent (broken, stats.clause_current_irr),
-           stats.clause_current_irr);
+           broken, percent (broken, stats.clauses_now_irr),
+           stats.clauses_now_irr);
 
     walk_save_minimum (walker);
     assert (stats.walk_minimum <= (int64_t) walker.minimum);

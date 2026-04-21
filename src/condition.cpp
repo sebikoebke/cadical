@@ -52,12 +52,12 @@ bool Internal::conditioning () {
   if (level <= averages.current.jump)
     return false; // Main heuristic.
 
-  if (!stats.clause_current_irr)
+  if (!stats.clauses_now_irr)
     return false;
   double remain = active ();
   if (!remain)
     return false;
-  double ratio = stats.clause_current_irr / remain;
+  double ratio = stats.clauses_now_irr / remain;
   return ratio <= opts.conditionmaxrat;
 }
 
@@ -896,7 +896,7 @@ void Internal::condition (bool update_limits) {
 
   if (unsat)
     return;
-  if (!stats.clause_current_irr)
+  if (!stats.clauses_now_irr)
     return;
 
   START_SIMPLIFIER (condition, CONDITION);
@@ -913,8 +913,8 @@ void Internal::condition (bool update_limits) {
     limit = opts.conditionmineff;
   if (limit > opts.conditionmaxeff)
     limit = opts.conditionmaxeff;
-  assert (stats.clause_current_irr);
-  limit *= 2.0 * active () / (double) stats.clause_current_irr;
+  assert (stats.clauses_now_irr);
+  limit *= 2.0 * active () / (double) stats.clauses_now_irr;
   limit = max (limit, 2l * active ());
 
   PHASE ("condition", stats.conditionings,

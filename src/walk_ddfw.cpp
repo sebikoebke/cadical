@@ -798,7 +798,7 @@ void Walker_DDFW::do_sideways_jump () {
   push_flipped (lit);
   internal->stats.walk_flips++;
   internal->stats.walk_broken += broken.size ();
-  ++internal->stats.walk_sideways;
+  ++internal->stats.walk_flips_sideways;
 }
 
 void Walker_DDFW::transfer_weights () {
@@ -817,7 +817,7 @@ void Walker_DDFW::transfer_weights () {
   tranferred_weights += broken.size ();
 #endif
 
-  ++internal->stats.walk_weight_transfer;
+  ++internal->stats.walk_flips_transfer;
   ticks +=
       (1 + internal->cache_lines (broken.size (), sizeof (DDFW_Tagged)));
   for (auto c : broken) {
@@ -1262,8 +1262,8 @@ int Internal::walk_ddfw_round (int64_t limit, bool prev) {
     PHASE ("walk", stats.walk,
            "starting with %zd unsatisfied clauses "
            "(%.0f%% out of %" PRId64 ")",
-           broken, percent (broken, stats.clause_current_irr),
-           stats.clause_current_irr);
+           broken, percent (broken, stats.clauses_now_irr),
+           stats.clauses_now_irr);
 
     walk_ddfw_save_minimum (walker);
     assert ((unsigned) stats.walk_minimum <= walker.minimum);
@@ -1300,7 +1300,7 @@ int Internal::walk_ddfw_round (int64_t limit, bool prev) {
       // the others, because it transfers more weights at once (especially
       // compared to the original ddfw).
       if (weight_reducing_lit && weight_reduction > 0.1) {
-        ++stats.walk_weight_reducing;
+        ++stats.walk_flips_reducing;
         LOG ("flipping one literal");
         walker.walk_ddfw_flip_lit (weight_reducing_lit);
         walker.push_flipped (weight_reducing_lit);

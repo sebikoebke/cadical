@@ -15,8 +15,8 @@ void Internal::transred () {
     return;
   if (terminated_asynchronously ())
     return;
-  if (!stats.clause_current_red &&
-      !stats.clause_current_irr)
+  if (!stats.clauses_now_red &&
+      !stats.clauses_now_irr)
     return;
 
   assert (opts.transred);

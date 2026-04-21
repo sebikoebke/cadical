@@ -122,16 +122,16 @@ Clause *Internal::new_clause (bool red, int glue) {
   //
   assert (c->bytes () == bytes);
 
-  stats.clause_current_total++;
-  stats.clause_added_total++;
+  stats.clauses_now_total++;
+  stats.clauses_total++;
 
   if (red) {
-    stats.clause_current_red++;
-    stats.clause_added_red++;
+    stats.clauses_now_red++;
+    stats.clauses_redundant++;
   } else {
     stats.irredundant_literals += size;
-    stats.clause_current_irr++;
-    stats.clause_added_irr++;
+    stats.clauses_now_irr++;
+    stats.clauses_irredundant++;
   }
   if (size == 2)
     new_binary_since_dedup = true;
@@ -251,14 +251,14 @@ void Internal::make_irredundant (Clause *subsuming) {
   subsuming->redundant = false;
   if (proof)
     proof->strengthen (subsuming->id);
-  stats.clause_current_irr++;
-  stats.clause_added_irr++;
+  stats.clauses_now_irr++;
+  stats.clauses_irredundant++;
   stats.irredundant_literals += subsuming->size;
-  assert (stats.clause_current_red > 0);
-  stats.clause_current_red--;
-  assert (stats.clause_added_red > 0);
-  stats.clause_added_red--;
-  // ... and keep 'stats.clause_added_total'.
+  assert (stats.clauses_now_red > 0);
+  stats.clauses_now_red--;
+  assert (stats.clauses_redundant > 0);
+  stats.clauses_redundant--;
+  // ... and keep 'stats.clauses_total'.
 }
 
 // This is the 'raw' deallocation of a clause.  If the clause is in the
@@ -334,16 +334,16 @@ void Internal::mark_garbage (Clause *c) {
   if (opts.check && is_external_forgettable (c->id))
     mark_garbage_external_forgettable (c->id);
 
-  assert (stats.clause_current_total > 0);
-  stats.clause_current_total--;
+  assert (stats.clauses_now_total > 0);
+  stats.clauses_now_total--;
 
   size_t bytes = c->bytes ();
   if (c->redundant) {
-    assert (stats.clause_current_red > 0);
-    stats.clause_current_red--;
+    assert (stats.clauses_now_red > 0);
+    stats.clauses_now_red--;
   } else {
-    assert (stats.clause_current_irr > 0);
-    stats.clause_current_irr--;
+    assert (stats.clauses_now_irr > 0);
+    stats.clauses_now_irr--;
     assert (stats.irredundant_literals >= c->size);
     stats.irredundant_literals -= c->size;
     mark_removed (c);

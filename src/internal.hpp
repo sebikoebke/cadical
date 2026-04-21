@@ -390,9 +390,9 @@ struct Internal {
 
   // Currently remaining active redundant and irredundant clauses.
 
-  int64_t redundant () const { return stats.clause_current_red; }
+  int64_t redundant () const { return stats.clauses_now_red; }
 
-  int64_t irredundant () const { return stats.clause_current_irr; }
+  int64_t irredundant () const { return stats.clauses_now_irr; }
 
   double clause_variable_ratio () const {
     return relative (irredundant (), active ());

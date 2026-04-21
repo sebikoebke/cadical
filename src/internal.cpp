@@ -506,7 +506,7 @@ void Internal::init_preprocessing_limits () {
     mode = "keeping";
   else {
     double delta =
-        stats.clause_added_irr ? log10 (stats.clause_added_irr) : 100;
+        stats.clauses_irredundant ? log10 (stats.clauses_irredundant) : 100;
     delta = delta * delta;
     lim.inprobe = stats.conflicts + opts.inprobeint * delta;
     mode = "initial";
@@ -732,7 +732,7 @@ bool Internal::preprocess_round (int round, bool &triggered) {
     int64_t vars, clauses;
   } before, after;
   before.vars = active ();
-  before.clauses = stats.clause_current_irr;
+  before.clauses = stats.clauses_now_irr;
   stats.preprocessings++;
   assert (!preprocessing);
   preprocessing = true;
@@ -751,7 +751,7 @@ bool Internal::preprocess_round (int round, bool &triggered) {
     condition (false);
 
   after.vars = active ();
-  after.clauses = stats.clause_current_irr;
+  after.clauses = stats.clauses_now_irr;
   assert (preprocessing);
   preprocessing = false;
   PHASE ("preprocessing", stats.preprocessings,
@@ -787,7 +787,7 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
     int64_t vars, clauses;
   } before, after;
   before.vars = active ();
-  before.clauses = stats.clause_current_irr;
+  before.clauses = stats.clauses_now_irr;
 #endif
   // stats.preprocessings++;
   assert (!preprocessing);
@@ -817,7 +817,7 @@ void Internal::preprocess_quickly (bool always, bool &triggered) {
   // condition (false);
 #ifndef QUIET
   after.vars = active ();
-  after.clauses = stats.clause_current_irr;
+  after.clauses = stats.clauses_now_irr;
 #endif
   assert (preprocessing);
   preprocessing = false;

@@ -464,9 +464,9 @@ void Internal::check_clause_stats () {
       irrlits += c->size;
     total++;
   }
-  assert (stats.clause_current_irr == irredundant);
-  assert (stats.clause_current_red == redundant);
-  assert (stats.clause_current_total == total);
+  assert (stats.clauses_now_irr == irredundant);
+  assert (stats.clauses_now_red == redundant);
+  assert (stats.clauses_now_total == total);
   assert (stats.irredundant_literals == irrlits);
   assert (stats.garbage_literals == garbagelits);
   assert (stats.garbage_clauses == garbagecls);

@@ -105,11 +105,11 @@ inline void Internal::vivify_subsume_clause (Clause *subsuming,
          "binary subsuming clause was already deleted, so undeleting");
     subsuming->garbage = false;
     subsuming->glue = 1;
-    ++stats.clause_current_total;
+    ++stats.clauses_now_total;
     if (subsuming->redundant)
-      stats.clause_current_red++;
+      stats.clauses_now_red++;
     else
-      stats.clause_current_irr++,
+      stats.clauses_now_irr++,
           stats.irredundant_literals += subsuming->size;
     stats.garbage_literals -= subsuming->size;
     --stats.garbage_clauses;
@@ -132,15 +132,15 @@ inline void Internal::demote_clause (Clause *c) {
   assert (!c->redundant);
   mark_removed (c);
   c->redundant = true;
-  assert (stats.clause_current_irr > 0);
-  stats.clause_current_irr--;
-  assert (stats.clause_added_irr > 0);
-  stats.clause_added_irr--;
+  assert (stats.clauses_now_irr > 0);
+  stats.clauses_now_irr--;
+  assert (stats.clauses_irredundant > 0);
+  stats.clauses_irredundant--;
   stats.irredundant_literals -= c->size;
-  stats.clause_current_red++;
-  stats.clause_added_red++;
+  stats.clauses_now_red++;
+  stats.clauses_redundant++;
   c->glue = c->size - 1;
-  // ... and keep 'stats.clause_added_total'.
+  // ... and keep 'stats.clauses_total'.
 }
 
 /*------------------------------------------------------------------------*/
@@ -1595,7 +1595,7 @@ void Internal::vivify_round (Vivifier &vivifier, int64_t ticks_limit) {
 
   PHASE ("vivify", stats.vivifications,
          "scheduled %" PRId64 " clauses to be vivified %.0f%%", scheduled,
-         percent (scheduled, stats.clause_current_irr));
+         percent (scheduled, stats.clauses_now_irr));
 
   // Limit the number of propagations during vivification as in 'probe'.
   //
@@ -1753,7 +1753,7 @@ bool Internal::vivify () {
     return false;
   if (!opts.vivify)
     return false;
-  if (!stats.clause_current_irr)
+  if (!stats.clauses_now_irr)
     return false;
   if (level)
     backtrack ();
@@ -1777,7 +1777,7 @@ bool Internal::vivify () {
           ? 0
           : (double) opts.vivifyirredeff;
   double sumeffort = tier1effort + tier2effort + tier3effort + irreffort;
-  if (!stats.clause_current_red)
+  if (!stats.clauses_now_red)
     tier1effort = tier2effort = tier3effort = 0;
   if (!sumeffort)
     sumeffort = irreffort = 1;

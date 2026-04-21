@@ -829,8 +829,8 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
     PHASE ("walk", stats.walk,
            "starting with %zd unsatisfied clauses "
            "(%.0f%% out of %" PRId64 ")",
-           broken, percent (broken, stats.clause_current_irr),
-           stats.clause_current_irr);
+           broken, percent (broken, stats.clauses_now_irr),
+           stats.clauses_now_irr);
 
     walk_full_occs_save_minimum (walker);
     assert ((unsigned) stats.walk_minimum <= walker.minimum);

@@ -1560,7 +1560,7 @@ bool Internal::factor () {
   } before, after, delta;
 #ifndef QUIET
   before.variables = stats.variables_extension + stats.variables_original;
-  before.clauses = stats.clause_current_irr;
+  before.clauses = stats.clauses_now_irr;
 #endif
   before.ticks = stats.ticks_factor;
 
@@ -1578,7 +1578,7 @@ bool Internal::factor () {
   delta.ticks = after.ticks - before.ticks;
 #ifndef QUIET
   after.variables = stats.variables_extension + stats.variables_original;
-  after.clauses = stats.clause_current_irr;
+  after.clauses = stats.clauses_now_irr;
   delta.variables = after.variables - before.variables;
   delta.clauses = before.clauses - after.clauses;
   VERBOSE (2, "used %f million factorization ticks", delta.ticks * 1e-6);

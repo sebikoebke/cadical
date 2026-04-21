@@ -740,7 +740,7 @@ bool Internal::block () {
     return false;
   if (unsat)
     return false;
-  if (!stats.clause_current_irr)
+  if (!stats.clauses_now_irr)
     return false;
   if (terminated_asynchronously ())
     return false;

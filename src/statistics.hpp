@@ -12,28 +12,28 @@
   STATISTIC (backbone_rounds,        2, relative, "per", backbone_phases) \
   STATISTIC (backbone_units,         1, relative, "per", backbone_phases) \
   STATISTIC (backtracked,            3, NOTHING,  0, 0) \
-  STATISTIC (blocked,                1, percent,  "%",   clause_added_irr) \
+  STATISTIC (blocked,                1, percent,  "%",   clauses_irredundant) \
   STATISTIC (blocked_candidates,     2, relative, "per", blockings) \
-  STATISTIC (blocked_pure_clauses,   2, percent,  "per", blocked_pure_literals) \
+  STATISTIC (blocked_pure_clauses,   2, percent,  "%", blocked_pure_literals) \
   STATISTIC (blocked_pure_literals,  2, percent,  "%",   vars) \
   STATISTIC (blocked_resolutions,    2, relative, "per", blocked_candidates) \
   STATISTIC (blockings,              1, INTERVAL, "", interval) \
-  STATISTIC (clause_added_irr,       2, percent,  "%",  clause_added_total) \
-  STATISTIC (clause_added_red,       2, percent,  "%",  clause_added_total) \
-  STATISTIC (clause_added_total,     2, relative, "per", searches) \
-  STATISTIC (clause_current_irr,     3, NOTHING,  0, 0) \
-  STATISTIC (clause_current_red,     3, NOTHING,  0, 0) \
-  STATISTIC (clause_current_total,   3, NOTHING,  0, 0) \
-  STATISTIC (clause_improved_glue,   2, relative, "per", clause_added_red) \
+  STATISTIC (clause_improved_glue,   2, relative, "per", clauses_redundant) \
   STATISTIC (clause_promoted_tier1,  2, relative, "per", clause_improved_glue) \
   STATISTIC (clause_promoted_tier2,  2, relative, "per", clause_improved_glue) \
-  STATISTIC (clause_recompute_glue,  2, relative, "per", clause_added_red) \
+  STATISTIC (clause_recompute_glue,  2, relative, "per", clauses_redundant) \
+  STATISTIC (clauses_now_irr,        3, NOTHING,  0, 0) \
+  STATISTIC (clauses_now_red,        3, NOTHING,  0, 0) \
+  STATISTIC (clauses_now_total,      3, NOTHING,  0, 0) \
+  STATISTIC (clauses_irredundant,    2, percent,  "%",  clauses_total) \
+  STATISTIC (clauses_redundant,      2, percent,  "%",  clauses_total) \
+  STATISTIC (clauses_total,          1, relative, "per", searches) \
   STATISTIC (collected,              2, relative, "per", collections) \
   STATISTIC (collections,            1, INTERVAL, "", interval) \
-  STATISTIC (compacts,               1, INTERVAL, "per", interval) \
+  STATISTIC (compacts,               1, INTERVAL, "", interval) \
   STATISTIC (condition_active,       2, relative, "per", conditionings) \
   STATISTIC (condition_candidates,   2, relative, "per", conditionings) \
-  STATISTIC (conditioned,            1, percent, "%",  clause_added_irr) \
+  STATISTIC (conditioned,            1, percent, "%",  clauses_irredundant) \
   STATISTIC (conditioned_assign,     2, relative, "per", conditioned) \
   STATISTIC (conditioned_autarky,    2, relative, "per", conditioned) \
   STATISTIC (conditioned_cond,       2, relative, "per", conditioned) \
@@ -48,10 +48,10 @@
   STATISTIC (congruence_ands,        2, relative, "per", congruent) \
   STATISTIC (congruence_dummy_ands,  2, relative, "per", congruence_rounds) \
   STATISTIC (congruence_gates,       2, relative, "per", congruence_rounds) \
-  STATISTIC (congruence_gates_and,   2, relative, "%", congruence_gates) \
-  STATISTIC (congruence_gates_ite,   2, relative, "%", congruence_gates) \
-  STATISTIC (congruence_gates_xor,   2, relative, "%", congruence_gates) \
-  STATISTIC (congruence_ites,        2, relative, "%", congruent) \
+  STATISTIC (congruence_gates_and,   2, percent, "%", congruence_gates) \
+  STATISTIC (congruence_gates_ite,   2, percent, "%", congruence_gates) \
+  STATISTIC (congruence_gates_xor,   2, percent, "%", congruence_gates) \
+  STATISTIC (congruence_ites,        2, relative, "per", congruent) \
   STATISTIC (congruence_rounds,      1, INTERVAL, "", interval) \
   STATISTIC (congruence_rw_ands,     2, relative, "per", congruence_gates) \
   STATISTIC (congruence_rw_ites,     2, relative, "per", congruence_gates) \
@@ -71,7 +71,7 @@
   STATISTIC (cover_asymmetric,       2, percent, "%",  cover_total) \
   STATISTIC (cover_blocked,          2, percent, "%",  cover_total) \
   STATISTIC (coverings,              2, INTERVAL, "", interval) \
-  STATISTIC (cover_total,            1, percent, "%",  clause_added_irr) \
+  STATISTIC (cover_total,            1, percent, "%",  clauses_irredundant) \
   STATISTIC (decision_random,        2, percent, "%",  decisions) \
   STATISTIC (decision_random_phase,  2, INTERVAL, "", interval) \
   STATISTIC (decisions,              0, SECONDS, "per",  second) \
@@ -96,7 +96,7 @@
   STATISTIC (eliminated_equivalent,  2, percent, "%",  eliminated) \
   STATISTIC (eliminated_ite,         2, percent, "%",  eliminated) \
   STATISTIC (eliminated_xor,         2, percent, "%",  eliminated) \
-  STATISTIC (eliminate_equivalence,  2, relative, "per", propagations) \
+  STATISTIC (eliminate_equivalence,  2, relative, "per", eliminate_gates) \
   STATISTIC (eliminate_fast_phases,  2, relative, "per", eliminate_fast_rounds) \
   STATISTIC (eliminate_fast_rounds,  2, relative, "per", searches) \
   STATISTIC (eliminate_gates,        2, percent, "%",  eliminate_tried) \
@@ -112,7 +112,7 @@
   STATISTIC (eliminate_tried_res,    2, relative, "per", eliminate_tried) \
   STATISTIC (eliminate_xor,          2, percent, "%", eliminate_gates) \
   STATISTIC (eliminations,           1, INTERVAL, "", interval) \
-  STATISTIC (extended,               1, relative, "per", extensions) \
+  STATISTIC (extended,               1, relative, "per", weakened) \
   STATISTIC (extensions,             1, relative, "per", searches) \
   STATISTIC (factor_added_clauses,   2, relative, "per", factored) \
   STATISTIC (factor_added_literals,  2, relative, "per", factored) \
@@ -128,11 +128,11 @@
   STATISTIC (failed_literals,        1, percent, "%", vars) \
   STATISTIC (flush_hyper,            2, percent, "%", flush_learned) \
   STATISTIC (flushings,              1, INTERVAL, "", interval) \
-  STATISTIC (flush_learned,          1, percent, "%", clause_added_red) \
+  STATISTIC (flush_learned,          1, percent, "%", clauses_redundant) \
   STATISTIC (garbage_bytes,          3, NOTHING, 0, 0) \
   STATISTIC (garbage_clauses,        3, NOTHING, 0, 0) \
   STATISTIC (garbage_literals,       3, NOTHING, 0, 0) \
-  STATISTIC (hbr_redundant,          2, relative, "per", propagations) \
+  STATISTIC (hbr_redundant,          2, percent, "%", hbrs) \
   STATISTIC (hbrs,                   1, relative, "per", probed) \
   STATISTIC (hbr_sizes,              2, relative, "per", hbrs) \
   STATISTIC (hbr_subsuming,          2, relative, "per", hbrs) \
@@ -148,10 +148,10 @@
   STATISTIC (instantiate_tried,      2, relative, "per", instantiations) \
   STATISTIC (instantiations,         1, INTERVAL, "", interval) \
   STATISTIC (irredundant_literals,   3, NOTHING, 0, 0) \
-  STATISTIC (learned_binaries,       2, percent, "%", clause_added_total) \
-  STATISTIC (learned_clauses,        2, percent, "%", clause_added_total) \
-  STATISTIC (learned_literals,       2, percent, "%", clause_added_total) \
-  STATISTIC (learned_units,          2, percent, "%", clause_added_total) \
+  STATISTIC (learned_binaries,       2, percent, "%", clauses_total) \
+  STATISTIC (learned_clauses,        2, percent, "%", clauses_total) \
+  STATISTIC (learned_literals,       2, percent, "%", clauses_total) \
+  STATISTIC (learned_units,          2, percent, "%", clauses_total) \
   STATISTIC (lucky,                  1, percent, "%", lucky_tried) \
   STATISTIC (lucky_backward_one,     2, percent, "%", lucky_tried) \
   STATISTIC (lucky_backward_zero,    2, percent, "%", lucky_tried) \
@@ -200,7 +200,7 @@
   STATISTIC (restored_literals,      2, relative, "per", restored_clauses) \
   STATISTIC (reused,                 1, relative, "per", restart) \
   STATISTIC (reused_levels,          2, relative, "per", reused) \
-  STATISTIC (reused_stable,          2, relative, "%", reused) \
+  STATISTIC (reused_stable,          2, relative, "per", reused) \
   STATISTIC (scores_rescored,        2, percent, "%", conflicts) \
   STATISTIC (scores_shuffled,        2, relative, "per", rephased) \
   STATISTIC (searches,               0, NOTHING, 0, 0) \
@@ -210,10 +210,10 @@
   STATISTIC (stable_conflicts,       2, percent, "%", conflicts) \
   STATISTIC (stable_phases_current,  2, INTERVAL, "", interval) \
   STATISTIC (stable_phases_total,    1, INTERVAL, "", interval) \
-  STATISTIC (strengthened,           1, percent, "%", clause_added_total) \
+  STATISTIC (strengthened,           1, percent, "%", clauses_total) \
   STATISTIC (subsume_checks,         2, relative, "per", subsume_tried) \
   STATISTIC (subsume_checks_binary,  2, percent, "%", subsume_checks) \
-  STATISTIC (subsumed,               1, percent, "%", clause_added_total) \
+  STATISTIC (subsumed,               1, percent, "%", clauses_total) \
   STATISTIC (subsumed_irredundant,   2, percent, "%", subsumed) \
   STATISTIC (subsumed_redundant,     2, percent, "%", subsumed) \
   STATISTIC (subsume_phases,         2, relative, "per", subsume_rounds) \
@@ -271,10 +271,10 @@
   STATISTIC (up_cb_add,              1, percent, "%", up_cb) \
   STATISTIC (up_cb_check_model,      1, percent, "%", up_cb) \
   STATISTIC (up_cb_prop,             1, percent, "%", up_cb) \
-  STATISTIC (up_cb_prop_assign,      2, percent, "%", up_cb_prob) \
-  STATISTIC (up_cb_prop_clash,       2, percent, "%", up_cb_prob) \
-  STATISTIC (up_cb_prop_explain,     2, percent, "%", up_cb_prob) \
-  STATISTIC (up_learn,               1, percent, "%", clause_added_total) \
+  STATISTIC (up_cb_prop_assign,      2, percent, "%", up_cb_prop) \
+  STATISTIC (up_cb_prop_clash,       2, percent, "%", up_cb_prop) \
+  STATISTIC (up_cb_prop_explain,     2, percent, "%", up_cb_prop) \
+  STATISTIC (up_learn,               1, percent, "%", clauses_total) \
   STATISTIC (up_learn_conflict,      2, percent, "%", up_learn) \
   STATISTIC (up_learn_elevating,     2, percent, "%", up_learn) \
   STATISTIC (up_learn_empty,         2, percent, "%", up_learn) \
@@ -302,7 +302,7 @@
   STATISTIC (vars_reactivated,       2, percent, "%", vars) \
   STATISTIC (vars_unused,            2, percent, "%", vars) \
   STATISTIC (vivifications,          1, INTERVAL, "", interval) \
-  STATISTIC (vivified,               1, percent, "%", clause_added_total) \
+  STATISTIC (vivified,               1, percent, "%", clauses_total) \
   STATISTIC (vivified_irr,           2, percent, "%", vivified) \
   STATISTIC (vivified_tier1,         2, percent, "%", vivified) \
   STATISTIC (vivified_tier2,         2, percent, "%", vivified) \
@@ -323,21 +323,21 @@
   STATISTIC (vivify_subsumed,        2, percent, "%", subsumed) \
   STATISTIC (vivify_subsumed_irr,    2, percent, "%", vivify_subsumed) \
   STATISTIC (vivify_subsumed_red,    2, percent, "%", vivify_subsumed) \
-  STATISTIC (vivify_units,           2, relative, "per", propagations) \
+  STATISTIC (vivify_units,           2, percent, "%", vivify_checks) \
   STATISTIC (walk,                   1, INTERVAL, "", interval) \
-  STATISTIC (walk_broken,            2, relative, "per", propagations) \
-  STATISTIC (walk_flips,             2, relative, "per", propagations) \
-  STATISTIC (walk_improved,          2, relative, "per", propagations) \
-  STATISTIC (walk_sideways,          2, relative, "per", propagations) \
-  STATISTIC (walk_warmup,            2, relative, "per", propagations) \
-  STATISTIC (walk_warmup_conflicts,  2, relative, "per", propagations) \
-  STATISTIC (walk_warmup_decision,   2, relative, "per", propagations) \
-  STATISTIC (walk_warmup_dummy,      2, relative, "per", propagations) \
-  STATISTIC (walk_warmup_propagate,  2, relative, "per", propagations) \
-  STATISTIC (walk_weight_reducing,   2, relative, "per", propagations) \
-  STATISTIC (walk_weight_transfer,   2, relative, "per", propagations) \
-  STATISTIC (weakened,               1, relative, "per", propagations) \
-  STATISTIC (weakened_lengths,       2, relative, "per", propagations)
+  STATISTIC (walk_broken,            2, relative, "per", walk_flips) \
+  STATISTIC (walk_flips,             2, relative, "per", walk) \
+  STATISTIC (walk_flips_reducing,    2, percent, "%", walk_flips) \
+  STATISTIC (walk_flips_sideways,    2, percent, "%", walk_flips) \
+  STATISTIC (walk_flips_transfer,    2, percent, "%", walk_flips) \
+  STATISTIC (walk_improved,          2, relative, "per", walk) \
+  STATISTIC (walk_warmup,            2, percent, "%", walk) \
+  STATISTIC (walk_warmup_conflicts,  2, relative, "per", walk_warmup) \
+  STATISTIC (walk_warmup_decision,   2, relative, "per", walk_warmup) \
+  STATISTIC (walk_warmup_dummy,      2, relative, "per", walk_warmup) \
+  STATISTIC (walk_warmup_propagate,  2, relative, "per", walk_warmup) \
+  STATISTIC (weakened,               1, percent, "%", clauses_total) \
+  STATISTIC (weakened_lengths,       2, relative, "per", weakened)
 
 // clang-format on
 

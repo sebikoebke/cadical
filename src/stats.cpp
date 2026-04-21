@@ -68,7 +68,7 @@ void Stats::print_old (Internal *internal) {
   if (all || stats.blocked) {
     PRT ("blocked:         %15" PRId64
          "   %10.2f %%  of irredundant clauses",
-         stats.blocked, percent (stats.blocked, stats.clause_added_irr));
+         stats.blocked, percent (stats.blocked, stats.clauses_irredundant));
     PRT ("  blockings:     %15" PRId64 "   %10.2f    internal",
          stats.blockings, relative (stats.conflicts, stats.blockings));
     PRT ("  candidates:    %15" PRId64 "   %10.2f    per blocking ",
@@ -105,7 +105,7 @@ void Stats::print_old (Internal *internal) {
     PRT ("conditioned:     %15" PRId64
          "   %10.2f %%  of irredundant clauses",
          stats.conditioned,
-         percent (stats.conditionings, stats.clause_added_irr));
+         percent (stats.conditionings, stats.clauses_irredundant));
     PRT ("  conditionings: %15" PRId64 "   %10.2f    interval",
          stats.conditionings,
          relative (stats.conflicts, stats.conditionings));
@@ -180,7 +180,7 @@ void Stats::print_old (Internal *internal) {
     PRT ("covered:         %15" PRId64
          "   %10.2f %%  of irredundant clauses",
          stats.cover_total,
-         percent (stats.cover_total, stats.clause_added_irr));
+         percent (stats.cover_total, stats.clauses_irredundant));
     PRT ("  coverings:     %15" PRId64 "   %10.2f    interval",
          stats.coverings, relative (stats.conflicts, stats.coverings));
     PRT ("  asymmetric:    %15" PRId64 "   %10.2f %%  of covered clauses",
@@ -634,12 +634,12 @@ void Stats::print_old (Internal *internal) {
          relative (stats.sweep_clauses, stats.sweep_variables));
     PRT ("  completed:     %15" PRId64 "   %10.2f    sweeps to complete",
          stats.sweep_completed,
-         relative (stats.sweep, stats.sweep_completed));
+         relative (stats.sweepings, stats.sweep_completed));
   }
   if (all || stats.subsumed) {
     PRT ("subsumed:        %15" PRId64 "   %10.2f %%  of all clauses",
          stats.subsumed,
-         percent (stats.subsumed, stats.clause_added_total));
+         percent (stats.subsumed, stats.clauses_total));
     PRT ("  subsumephases: %15" PRId64 "   %10.2f    interval",
          stats.subsume_phases,
          relative (stats.conflicts, stats.subsume_phases));
@@ -683,7 +683,7 @@ void Stats::print_old (Internal *internal) {
   if (all || stats.strengthened) {
     PRT ("strengthened:    %15" PRId64 "   %10.2f %%  of all clauses",
          stats.strengthened,
-         percent (stats.strengthened, stats.clause_added_total));
+         percent (stats.strengthened, stats.clauses_total));
     PRT ("  elimotfstr:    %15" PRId64 "   %10.2f %%  of strengthened",
          stats.eliminate_otf_str,
          percent (stats.eliminate_otf_str, stats.strengthened));
@@ -765,7 +765,7 @@ void Stats::print_old (Internal *internal) {
   }
   if (all || vivified) {
     PRT ("vivified:        %15" PRId64 "   %10.2f %%  of all clauses",
-         vivified, percent (vivified, stats.clause_added_total));
+         vivified, percent (vivified, stats.clauses_total));
     PRT ("  vivifications: %15" PRId64 "   %10.2f    interval",
          stats.vivifications,
          relative (stats.conflicts, stats.vivifications));
@@ -863,20 +863,20 @@ void Stats::print_old (Internal *internal) {
     if (stats.walk_minimum < INT64_MAX)
       PRT ("  minimum:       %15" PRId64 "   %10.2f %%  clauses",
            stats.walk_minimum,
-           percent (stats.walk_minimum, stats.clause_added_irr));
+           percent (stats.walk_minimum, stats.clauses_irredundant));
     PRT ("  broken:        %15" PRId64 "   %10.2f    per flip",
          stats.walk_broken, relative (stats.walk_broken, stats.walk_flips));
     PRT ("  improved:      %15" PRId64 "   %10.2f    per walk",
          stats.walk_improved, relative (stats.walk_improved, stats.walk));
     PRT ("  wrv-flip:      %15" PRId64 "   %10.2f %% flip",
-         stats.walk_weight_reducing,
-         percent (stats.walk_weight_reducing, stats.walk_flips));
+         stats.walk_flips_reducing,
+         percent (stats.walk_flips_reducing, stats.walk_flips));
     PRT ("  side-flip:     %15" PRId64 "   %10.2f %% flip",
-         stats.walk_sideways,
-         percent (stats.walk_sideways, stats.walk_flips));
+         stats.walk_flips_sideways,
+         percent (stats.walk_flips_sideways, stats.walk_flips));
     PRT ("  wght-transfer: %15" PRId64 "   %10.2f %% flip",
-         stats.walk_weight_transfer,
-         percent (stats.walk_weight_transfer, stats.walk_flips));
+         stats.walk_flips_transfer,
+         percent (stats.walk_flips_transfer, stats.walk_flips));
   }
   if (all || stats.weakened) {
     PRT ("weakened:        %15" PRId64 "   %10.2f    average size",
