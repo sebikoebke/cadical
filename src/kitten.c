@@ -14,20 +14,12 @@
 
 typedef signed char value;
 
-static void die (const char *fmt, ...) {
-  fputs ("kitten: error: ", stderr);
-  va_list ap;
-  va_start (ap, fmt);
-  vfprintf (stderr, fmt, ap);
-  va_end (ap);
-  fputc ('\n', stderr);
-  exit (1);
-}
+void kitten_error (const char *fmt, ...);
 
 static inline void *kitten_calloc (size_t n, size_t size) {
   void *res = calloc (n, size);
   if (n && size && !res)
-    die ("out of memory allocating '%zu * %zu' bytes", n, size);
+    kitten_error ("out of memory allocating '%zu * %zu' bytes", n, size);
   return res;
 }
 
@@ -48,7 +40,7 @@ static inline void *kitten_calloc (size_t n, size_t size) {
     const size_t BYTES = NEW_CAPACITY * sizeof *(S).begin; \
     (S).begin = realloc ((S).begin, BYTES); \
     if (!(S).begin) \
-      die ("out of memory reallocating '%zu' bytes", BYTES); \
+      kitten_error ("out of memory reallocating '%zu' bytes", BYTES); \
     (S).allocated = (S).begin + NEW_CAPACITY; \
     (S).end = (S).begin + SIZE; \
   } while (0)
@@ -801,7 +793,7 @@ static inline void connect_new_klause (kitten *kitten, unsigned ref) {
 static unsigned new_reference (kitten *kitten) {
   size_t ref = SIZE_STACK (kitten->klauses);
   if (ref >= INVALID) {
-    die ("maximum number of literals exhausted");
+    kitten_error ("maximum number of literals exhausted");
   }
   const unsigned res = (unsigned) ref;
   assert (res != INVALID);

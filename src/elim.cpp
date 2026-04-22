@@ -1076,6 +1076,7 @@ void Internal::elim (bool update_limits) {
   bool round_complete = false;
 
   try {
+
     while (!unsat && !phase_complete && !terminated_asynchronously ()) {
 #ifndef QUIET
       int eliminated =
