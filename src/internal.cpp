@@ -146,8 +146,6 @@ void Internal::enlarge (int new_max_var) {
   enlarge_zero (stab, new_vsize);
   enlarge_init (ptab, 2 * new_vsize, -1);
   enlarge_only (ftab, new_vsize);
-  enlarge_vals (new_vsize);
-  vsize = new_vsize;
   if (external)
     enlarge_zero (relevanttab, new_vsize);
   const signed char val = opts.phase ? 1 : -1;
@@ -157,6 +155,9 @@ void Internal::enlarge (int new_max_var) {
   enlarge_zero (phases.best, new_vsize);
   enlarge_zero (phases.prev, new_vsize);
   enlarge_zero (marks, new_vsize);
+  // keep this last to avoid memory issues on deallocation.
+  enlarge_vals (new_vsize);
+  vsize = new_vsize;
 }
 
 // This function enlarges enough to do backtracking (without updating the
@@ -171,33 +172,33 @@ void Internal::enlarge (int new_max_var) {
 void Internal::reserve_vars (int new_min_vsize) {
   if ((size_t) new_min_vsize < vsize)
     return;
-#ifdef LOGGING
-  int new_vars = new_min_vsize - max_var;
-#endif
   size_t new_vsize = vsize ? 2 * vsize : 1 + (size_t) max_var;
   while (new_vsize <= (size_t) new_min_vsize)
     new_vsize *= 2;
+
+  LOG ("reserving %d new internal variables, reserved so far: %d",
+       (int) new_vsize - max_var, max_var);
+
   if (lrat || frat)
     enlarge_zero (unit_clause_idx, 2 * new_vsize);
-  enlarge_only (ftab, new_vsize);
-  enlarge_zero (marks, new_vsize);
-  enlarge_vals (new_vsize);
-  enlarge_only (vtab, new_vsize);
-  enlarge_only (phases.saved, new_vsize);
-  enlarge_zero (stab, new_vsize);
-  enlarge_zero (btab, new_vsize);
-  if (external)
-    enlarge_zero (relevanttab, new_vsize);
+  // keep this before enlarge_vals
   if (!vsize || watching ()) {
-    LOG ("enlarging wtab");
     enlarge_only (wtab, 2 * new_vsize);
   }
   if (!otab.empty ())
     enlarge_init (otab, 2 * new_vsize, Occs ());
   if (!ntab.empty ())
     enlarge_zero (ntab, 2 * new_vsize);
-  LOG ("reserving %d new internal variables, reserved so far: %d", new_vars,
-       max_var);
+  enlarge_only (vtab, new_vsize);
+  enlarge_zero (btab, new_vsize);
+  enlarge_zero (stab, new_vsize);
+  enlarge_only (ftab, new_vsize);
+  if (external)
+    enlarge_zero (relevanttab, new_vsize);
+  enlarge_only (phases.saved, new_vsize);
+  enlarge_zero (marks, new_vsize);
+  // keep this last to avoid memory issues on deallocation.
+  enlarge_vals (new_vsize);
   vsize = new_vsize;
 }
 
