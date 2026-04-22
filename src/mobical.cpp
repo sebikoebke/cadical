@@ -2366,17 +2366,27 @@ public:
   void print (ostream &o) {
     for (size_t i = 0; i < calls.size (); i++) {
 #ifdef MOBICAL_MEMORY
+      for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
+        if (mobical.shared->leak_alloc.call_index[index] == i + 1) {
+          o << "# "
+               "V--------------------------------------------------------"
+               "--"
+               "------------ leak alloc: leaked allocation"
+            << endl;
+          break;
+        }
+      }
       if (mobical.shared->bad_alloc.alloc_call_index == i + 1)
         o << "# "
              "V----------------------------------------------------------"
              "--"
-             "---------- bad alloc: allocation"
+             "---------- bad alloc: failed allocation"
           << endl;
       if (mobical.shared->bad_alloc.signal_call_index == i + 1)
         o << "# "
              "V----------------------------------------------------------"
              "--"
-             "---------- bad alloc: crashed"
+             "---------- bad alloc: crashed / assertion"
           << endl;
       if (mobical.shared->bad_alloc.debug_filter_index == i + 1)
         o << "# "
@@ -2384,16 +2394,6 @@ public:
              "--"
              "---------- debug: call was filtered"
           << endl;
-      for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
-        if (mobical.shared->leak_alloc.call_index[index] == i + 1) {
-          o << "# "
-               "V--------------------------------------------------------"
-               "--"
-               "------------ leak alloc: allocation"
-            << endl;
-          break;
-        }
-      }
 #endif
       o << i << ' ';
       calls[i]->print (o);
@@ -2411,7 +2411,7 @@ public:
     }
     if (mobical.shared->bad_alloc.signal_call_index > 0) {
       o << "# ---------------------------------------------------" << endl;
-      o << "# A crash happened here:" << endl;
+      o << "# A crash / assertion happened here:" << endl;
       assert (mobical.shared->bad_alloc.signal_stack_size <=
               MOBICAL_MEMORY_STACK_COUNT);
       print_trace (mobical.shared->bad_alloc.signal_stack_array,
@@ -2482,6 +2482,8 @@ public:
           memory_leak_next_free = 0;
           continue;
         } else if (c->type == Call::RESET) {
+          // Set the flag before the reset call such that memory leaks
+          // are found when the reset call leaks memory.
           deallocated = true;
         }
 #endif
@@ -2533,24 +2535,43 @@ public:
         }
       } catch (const std::bad_alloc &e) {
         // Ignore out-of-memory errors and assume solver state is
-        // consistent.
+        // consistent. Only reset calls (destruction of the solver)
+        // are allowed after a bad allocation caused by the bad_alloc call
+        // or by CaDiCaL running out of memory due to process limitations.
         mobical.shared->oom++;
+#ifdef MOBICAL_MEMORY
+        if (!memory_bad_failed) {
+          memory_bad_failed = 1;
+          mobical.shared->bad_alloc.alloc_call_index = memory_call_index;
+          mobical.shared->bad_alloc.alloc_stack_size = 0;
+        }
+#endif
       }
     }
 #ifdef MOBICAL_MEMORY
+    // Delete the mock pointer to ignore these memory leaks
+    // in case the reset call failed due to a bad memory allocation.
     if (deallocated && mobical.mock_pointer) {
       delete mobical.mock_pointer;
       mobical.mock_pointer = nullptr;
     }
     hooks_uninstall ();
-    // Note: Do not force-deallocate here as otherwise the shrink
-    // procedure will remove the RESET call.
+    // Note: Do not force-deallocate the solver here as otherwise
+    // the shrink procedure will remove the RESET call.
     if (deallocated) {
       for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
         if (mobical.shared->leak_alloc.alloc_ptr[index] != nullptr) {
           reset_child_signal_handlers ();
           raise (SIGUSR2);
         }
+      }
+    } else {
+      // If reset was not called before reaching here (deallocated is not set)
+      // the leaks are false positives. In this case clear all the leaks.
+      // Otherwise, the user will get leaked memory warnings even though
+      // the memory is not freed since no reset call is present.
+      for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
+        mobical.shared->leak_alloc.alloc_ptr[index] = nullptr;
       }
     }
 #endif
