@@ -1054,16 +1054,17 @@ void Internal::elim (bool update_limits) {
 
   init_citten ();
 
-  // Alternate one round of bounded variable elimination ('elim_round') and
-  // subsumption ('subsume_round'), blocked ('block') and covered clause
-  // elimination ('cover') until nothing changes, or the round limit is hit.
-  // The loop also aborts early if no variable could be eliminated, the
-  // empty clause is resolved, it is asynchronously terminated or a
-  // resolution limit is hit.
+  // Alternate one round of bounded variable elimination ('elim_round')
+  // and subsumption ('subsume_round'), blocked ('block') and covered
+  // clause elimination ('cover') until nothing changes, or the round
+  // limit is hit. The loop also aborts early if no variable could be
+  // eliminated, the empty clause is resolved, it is asynchronously
+  // terminated or a resolution limit is hit.
 
   // This variable determines whether the whole loop of this bounded
   // variable elimination phase ('elim') ran until completion.  This
-  // potentially triggers an incremental increase of the elimination bound.
+  // potentially triggers an incremental increase of the elimination
+  // bound.
   //
   bool phase_complete = false, deleted_binary_clause = false;
 
@@ -1073,63 +1074,71 @@ void Internal::elim (bool update_limits) {
 #endif
 
   bool round_complete = false;
-  while (!unsat && !phase_complete && !terminated_asynchronously ()) {
+
+  try {
+    while (!unsat && !phase_complete && !terminated_asynchronously ()) {
 #ifndef QUIET
-    int eliminated =
+      int eliminated =
 #endif
-        elim_round (round_complete, deleted_binary_clause);
+          elim_round (round_complete, deleted_binary_clause);
 
-    if (!round_complete) {
+      if (!round_complete) {
+        PHASE ("elim-phase", stats.eliminate_phases,
+               "last round %d incomplete %s", round,
+               eliminated ? "but successful" : "and unsuccessful");
+        assert (!phase_complete);
+        break;
+      }
+
+      if (round++ >= opts.elimrounds) {
+        PHASE ("elim-phase", stats.eliminate_phases,
+               "round limit %d hit (%s)", round - 1,
+               eliminated ? "though last round successful"
+                          : "last round unsuccessful anyhow");
+        assert (!phase_complete);
+        break;
+      }
+
+      // Prioritize 'subsumption' over blocked and covered clause
+      // elimination.
+
+      if (subsume_round ())
+        continue;
+      if (block ())
+        continue;
+      if (cover ())
+        continue;
+
+      // Was not able to generate new variable elimination candidates after
+      // variable elimination round, neither through subsumption, nor
+      // blocked, nor covered clause elimination.
+      //
       PHASE ("elim-phase", stats.eliminate_phases,
-             "last round %d incomplete %s", round,
-             eliminated ? "but successful" : "and unsuccessful");
-      assert (!phase_complete);
-      break;
+             "no new variable elimination candidates");
+
+      assert (round_complete);
+      phase_complete = true;
     }
 
-    if (round++ >= opts.elimrounds) {
+    if (phase_complete) {
+      stats.eliminate_complete++;
       PHASE ("elim-phase", stats.eliminate_phases,
-             "round limit %d hit (%s)", round - 1,
-             eliminated ? "though last round successful"
-                        : "last round unsuccessful anyhow");
-      assert (!phase_complete);
-      break;
+             "fully completed elimination %" PRId64
+             " at elimination bound %" PRId64 "",
+             stats.eliminate_complete, lim.elimbound);
+    } else {
+      PHASE ("elim-phase", stats.eliminate_phases,
+             "incomplete elimination %" PRId64
+             " at elimination bound %" PRId64 "",
+             stats.eliminate_complete + 1, lim.elimbound);
     }
 
-    // Prioritize 'subsumption' over blocked and covered clause elimination.
-
-    if (subsume_round ())
-      continue;
-    if (block ())
-      continue;
-    if (cover ())
-      continue;
-
-    // Was not able to generate new variable elimination candidates after
-    // variable elimination round, neither through subsumption, nor blocked,
-    // nor covered clause elimination.
-    //
-    PHASE ("elim-phase", stats.eliminate_phases,
-           "no new variable elimination candidates");
-
-    assert (round_complete);
-    phase_complete = true;
+    reset_citten ();
+  } catch (std::bad_alloc &exception) {
+    reset_citten ();
+    throw exception;
   }
 
-  if (phase_complete) {
-    stats.eliminate_complete++;
-    PHASE ("elim-phase", stats.eliminate_phases,
-           "fully completed elimination %" PRId64
-           " at elimination bound %" PRId64 "",
-           stats.eliminate_complete, lim.elimbound);
-  } else {
-    PHASE ("elim-phase", stats.eliminate_phases,
-           "incomplete elimination %" PRId64
-           " at elimination bound %" PRId64 "",
-           stats.eliminate_complete + 1, lim.elimbound);
-  }
-
-  reset_citten ();
   if (deleted_binary_clause)
     delete_garbage_clauses ();
   init_watches ();
