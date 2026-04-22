@@ -566,7 +566,7 @@ struct CompactBinary {
 struct Closure {
 
   Closure (Internal *i);
-  ~Closure () { Gate::delete_gate (dummy_search_gate); }
+  ~Closure ();
   Gate *dummy_search_gate = nullptr;
   int dummy_search_gate_capacity = 0;
 

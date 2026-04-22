@@ -22,6 +22,11 @@ Closure::Closure (Internal *i)
   dummy_search_gate->garbage = false;
 }
 
+Closure::~Closure() {
+  Gate::delete_gate (dummy_search_gate);
+  reset_closure ();
+}
+
 char &Closure::lazy_propagated (int lit) {
   return lazy_propagated_idx[internal->vidx (lit)];
 }
@@ -664,11 +669,8 @@ int Closure::find_eager_representative_and_compress (int lit) {
     eager_representative (lit) = res;
     Clause *equiv = add_tmp_binary_clause (-lit, res);
     equiv->hyper = true;
-
-    if (internal->lrat && equiv) {
-      eager_representative_id (lit) = equiv->id;
-    }
     if (internal->lrat) {
+      eager_representative_id (lit) = equiv->id;
       lrat_chain = std::move (tmp_lrat_chain);
     }
   } else if (path_length == 2) {
@@ -7848,48 +7850,49 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   //  connect_binary_watches ();
 
   START_SIMPLIFIER (congruence, CONGRUENCE);
-  Closure closure (this);
+  Closure* closure = new Closure (this);
+  DeferDeletePtr<Closure> delete_closure(closure);
 
-  closure.init_closure ();
-  assert (unsat || closure.chain.empty ());
+  closure->init_closure ();
+  assert (unsat || closure->chain.empty ());
   assert (unsat || lrat_chain.empty ());
   const int64_t inital_old_merged =
       stats.congruent; // the binary stuff is covered by other techniques
-  closure.extract_binaries ();
+  closure->extract_binaries ();
   const int64_t old_merged =
       stats.congruent; // the binary stuff is covered by other techniques
-  assert (unsat || closure.chain.empty ());
+  assert (unsat || closure->chain.empty ());
   assert (unsat || lrat_chain.empty ());
-  closure.extract_gates ();
-  assert (unsat || closure.chain.empty ());
+  closure->extract_gates ();
+  assert (unsat || closure->chain.empty ());
   assert (unsat || lrat_chain.empty ());
-  closure.reset_extraction ();
+  closure->reset_extraction ();
 
   if (!unsat) {
-    closure.find_units ();
-    assert (unsat || closure.chain.empty ());
+    closure->find_units ();
+    assert (unsat || closure->chain.empty ());
     assert (unsat || lrat_chain.empty ());
     if (!internal->unsat) {
-      closure.find_equivalences ();
-      assert (unsat || closure.chain.empty ());
+      closure->find_equivalences ();
+      assert (unsat || closure->chain.empty ());
       assert (unsat || lrat_chain.empty ());
 
       if (!unsat) {
-        const int propagated = closure.propagate_units_and_equivalences ();
-        assert (unsat || closure.chain.empty ());
+        const int propagated = closure->propagate_units_and_equivalences ();
+        assert (unsat || closure->chain.empty ());
         if (!unsat && propagated)
-          closure.forward_subsume_matching_clauses ();
+          closure->forward_subsume_matching_clauses ();
       }
     }
   }
+  assert (closure->new_unwatched_binary_clauses.empty ());
+  delete_closure.free();
 
-  closure.reset_closure ();
   internal->clear_watches ();
   internal->connect_watches ();
   if (!internal->unsat) {
     propagated2 = propagated = 0;
   }
-  assert (closure.new_unwatched_binary_clauses.empty ());
   internal->reset_occs ();
   internal->reset_noccs ();
   assert (!internal->occurring ());
