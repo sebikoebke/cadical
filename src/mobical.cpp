@@ -3930,6 +3930,14 @@ int Trace::fork_and_execute () {
 
     executed++;
 
+    // disable core dumps for faster delta-debugging.
+#ifndef _WIN32
+    rlimit64 limit;
+    limit.rlim_cur = 0;
+    limit.rlim_max = 0;
+    setrlimit64 (RLIMIT_CORE, &limit);
+#endif
+
     int status, other = wait (&status);
     if (other != child)
       res = 0;
