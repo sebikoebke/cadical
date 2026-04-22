@@ -4326,10 +4326,11 @@ void Trace::add_options (int expected) {
   for (; i < size (); i++) {
     c = calls[i];
 #ifdef MOBICAL_MEMORY
-    if (!(c->type == Call::INIT || c->type == Call::MAXALLOC)) {
+    if (!(c->type == Call::INIT || c->type == Call::MAXALLOC))
 #else
-    if (!(c->type == Call::INIT)) {
+    if (!(c->type == Call::INIT))
 #endif
+    {
       continue;
     }
     extended.push_back (c->copy ());
