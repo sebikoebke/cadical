@@ -41,7 +41,9 @@ bool parse_int_str (const char *str, int &);
 
 /*------------------------------------------------------------------------*/
 
-inline bool is_power_of_two (size_t n) { return n > 0 && n && !(n & (n - 1)); }
+inline bool is_power_of_two (size_t n) {
+  return n > 0 && n && !(n & (n - 1));
+}
 
 inline bool contained (int64_t c, int64_t l, int64_t u) {
   return l <= c && c <= u;
@@ -132,7 +134,8 @@ template <class T> static void reserve_at_least (vector<T> &v, size_t N) {
 }
 
 template <class K, class E>
-static K find_or_default (const std::unordered_map<K, E> &map, K key, E default_el) {
+static K find_or_default (const std::unordered_map<K, E> &map, K key,
+                          E default_el) {
   auto it = map.find (key);
   if (it == map.end ())
     return default_el;

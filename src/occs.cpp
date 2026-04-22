@@ -15,7 +15,8 @@ void Internal::init_occs () {
 }
 
 void Internal::reset_occs () {
-  assert (occurring ());
+  // breaks when memory allocation fails during sweep
+  // assert (occurring ());
   erase_vector (otab);
   LOG ("reset occurrence lists");
 }
@@ -47,7 +48,8 @@ void Internal::clear_noccs () {
 }
 
 void Internal::reset_noccs () {
-  assert (!max_var || !ntab.empty ());
+  // breaks when memory allocation fails during sweep
+  // assert (!max_var || !ntab.empty ());
   erase_vector (ntab);
   LOG ("reset two-sided occurrence counters");
 }

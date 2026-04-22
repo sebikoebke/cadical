@@ -1,18 +1,14 @@
 #include "internal.hpp"
+#include "util.hpp"
 
 namespace CaDiCaL {
 
 Sweeper::Sweeper (Internal *i)
-    : internal (i), random (internal->opts.seed) {
+    : internal (i), random (internal->opts.seed), reprs (0) {
   random += internal->stats.sweepings; // different seed every time
-  internal->init_sweeper (*this);
 }
 
-Sweeper::~Sweeper () {
-  // this is already called actively
-  // internal->release_sweeper (this);
-  return;
-}
+Sweeper::~Sweeper () { internal->release_sweeper (*this); }
 
 #define INVALID64 INT64_MAX
 #define INVALID UINT_MAX
@@ -223,10 +219,8 @@ void Internal::init_sweeper (Sweeper &sweeper) {
     sweeper.reprs[lit] = lit;
   sweeper.first = sweeper.last = sweeper.save = 0;
   sweeper.limit.ticks = 0;
-  sweeper.current_ticks =
-      2 *
-      clauses
-          .size (); // initialize with the cost of building full occ list.
+  // initialize with the cost of building full occ list.
+  sweeper.current_ticks = 2 * clauses.size ();
   sweeper.current_ticks +=
       2 + 2 * cache_lines (clauses.size (), sizeof (Clause *));
   assert (!citten);
@@ -273,9 +267,10 @@ void Internal::init_sweeper (Sweeper &sweeper) {
 }
 
 void Internal::release_sweeper (Sweeper &sweeper) {
-
-  sweeper.reprs -= max_var;
-  delete[] sweeper.reprs;
+  if (sweeper.reprs) {
+    sweeper.reprs -= max_var;
+    delete[] sweeper.reprs;
+  }
 
   erase_vector (sweeper.depths);
   erase_vector (sweeper.prev);
@@ -1901,29 +1896,31 @@ bool Internal::sweep () {
   stats.sweepings++;
   uint64_t equivalences = stats.sweep_eq;
   uint64_t units = stats.sweep_units;
-  Sweeper sweeper = Sweeper (this);
+  Sweeper *sweeper = new Sweeper (this);
+  DeferDeletePtr<Sweeper> delete_sweeper (sweeper);
+  init_sweeper (*sweeper);
   if (opts.sweepcomplete)
-    sweeper.limit.ticks = INT64_MAX;
+    sweeper->limit.ticks = INT64_MAX;
   else
-    sweeper.limit.ticks = tickslimit - stats.ticks_sweep;
-  sweep_set_kitten_ticks_limit (sweeper);
-  const unsigned scheduled = schedule_sweeping (sweeper);
+    sweeper->limit.ticks = tickslimit - stats.ticks_sweep;
+  sweep_set_kitten_ticks_limit (*sweeper);
+  const unsigned scheduled = schedule_sweeping (*sweeper);
   uint64_t swept = 0, limit = 10;
   for (;;) {
     if (unsat)
       break;
     if (terminated_asynchronously ())
       break;
-    if (kitten_ticks_limit_hit (sweeper, "sweeping loop"))
+    if (kitten_ticks_limit_hit (*sweeper, "sweeping loop"))
       break;
-    int idx = next_scheduled (sweeper);
+    int idx = next_scheduled (*sweeper);
     if (idx == 0)
       break;
     flags (idx).sweep = false;
 #ifndef QUIET
     const char *res =
 #endif
-        sweep_variable (sweeper, idx);
+        sweep_variable (*sweeper, idx);
     VERBOSE (4, "swept[%" PRIu64 "] external variable %d %s", swept,
              externalize (idx), res);
     if (++swept == limit) {
@@ -1941,8 +1938,8 @@ bool Internal::sweep () {
   PHASE ("sweep", stats.sweepings,
          "found %" PRIu64 " equivalences and %" PRIu64 " units",
          equivalences, units);
-  unschedule_sweeping (sweeper, swept, scheduled);
-  release_sweeper (sweeper);
+  unschedule_sweeping (*sweeper, swept, scheduled);
+  delete_sweeper.free ();
 
   if (!unsat) {
     propagated = 0;
