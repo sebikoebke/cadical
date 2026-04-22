@@ -1694,7 +1694,7 @@ struct InitCall : public Call {
       throw exception;
     }
   }
-  void print (ostream &o) { o << "init" << endl; }
+  void print (ostream &o) { o << "init"; }
   Call *copy () { return new InitCall (); }
   const char *keyword () { return "init"; }
 };
@@ -1706,7 +1706,7 @@ struct MaxAllocCall : public Call {
     (void) s;
     (void) extendmap;
   }
-  void print (ostream &o) { o << "max_alloc " << val << endl; }
+  void print (ostream &o) { o << "max_alloc " << val; }
   Call *copy () { return new MaxAllocCall (val); }
   const char *keyword () { return "max_alloc"; }
 };
@@ -1716,7 +1716,7 @@ struct LeakAllocCall : public Call {
     (void) s;
     (void) extendmap;
   }
-  void print (ostream &o) { o << "leak_alloc" << endl; }
+  void print (ostream &o) { o << "leak_alloc"; }
   Call *copy () { return new LeakAllocCall (); }
   const char *keyword () { return "leak_alloc"; }
 };
@@ -1728,7 +1728,7 @@ struct VarsCall : public Call {
     res = s->vars ();
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "vars" << endl; }
+  void print (ostream &o) { o << "vars"; }
   Call *copy () { return new VarsCall (); }
   const char *keyword () { return "vars"; }
 };
@@ -1739,7 +1739,7 @@ struct ActiveCall : public Call {
     res = s->active ();
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "active" << endl; }
+  void print (ostream &o) { o << "active"; }
   Call *copy () { return new ActiveCall (); }
   const char *keyword () { return "active"; }
 };
@@ -1750,7 +1750,7 @@ struct RedundantCall : public Call {
     res = s->redundant ();
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "redundant" << endl; }
+  void print (ostream &o) { o << "redundant"; }
   Call *copy () { return new RedundantCall (); }
   const char *keyword () { return "redundant"; }
 };
@@ -1761,7 +1761,7 @@ struct IrredundantCall : public Call {
     res = s->irredundant ();
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "irredundant" << endl; }
+  void print (ostream &o) { o << "irredundant"; }
   Call *copy () { return new IrredundantCall (); }
   const char *keyword () { return "irredundant"; }
 };
@@ -1778,7 +1778,7 @@ struct ResizeCall : public Call {
     assert (!has_effect || extendmap->map.back () == s->vars ());
 #endif
   }
-  void print (ostream &o) { o << "resize " << arg << endl; }
+  void print (ostream &o) { o << "resize " << arg; }
   Call *copy () { return new ResizeCall (arg); }
   const char *keyword () { return "resize"; }
 };
@@ -1798,7 +1798,7 @@ struct DeclareMoreVariablesCall : public Call {
     assert (!arg || i == s->vars ());
     assert (!arg || extendmap->map.back () == i);
   }
-  void print (ostream &o) { o << "declare_more_variables " << arg << endl; }
+  void print (ostream &o) { o << "declare_more_variables " << arg; }
   Call *copy () { return new DeclareMoreVariablesCall (arg); }
   const char *keyword () { return "declare_more_variables"; }
 };
@@ -1814,7 +1814,7 @@ struct DeclareOneMoreVariableCall : public Call {
     assert (i == s->vars ());
     assert (extendmap->map.back () == i);
   }
-  void print (ostream &o) { o << "declare_one_more_variable" << endl; }
+  void print (ostream &o) { o << "declare_one_more_variable"; }
   Call *copy () { return new DeclareOneMoreVariableCall (); }
   const char *keyword () { return "declare_one_more_variable"; }
 };
@@ -1825,7 +1825,7 @@ struct PhaseCall : public Call {
     fflush (stdout);
     s->phase (map_arg (s, extendmap));
   }
-  void print (ostream &o) { o << "phase " << arg << endl; }
+  void print (ostream &o) { o << "phase " << arg; }
   Call *copy () { return new PhaseCall (arg); }
   const char *keyword () { return "phase"; }
 };
@@ -1837,7 +1837,7 @@ struct SetCall : public Call {
     if (!strcmp (name, "factorcheck"))
       extendmap->factor_check = val;
   }
-  void print (ostream &o) { o << "set " << name << ' ' << val << endl; }
+  void print (ostream &o) { o << "set " << name << ' ' << val; }
   Call *copy () { return new SetCall (name, val); }
   const char *keyword () { return "set"; }
 };
@@ -1848,7 +1848,7 @@ struct ConfigureCall : public Call {
     s->configure (name);
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "configure " << name << endl; }
+  void print (ostream &o) { o << "configure " << name; }
   Call *copy () { return new ConfigureCall (name); }
   const char *keyword () { return "configure"; }
 };
@@ -1859,7 +1859,7 @@ struct LimitCall : public Call {
     s->limit (name, val);
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "limit " << name << ' ' << val << endl; }
+  void print (ostream &o) { o << "limit " << name << ' ' << val; }
   Call *copy () { return new LimitCall (name, val); }
   const char *keyword () { return "limit"; }
 };
@@ -1870,7 +1870,7 @@ struct OptimizeCall : public Call {
     s->optimize (val);
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "optimize " << val << endl; }
+  void print (ostream &o) { o << "optimize " << val; }
   Call *copy () { return new OptimizeCall (val); }
   const char *keyword () { return "optimize"; }
 };
@@ -1887,7 +1887,7 @@ struct ResetCall : public Call {
       mobical.mock_pointer = 0;
     }
   }
-  void print (ostream &o) { o << "reset" << endl; }
+  void print (ostream &o) { o << "reset"; }
   Call *copy () { return new ResetCall (); }
   const char *keyword () { return "reset"; }
 };
@@ -1898,7 +1898,7 @@ struct AddCall : public Call {
     fflush (stdout);
     s->add (map_arg (s, extendmap));
   }
-  void print (ostream &o) { o << "add " << arg << endl; }
+  void print (ostream &o) { o << "add " << arg; }
   Call *copy () { return new AddCall (arg); }
   const char *keyword () { return "add"; }
 };
@@ -1908,7 +1908,7 @@ struct ConstrainCall : public Call {
   void execute (Solver *&s, ExtendMap *&extendmap) {
     s->constrain (map_arg (s, extendmap));
   }
-  void print (ostream &o) { o << "constrain " << arg << endl; }
+  void print (ostream &o) { o << "constrain " << arg; }
   Call *copy () { return new ConstrainCall (arg); }
   const char *keyword () { return "constrain"; }
 };
@@ -1943,7 +1943,7 @@ struct ConnectCall : public Call {
       mobical.mock_pointer->collect_prev_fixed ();
     }
   }
-  void print (ostream &o) { o << "connect mock-propagator" << endl; }
+  void print (ostream &o) { o << "connect mock-propagator"; }
   Call *copy () { return new ConnectCall (); }
   const char *keyword () { return "connect"; }
 };
@@ -1958,7 +1958,7 @@ struct ObserveCall : public Call {
     }
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "observe " << arg << endl; }
+  void print (ostream &o) { o << "observe " << arg; }
   Call *copy () { return new ObserveCall (arg); }
   const char *keyword () { return "observe"; }
 };
@@ -1975,7 +1975,7 @@ struct LemmaCall : public Call {
       mp->push_lemma_lit (map_arg (s, extendmap));
     }
   }
-  void print (ostream &o) { o << "lemma " << arg << endl; }
+  void print (ostream &o) { o << "lemma " << arg; }
   Call *copy () { return new LemmaCall (arg); }
   const char *keyword () { return "lemma"; }
 };
@@ -1996,7 +1996,7 @@ struct DisconnectCall : public Call {
     assert (!s->external->propagator);
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "disconnect mock-propagator" << endl; }
+  void print (ostream &o) { o << "disconnect mock-propagator"; }
   Call *copy () { return new DisconnectCall (); }
   const char *keyword () { return "disconnect"; }
 };
@@ -2006,7 +2006,7 @@ struct AssumeCall : public Call {
   void execute (Solver *&s, ExtendMap *&extendmap) {
     s->assume (map_arg (s, extendmap));
   }
-  void print (ostream &o) { o << "assume " << arg << endl; }
+  void print (ostream &o) { o << "assume " << arg; }
   Call *copy () { return new AssumeCall (arg); }
   const char *keyword () { return "assume"; }
 };
@@ -2017,7 +2017,7 @@ struct SolveCall : public Call {
     res = s->solve ();
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "solve " << res << endl; }
+  void print (ostream &o) { o << "solve " << res; }
   Call *copy () { return new SolveCall (res); }
   const char *keyword () { return "solve"; }
 };
@@ -2028,7 +2028,7 @@ struct SimplifyCall : public Call {
     res = s->simplify (arg);
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "simplify " << arg << " " << res << endl; }
+  void print (ostream &o) { o << "simplify " << arg << " " << res; }
   Call *copy () { return new SimplifyCall (arg, res); }
   const char *keyword () { return "simplify"; }
 };
@@ -2041,7 +2041,7 @@ struct PropagateAssumptionsCall : public Call {
     (void) (extendmap);
   }
   void print (ostream &o) {
-    o << "propagate_assumptions " << arg << " " << res << endl;
+    o << "propagate_assumptions " << arg << " " << res;
   }
   Call *copy () { return new PropagateAssumptionsCall (arg); }
   const char *keyword () { return "propagate_assumptions"; }
@@ -2056,7 +2056,7 @@ struct ImpliedCall : public Call {
       s->implied (entrailed);
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "implied" << endl; }
+  void print (ostream &o) { o << "implied"; }
   Call *copy () { return new ImpliedCall (arg); }
   const char *keyword () { return "implied"; }
 };
@@ -2067,7 +2067,7 @@ struct ResetAssumptionsCall : public Call {
     s->reset_assumptions ();
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "reset_assumptions" << endl; }
+  void print (ostream &o) { o << "reset_assumptions"; }
   Call *copy () { return new ResetAssumptionsCall (arg); }
   const char *keyword () { return "reset_assumptions"; }
 };
@@ -2078,7 +2078,7 @@ struct LookaheadCall : public Call {
     res = s->lookahead ();
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "lookahead " << res << endl; }
+  void print (ostream &o) { o << "lookahead " << res; }
   Call *copy () { return new LookaheadCall (res); }
   const char *keyword () { return "lookahead"; }
 };
@@ -2089,7 +2089,7 @@ struct CubingCall : public Call {
     (void) s->generate_cubes (arg);
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "cubing " << res << endl; }
+  void print (ostream &o) { o << "cubing " << res; }
   Call *copy () { return new CubingCall (res); }
   const char *keyword () { return "cubing"; }
 };
@@ -2104,7 +2104,7 @@ struct PropagateCall : public Call {
       s->implied (implicants);
     }
   }
-  void print (ostream &o) { o << "propagate " << res << endl; }
+  void print (ostream &o) { o << "propagate " << res; }
   Call *copy () { return new PropagateCall (res); }
   const char *keyword () { return "propagate"; }
 };
@@ -2119,7 +2119,7 @@ struct ValCall : public Call {
     else
       res = 0;
   }
-  void print (ostream &o) { o << "val " << arg << ' ' << res << endl; }
+  void print (ostream &o) { o << "val " << arg << ' ' << res; }
   Call *copy () { return new ValCall (arg, res); }
   const char *keyword () { return "val"; }
 };
@@ -2134,7 +2134,7 @@ struct FlipCall : public Call {
     else
       res = 0;
   }
-  void print (ostream &o) { o << "flip " << arg << ' ' << res << endl; }
+  void print (ostream &o) { o << "flip " << arg << ' ' << res; }
   Call *copy () { return new FlipCall (arg, res); }
   const char *keyword () { return "flip"; }
 };
@@ -2150,7 +2150,7 @@ struct FlippableCall : public Call {
       res = 0;
   }
   void print (ostream &o) {
-    o << "flippable " << arg << ' ' << res << endl;
+    o << "flippable " << arg << ' ' << res;
   }
   Call *copy () { return new FlipCall (arg, res); }
   const char *keyword () { return "flippable"; }
@@ -2161,7 +2161,7 @@ struct FixedCall : public Call {
   void execute (Solver *&s, ExtendMap *&extendmap) {
     res = s->fixed (map_arg (s, extendmap, false));
   }
-  void print (ostream &o) { o << "fixed " << arg << ' ' << res << endl; }
+  void print (ostream &o) { o << "fixed " << arg << ' ' << res; }
   Call *copy () { return new FixedCall (arg, res); }
   const char *keyword () { return "fixed"; }
 };
@@ -2176,7 +2176,7 @@ struct FailedCall : public Call {
     else
       res = 0;
   }
-  void print (ostream &o) { o << "failed " << arg << ' ' << res << endl; }
+  void print (ostream &o) { o << "failed " << arg << ' ' << res; }
   Call *copy () { return new FailedCall (arg, res); }
   const char *keyword () { return "failed"; }
 };
@@ -2190,7 +2190,7 @@ struct ConcludeCall : public Call {
       s->conclude ();
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "conclude" << endl; }
+  void print (ostream &o) { o << "conclude"; }
   Call *copy () { return new ConcludeCall (); }
   const char *keyword () { return "conclude"; }
 };
@@ -2200,7 +2200,7 @@ struct FreezeCall : public Call {
   void execute (Solver *&s, ExtendMap *&extendmap) {
     s->freeze (map_arg (s, extendmap));
   }
-  void print (ostream &o) { o << "freeze " << arg << endl; }
+  void print (ostream &o) { o << "freeze " << arg; }
   Call *copy () { return new FreezeCall (arg); }
   const char *keyword () { return "freeze"; }
 };
@@ -2211,7 +2211,7 @@ struct MeltCall : public Call {
     if (mobical.donot.enforce || s->frozen (map_arg (s, extendmap)))
       s->melt (map_arg (s, extendmap));
   }
-  void print (ostream &o) { o << "melt " << arg << endl; }
+  void print (ostream &o) { o << "melt " << arg; }
   Call *copy () { return new MeltCall (arg); }
   const char *keyword () { return "melt"; }
 };
@@ -2221,7 +2221,7 @@ struct FrozenCall : public Call {
   void execute (Solver *&s, ExtendMap *&extendmap) {
     res = s->frozen (map_arg (s, extendmap, false));
   }
-  void print (ostream &o) { o << "frozen " << arg << ' ' << res << endl; }
+  void print (ostream &o) { o << "frozen " << arg << ' ' << res; }
   Call *copy () { return new FrozenCall (arg, res); }
   const char *keyword () { return "frozen"; }
 };
@@ -2232,7 +2232,7 @@ struct DumpCall : public Call {
     s->dump_cnf ();
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "dump" << endl; }
+  void print (ostream &o) { o << "dump"; }
   Call *copy () { return new DumpCall (); }
   const char *keyword () { return "dump"; }
 };
@@ -2243,7 +2243,7 @@ struct StatsCall : public Call {
     s->statistics ();
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "stats" << endl; }
+  void print (ostream &o) { o << "stats"; }
   Call *copy () { return new StatsCall (); }
   const char *keyword () { return "stats"; }
 };
@@ -2255,7 +2255,7 @@ struct TraceProofCall : public Call {
     s->trace_proof (path.c_str ());
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "trace_proof" << ' ' << path << endl; }
+  void print (ostream &o) { o << "trace_proof" << ' ' << path; }
   Call *copy () { return new TraceProofCall (path); }
   const char *keyword () { return "trace_proof"; }
 };
@@ -2266,7 +2266,7 @@ struct FlushProofTraceCall : public Call {
     s->flush_proof_trace ();
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "flush_proof_trace" << endl; }
+  void print (ostream &o) { o << "flush_proof_trace"; }
   Call *copy () { return new FlushProofTraceCall (); }
   const char *keyword () { return "flush_proof_trace"; }
 };
@@ -2277,7 +2277,7 @@ struct CloseProofTraceCall : public Call {
     s->close_proof_trace ();
     (void) (extendmap);
   }
-  void print (ostream &o) { o << "close_proof_trace" << endl; }
+  void print (ostream &o) { o << "close_proof_trace"; }
   Call *copy () { return new CloseProofTraceCall (); }
   const char *keyword () { return "close_proof_trace"; }
 };
@@ -2420,6 +2420,12 @@ public:
 #endif
       o << i << ' ';
       calls[i]->print (o);
+      if ((mobical.shared->bad_alloc.alloc_call_index != 0)
+        && (mobical.shared->bad_alloc.alloc_call_index < i + 1)
+        && (calls[i]->type != Call::RESET)) {
+        o << " # <----------- ignored";
+      }
+      o << endl;
     }
 
 #ifdef MOBICAL_MEMORY
@@ -2736,8 +2742,20 @@ class Reader {
   FILE *file;
   int lineno;
   bool close;
+  int peeked = EOF;
 
-  int next () { return getc (file); }
+  int next () {
+    if (peeked != EOF) {
+      int result = peeked;
+      peeked = EOF;
+      return result;
+    }
+    return getc (file);
+  }
+  int peek () {
+    peeked = getc (file);
+    return peeked;
+  }
 
   [[noreturn]] void error (const char *fmt, ...);
 
@@ -4822,6 +4840,13 @@ void Reader::parse () {
       line[n++] = ch;
       if ((ch = next ()) == EOF)
         error ("unexpected end-of-file");
+      // Comments at the end of the line
+      if (ch == ' ' && peek () == '#') {
+        while (ch != '\n') {
+          if ((ch = next ()) == EOF)
+            error ("unexpected end-of-file");
+        }
+      }
     }
     assert (n < sizeof line);
     line[n] = 0;
