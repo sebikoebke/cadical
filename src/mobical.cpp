@@ -2342,6 +2342,7 @@ public:
       if (!mobical.donot.summary && mobical.shared) {
         mobical.add_statistics (solver);
       }
+      extendmap.map.clear ();
       delete solver;
     }
     solver = 0;
@@ -2523,38 +2524,24 @@ public:
         // consistent.
         mobical.shared->oom++;
       }
-#ifdef MOBICAL_MEMORY
-      if (deallocated && mobical.mock_pointer) {
-        delete mobical.mock_pointer;
-        mobical.mock_pointer = nullptr;
-      }
-      hooks_uninstall ();
-      // Note: Do not force-deallocate here as otherwise the shrink
-      // procedure will remove the RESET call.
-      if (deallocated) {
-        for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
-          if (mobical.shared->leak_alloc.alloc_ptr[index] != nullptr) {
-            reset_child_signal_handlers ();
-            raise (SIGUSR2);
-          }
-        }
-        if (mobical.shared && process_type (c->type)) {
-          mobical.shared->solved++;
-          if (first)
-            first = false;
-          else
-            mobical.shared->incremental++;
-          c->execute (solver, extendmap);
-          if (c->res == 10)
-            mobical.shared->sat++;
-          if (c->res == 20)
-            mobical.shared->unsat++;
-        } else {
-          c->execute (solver, extendmap);
-        }
-      }
-#endif
     }
+#ifdef MOBICAL_MEMORY
+    if (deallocated && mobical.mock_pointer) {
+      delete mobical.mock_pointer;
+      mobical.mock_pointer = nullptr;
+    }
+    hooks_uninstall ();
+    // Note: Do not force-deallocate here as otherwise the shrink
+    // procedure will remove the RESET call.
+    if (deallocated) {
+      for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
+        if (mobical.shared->leak_alloc.alloc_ptr[index] != nullptr) {
+          reset_child_signal_handlers ();
+          raise (SIGUSR2);
+        }
+      }
+    }
+#endif
   }
 
   int vars () {
@@ -5269,13 +5256,9 @@ void Reader::parse () {
     }
 
 #ifdef LOGGING
-#ifdef MOBICAL_MEMORY
-    if (trace.size () == 3 && mobical.add_set_log_to_true)
+    if (!trace.calls.empty () && trace.calls.back ()->type == Call::INIT &&
+        mobical.add_set_log_to_true)
       trace.push_back (new SetCall ("log", 1));
-#else
-    if (trace.size () == 1 && mobical.add_set_log_to_true)
-      trace.push_back (new SetCall ("log", 1));
-#endif
 #endif
 
     if (c && mobical.add_dump_before_solve && process_type (c->type))
