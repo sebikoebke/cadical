@@ -159,9 +159,10 @@ Factoring::Factoring (Internal *i, int64_t l)
 }
 
 Factoring::~Factoring () {
-  assert (counted.empty ());
-  assert (nounted.empty ());
-  assert (flauses.empty ());
+  // breaks when memory allocation fails during factor
+  // assert (counted.empty ());
+  // assert (nounted.empty ());
+  // assert (flauses.empty ());
   internal->release_quotients (*this);
   schedule.erase (); // actually not necessary
 }
