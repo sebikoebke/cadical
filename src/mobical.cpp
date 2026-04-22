@@ -2363,7 +2363,30 @@ public:
 
   void push_back (Call *c) { calls.push_back (c); }
 
-  void print (ostream &o) {
+  void print (ostream &o, int code) {
+    if (seed)
+      o << "# seed: " << seed << endl;
+
+    if (code == 1)
+      o << "# status: exited with error or assertion thrown (1 / SIGABRT)" << endl;
+    else if (code == 2)
+      o << "# status: resource limit reached (2 / SIGXCPU)" << endl;
+    else if (code == 3)
+      o << "# status: forced bad allocation lead to crash / assertion (3 / SIGUSR1)" << endl;
+    else if (code == 4)
+      o << "# status: solver was destructed, but memory leaked (4 / SIGUSR2)" << endl;
+    else if (code == 5)
+      o << "# status: unknown signal was raised (5)" << endl;
+    else {
+      o << "# ------------------------------------------------------------" << endl;
+      o << "# status: ok, exited with code " << code << endl;
+      o << "#" << endl;
+      for (int i = 0; i < 20; i++)
+        o << "# WARNING: THIS TRACE PROBABLY HAS NOTHING TO DEBUG (SPURIOUS)" << endl;
+      o << "#" << endl;
+      o << "# ------------------------------------------------------------" << endl;
+    }
+
     for (size_t i = 0; i < calls.size (); i++) {
 #ifdef MOBICAL_MEMORY
       for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
@@ -2631,8 +2654,8 @@ public:
   int fork_and_execute ();
   void shrink (int expected);
 
-  void write_prefixed_seed (const char *prefix);
-  void write_path (const char *path);
+  void write_prefixed_seed (const char *prefix, int code);
+  void write_path (const char *path, int code);
 
   static bool ignored_option (const char *name);
   bool ignore_option (const char *, int max_var);
@@ -3966,14 +3989,17 @@ int Trace::fork_and_execute () {
       res = WEXITSTATUS (status);
     else if (!WIFSIGNALED (status))
       res = 0;
-    else if (mobical.donot.ignore_resource_limits)
+    else if (WTERMSIG (status) == SIGABRT)
       res = 1;
-    else if (WTERMSIG (status) == SIGUSR1)
-      res = 2; // Bad allocation caused signal.
+    else if (WTERMSIG (status) == SIGXCPU) {
+      // Memout (space_limit) or timeout (time_limit)
+      res = mobical.donot.ignore_resource_limits ? 2 : 0;
+    } else if (WTERMSIG (status) == SIGUSR1)
+      res = 3; // Bad allocation caused signal.
     else if (WTERMSIG (status) == SIGUSR2)
-      res = 3; // Leaked allocation caused signal.
+      res = 4; // Leaked allocation caused signal.
     else
-      res = (WTERMSIG (status) != SIGXCPU);
+      res = 5;
 
   } else {
 
@@ -4709,25 +4735,25 @@ void Trace::shrink (int expected) {
   mobical.shrinking = false;
 }
 
-void Trace::write_path (const char *path) {
+void Trace::write_path (const char *path, int code) {
   if (!strcmp (path, "-"))
-    print (cout);
+    print (cout, code);
   else {
     ofstream os (path);
     if (!os.is_open ())
       mobical.die ("can not write '%s'", path);
-    print (os);
+    print (os, code);
   }
 }
 
-void Trace::write_prefixed_seed (const char *prefix) {
+void Trace::write_prefixed_seed (const char *prefix, int code) {
   ostringstream ss;
   ss << prefix << '-' << setfill ('0') << right << setw (20) << seed
      << ".trace" << flush;
   ofstream os (ss.str ().c_str ());
   if (!os.is_open ())
     mobical.die ("can not write '%s'", ss.str ().c_str ());
-  print (os);
+  print (os, code);
   cerr << ss.str ();
 }
 
@@ -5869,7 +5895,7 @@ END_OF_BANNER_AND_OPTIONS:
         cerr << left << setw (13) << "output:";
       }
 
-      trace.write_path (output_path); // output
+      trace.write_path (output_path, res); // output
 
       if (!quiet) {
         if (res)
@@ -5993,7 +6019,7 @@ END_OF_BANNER_AND_OPTIONS:
           cerr << ' ' << left << setw (11) << traces << ' ';
           terminal.red ();
         }
-        trace.write_prefixed_seed ("bug"); // output
+        trace.write_prefixed_seed ("bug", res); // output
         if (quiet) {
           cerr << endl << flush;
         } else {
@@ -6024,7 +6050,7 @@ END_OF_BANNER_AND_OPTIONS:
           terminal.red (true);
         }
 
-        trace.write_prefixed_seed ("red"); // output
+        trace.write_prefixed_seed ("red", res); // output
 
         if (quiet) {
           cerr << endl << flush;
