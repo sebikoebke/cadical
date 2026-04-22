@@ -478,7 +478,7 @@ struct Gate {
                          const_literal_iterator end, bool lrat);
 
   // deletion of a gate
-  static void delete_gate (Gate *g);
+  static void delete_gate (Gate *&g);
 
   literal_iterator begin () { return rhs; }
   literal_iterator end () { return rhs + size; }

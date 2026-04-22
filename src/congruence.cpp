@@ -11,7 +11,8 @@
 namespace CaDiCaL {
 
 Closure::Closure (Internal *i)
-    : internal (i), table (Hash (nonces)) // 128, Hash (nonces)
+    : dummy_search_gate (0), internal (i),
+      table (Hash (nonces)) // 128, Hash (nonces)
 #ifdef LOGGING
       ,
       fresh_id (internal->clause_id)
@@ -141,6 +142,7 @@ void check_correct_ite_flags (const Gate *const g) {
 /*------------------------------------------------------------------------*/
 Gate *Gate::new_gate (size_t n, bool lrat) {
   void *raw = malloc (sizeof (Gate) + n * sizeof (int));
+  if (!raw) throw std::bad_alloc();
   Gate *g = new (raw) Gate ();
   if (lrat) {
     g->lrat_reasons = new Gate::LRAT_Reasons ();
@@ -152,6 +154,7 @@ Gate *Gate::new_gate (const std::vector<int> &v, bool lrat) {
   const int n = v.size ();
   size_t bytes = Gate::bytes (n);
   void *raw = malloc (bytes);
+  if (!raw) throw std::bad_alloc();
   DeferDeleteArray<char> clause_delete ((char *) raw);
   Gate *g = new (raw) Gate (n);
   for (int i = 0; i < n; ++i)
@@ -168,6 +171,7 @@ Gate *Gate::new_gate (const_literal_iterator begin,
   const int n = end - begin;
   size_t bytes = Gate::bytes (n);
   void *raw = malloc (bytes);
+  if (!raw) throw std::bad_alloc();
   DeferDeleteArray<char> clause_delete ((char *) raw);
   Gate *g = new (raw) Gate (n);
 
@@ -183,9 +187,12 @@ Gate *Gate::new_gate (const_literal_iterator begin,
   return g;
 }
 
-void Gate::delete_gate (Gate *g) {
-  delete g->lrat_reasons;
-  free (g);
+void Gate::delete_gate (Gate *&g) {
+  if (g) {
+    delete g->lrat_reasons;
+    free (g);
+  }
+  g = 0;
 }
 
 void Gate::resize (int n) {
