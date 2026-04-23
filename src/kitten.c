@@ -31,6 +31,10 @@ static inline void *kitten_calloc (size_t n, size_t size) {
 
 #undef ENLARGE_STACK
 
+// Use (S).begin as backup to old pointer to guarantee
+// the memory can be freed in case of realloc failing.
+// Store the new pointer temporarily in (S).allocated.
+// Only if memory allocation succeeds overwrite (S).begin.
 #define ENLARGE_STACK(S) \
   do { \
     assert (FULL_STACK (S)); \
@@ -38,9 +42,10 @@ static inline void *kitten_calloc (size_t n, size_t size) {
     const size_t OLD_CAPACITY = CAPACITY_STACK (S); \
     const size_t NEW_CAPACITY = OLD_CAPACITY ? 2 * OLD_CAPACITY : 1; \
     const size_t BYTES = NEW_CAPACITY * sizeof *(S).begin; \
-    (S).begin = realloc ((S).begin, BYTES); \
-    if (!(S).begin) \
+    (S).allocated = realloc ((S).begin, BYTES); \
+    if (!(S).allocated) \
       kitten_error ("out of memory reallocating '%zu' bytes", BYTES); \
+    (S).begin = (S).allocated; \
     (S).allocated = (S).begin + NEW_CAPACITY; \
     (S).end = (S).begin + SIZE; \
   } while (0)

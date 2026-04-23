@@ -120,6 +120,7 @@ void Internal::sweep_dense_mode_and_watch_irredundant () {
 void Internal::sweep_sparse_mode () {
   reset_occs ();
   reset_noccs ();
+  reset_watches ();
   init_watches ();
   connect_watches ();
 }
@@ -283,11 +284,11 @@ void Internal::release_sweeper (Sweeper &sweeper) {
   for (unsigned i = 0; i < 2; i++)
     erase_vector (sweeper.core[i]);
 
-  kitten_release (citten);
+  if (citten)
+    kitten_release (citten);
   citten = 0;
   stats.ticks_sweep += sweeper.current_ticks;
   stats.ticks += sweeper.current_ticks;
-  sweep_sparse_mode ();
   return;
 }
 
@@ -1940,6 +1941,7 @@ bool Internal::sweep () {
          equivalences, units);
   unschedule_sweeping (*sweeper, swept, scheduled);
   delete_sweeper.free ();
+  sweep_sparse_mode ();
 
   if (!unsat) {
     propagated = 0;

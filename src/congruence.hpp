@@ -478,7 +478,7 @@ struct Gate {
                          const_literal_iterator end, bool lrat);
 
   // deletion of a gate
-  static void delete_gate (Gate *g);
+  static void delete_gate (Gate *&g);
 
   literal_iterator begin () { return rhs; }
   literal_iterator end () { return rhs + size; }
@@ -566,7 +566,7 @@ struct CompactBinary {
 struct Closure {
 
   Closure (Internal *i);
-  ~Closure () { Gate::delete_gate (dummy_search_gate); }
+  ~Closure ();
   Gate *dummy_search_gate = nullptr;
   int dummy_search_gate_capacity = 0;
 

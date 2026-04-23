@@ -537,10 +537,10 @@ Clause *Internal::new_learned_redundant_clause (int glue) {
         assert (var (clause[1]).level >= var (clause[i]).level);
 #endif
   external->check_learned_clause ();
-  Clause *res = new_clause (true, glue);
   if (proof) {
-    proof->add_derived_clause (res, lrat_chain);
+    proof->add_derived_clause (clause_id + 1, true, clause, lrat_chain);
   }
+  Clause *res = new_clause (true, glue);
   assert (watching ());
   watch_clause (res);
   return res;
@@ -550,10 +550,10 @@ Clause *Internal::new_learned_redundant_clause (int glue) {
 //
 Clause *Internal::new_hyper_binary_resolved_clause (bool red, int glue) {
   external->check_learned_clause ();
-  Clause *res = new_clause (red, glue);
   if (proof) {
-    proof->add_derived_clause (res, lrat_chain);
+    proof->add_derived_clause (clause_id + 1, red, clause, lrat_chain);
   }
+  Clause *res = new_clause (red, glue);
   assert (watching ());
   watch_clause (res);
   return res;
@@ -563,11 +563,11 @@ Clause *Internal::new_hyper_binary_resolved_clause (bool red, int glue) {
 //
 Clause *Internal::new_hyper_ternary_resolved_clause (bool red) {
   external->check_learned_clause ();
+  if (proof) {
+    proof->add_derived_clause (clause_id + 1, red, clause, lrat_chain);
+  }
   size_t size = clause.size ();
   Clause *res = new_clause (red, size);
-  if (proof) {
-    proof->add_derived_clause (res, lrat_chain);
-  }
   assert (!watching ());
   return res;
 }
@@ -576,14 +576,14 @@ Clause *Internal::new_factor_clause (int witness) {
   external->check_learned_clause ();
   stats.factor_added_clauses++;
   stats.factor_added_literals += clause.size ();
-  Clause *res = new_clause (false, 0);
   if (proof) {
     if (witness)
-      proof->add_derived_rat_clause (res, externalize (witness),
-                                     lrat_chain);
+      proof->add_derived_rat_clause (clause_id + 1, false, externalize (witness),
+                                     clause, lrat_chain);
     else
-      proof->add_derived_clause (res, lrat_chain);
+      proof->add_derived_clause (clause_id + 1, false, clause, lrat_chain);
   }
+  Clause *res = new_clause (false, 0);
   assert (!watching ());
   assert (occurring ());
   for (const auto &lit : *res) {
@@ -598,11 +598,11 @@ Clause *
 Internal::new_hyper_ternary_resolved_clause_and_watch (bool red,
                                                        bool full_watching) {
   external->check_learned_clause ();
+  if (proof) {
+    proof->add_derived_clause (clause_id + 1, red, clause, lrat_chain);
+  }
   size_t size = clause.size ();
   Clause *res = new_clause (red, size);
-  if (proof) {
-    proof->add_derived_clause (res, lrat_chain);
-  }
   if (full_watching) {
     assert (watching ());
     watch_clause (res);
@@ -615,11 +615,11 @@ Internal::new_hyper_ternary_resolved_clause_and_watch (bool red,
 //
 Clause *Internal::new_clause_as (const Clause *orig) {
   external->check_learned_clause ();
+  if (proof) {
+    proof->add_derived_clause (clause_id + 1, orig->redundant, clause, lrat_chain);
+  }
   const int new_glue = orig->glue;
   Clause *res = new_clause (orig->redundant, new_glue);
-  if (proof) {
-    proof->add_derived_clause (res, lrat_chain);
-  }
   assert (watching ());
   watch_clause (res);
   return res;

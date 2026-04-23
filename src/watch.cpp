@@ -15,7 +15,8 @@ void Internal::clear_watches () {
 }
 
 void Internal::reset_watches () {
-  assert (!wtab.empty ());
+  // breaks when memory allocation fails during sweep
+  // assert (!wtab.empty ());
   erase_vector (wtab);
   LOG ("reset watcher tables");
 }

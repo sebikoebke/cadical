@@ -159,9 +159,10 @@ Factoring::Factoring (Internal *i, int64_t l)
 }
 
 Factoring::~Factoring () {
-  assert (counted.empty ());
-  assert (nounted.empty ());
-  assert (flauses.empty ());
+  // breaks when memory allocation fails during factor
+  // assert (counted.empty ());
+  // assert (nounted.empty ());
+  // assert (flauses.empty ());
   internal->release_quotients (*this);
   schedule.erase (); // actually not necessary
 }
@@ -273,6 +274,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
     return 0;
   // init quotient.
   Quotient *res = new Quotient (first_factor);
+  DeferDeletePtr<Quotient> delete_res(res);
   // these are set to 0 for sanity (but not used).
   res->next = 0;
   res->prev = 0;
@@ -481,6 +483,7 @@ Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
   *reduction_ptr = matches - 4;
   assert (!factoring.quotients.xorites);
   factoring.quotients.xorites = res;
+  delete_res.release();
   return res;
 }
 

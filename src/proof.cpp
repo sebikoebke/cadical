@@ -278,32 +278,6 @@ void Proof::add_derived_unit_clause (int64_t id, int internal_unit,
 
 /*------------------------------------------------------------------------*/
 
-void Proof::add_derived_clause (Clause *c, const vector<int64_t> &chain) {
-  LOG (c, "PROOF adding to proof derived");
-  assert (clause.empty ());
-  assert (proof_chain.empty ());
-  add_literals (c);
-  for (const auto &cid : chain)
-    proof_chain.push_back (cid);
-  clause_id = c->id;
-  redundant = c->redundant;
-  add_derived_clause ();
-}
-
-void Proof::add_derived_rat_clause (Clause *c, int w,
-                                    const vector<int64_t> &chain) {
-  LOG (c, "PROOF adding to proof derived witness %d", w);
-  assert (clause.empty ());
-  assert (proof_chain.empty ());
-  add_literals (c);
-  for (const auto &cid : chain)
-    proof_chain.push_back (cid);
-  clause_id = c->id;
-  redundant = c->redundant;
-  witness = w;
-  add_derived_clause ();
-}
-
 void Proof::add_derived_clause (int64_t id, bool r, const vector<int> &c,
                                 const vector<int64_t> &chain) {
   LOG (c, "PROOF adding derived clause");
