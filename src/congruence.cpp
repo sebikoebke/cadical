@@ -23,7 +23,7 @@ Closure::Closure (Internal *i)
   dummy_search_gate->garbage = false;
 }
 
-Closure::~Closure() {
+Closure::~Closure () {
   Gate::delete_gate (dummy_search_gate);
   reset_closure ();
 }
@@ -142,7 +142,8 @@ void check_correct_ite_flags (const Gate *const g) {
 /*------------------------------------------------------------------------*/
 Gate *Gate::new_gate (size_t n, bool lrat) {
   void *raw = malloc (sizeof (Gate) + n * sizeof (int));
-  if (!raw) throw std::bad_alloc();
+  if (!raw)
+    throw std::bad_alloc ();
   Gate *g = new (raw) Gate ();
   if (lrat) {
     g->lrat_reasons = new Gate::LRAT_Reasons ();
@@ -154,7 +155,8 @@ Gate *Gate::new_gate (const std::vector<int> &v, bool lrat) {
   const int n = v.size ();
   size_t bytes = Gate::bytes (n);
   void *raw = malloc (bytes);
-  if (!raw) throw std::bad_alloc();
+  if (!raw)
+    throw std::bad_alloc ();
   DeferDeleteArray<char> clause_delete ((char *) raw);
   Gate *g = new (raw) Gate (n);
   for (int i = 0; i < n; ++i)
@@ -171,7 +173,8 @@ Gate *Gate::new_gate (const_literal_iterator begin,
   const int n = end - begin;
   size_t bytes = Gate::bytes (n);
   void *raw = malloc (bytes);
-  if (!raw) throw std::bad_alloc();
+  if (!raw)
+    throw std::bad_alloc ();
   DeferDeleteArray<char> clause_delete ((char *) raw);
   Gate *g = new (raw) Gate (n);
 
@@ -1027,7 +1030,8 @@ Clause *Closure::new_tmp_clause (std::vector<int> &clause) {
   LOG (c, "new pointer %p", (void *) c);
 
   if (internal->proof)
-    internal->proof->add_derived_clause (internal->clause_id, false, clause, lrat_chain);
+    internal->proof->add_derived_clause (internal->clause_id, false, clause,
+                                         lrat_chain);
   if (clear)
     clause.clear ();
 
@@ -1047,7 +1051,8 @@ Clause *Closure::new_clause () {
   }
 
   if (internal->proof)
-    internal->proof->add_derived_clause (internal->clause_id + 1, false, clause, lrat_chain);
+    internal->proof->add_derived_clause (internal->clause_id + 1, false,
+                                         clause, lrat_chain);
   Clause *c = internal->new_clause (false);
 
   if (clear)
@@ -2910,6 +2915,7 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
   g->tag = Gate_Type::And_Gate;
   if (internal->lrat) {
     g->neg_lhs_id () = LitClausePair (lhs, base_clause);
+    assert (g->lrat_reasons);
     for (auto i : lrat_chain_and_gate)
       g->pos_lhs_ids ().push_back (i);
 #ifdef LOGGING
@@ -4114,9 +4120,8 @@ void Closure::init_xor_gate_extraction (std::vector<Clause *> &candidates) {
       internal->occs (lit).push_back (c);
   }
 
-  VERBOSE (
-      2, "connected %zu large clauses %.0f%%", candidates.size (),
-      percent (candidates.size (), internal->stats.clauses_now_irr));
+  VERBOSE (2, "connected %zu large clauses %.0f%%", candidates.size (),
+           percent (candidates.size (), internal->stats.clauses_now_irr));
 }
 
 Clause *Closure::find_large_xor_side_clause (std::vector<int> &lits) {
@@ -7335,9 +7340,8 @@ void Closure::init_ite_gate_extraction (
 
   ternary.clear ();
 
-  VERBOSE (
-      4, "connected %zu large clauses %.0f%%", candidates.size (),
-      percent (candidates.size (), internal->stats.clauses_now_irr));
+  VERBOSE (4, "connected %zu large clauses %.0f%%", candidates.size (),
+           percent (candidates.size (), internal->stats.clauses_now_irr));
 
 #ifndef QUIET
   size_t size_candidates = candidates.size ();
@@ -7854,8 +7858,8 @@ bool Internal::extract_gates (bool remove_units_before_run) {
   //  connect_binary_watches ();
 
   START_SIMPLIFIER (congruence, CONGRUENCE);
-  Closure* closure = new Closure (this);
-  DeferDeletePtr<Closure> delete_closure(closure);
+  Closure *closure = new Closure (this);
+  DeferDeletePtr<Closure> delete_closure (closure);
 
   closure->init_closure ();
   assert (unsat || closure->chain.empty ());
@@ -7890,7 +7894,7 @@ bool Internal::extract_gates (bool remove_units_before_run) {
     }
   }
   assert (closure->new_unwatched_binary_clauses.empty ());
-  delete_closure.free();
+  delete_closure.free ();
 
   internal->clear_watches ();
   internal->connect_watches ();
