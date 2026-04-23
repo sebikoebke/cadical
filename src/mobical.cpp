@@ -5769,6 +5769,7 @@ int Mobical::main (int argc, char **argv) {
          << " seconds";
   else
     cerr << "explicitly using no time limit";
+
   cerr << endl << flush;
 
   prefix ();
@@ -5781,13 +5782,13 @@ int Mobical::main (int argc, char **argv) {
          << " MB";
   else
     cerr << "explicitly using no space limit";
+
   cerr << endl << flush;
 
   if (mobical.add_plain_after_options) {
     prefix ();
     cerr << "generating only plain instances (--plain)" << endl << flush;
   }
-  prefix ();
 #ifdef MOBICAL_MEMORY
   if (mobical.bad_alloc && mobical.leak_alloc) {
     prefix ();
