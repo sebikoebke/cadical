@@ -2149,9 +2149,7 @@ struct FlippableCall : public Call {
     else
       res = 0;
   }
-  void print (ostream &o) {
-    o << "flippable " << arg << ' ' << res;
-  }
+  void print (ostream &o) { o << "flippable " << arg << ' ' << res; }
   Call *copy () { return new FlipCall (arg, res); }
   const char *keyword () { return "flippable"; }
 };
@@ -2368,23 +2366,32 @@ public:
       o << "# seed: " << seed << endl;
 
     if (code == 1)
-      o << "# status: exited with error or assertion thrown (1 / SIGABRT)" << endl;
+      o << "# status: exited with error or assertion thrown (1 / SIGABRT)"
+        << endl;
     else if (code == 2)
       o << "# status: resource limit reached (2 / SIGXCPU)" << endl;
     else if (code == 3)
-      o << "# status: forced bad allocation lead to crash / assertion (3 / SIGUSR1)" << endl;
+      o << "# status: forced bad allocation lead to crash / assertion (3 / "
+           "SIGUSR1)"
+        << endl;
     else if (code == 4)
-      o << "# status: solver was destructed, but memory leaked (4 / SIGUSR2)" << endl;
+      o << "# status: solver was destructed, but memory leaked (4 / "
+           "SIGUSR2)"
+        << endl;
     else if (code == 5)
       o << "# status: unknown signal was raised (5)" << endl;
     else {
-      o << "# ------------------------------------------------------------" << endl;
+      o << "# ------------------------------------------------------------"
+        << endl;
       o << "# status: ok, exited with code " << code << endl;
       o << "#" << endl;
       for (int i = 0; i < 20; i++)
-        o << "# WARNING: THIS TRACE PROBABLY HAS NOTHING TO DEBUG (SPURIOUS)" << endl;
+        o << "# WARNING: THIS TRACE PROBABLY HAS NOTHING TO DEBUG "
+             "(SPURIOUS)"
+          << endl;
       o << "#" << endl;
-      o << "# ------------------------------------------------------------" << endl;
+      o << "# ------------------------------------------------------------"
+        << endl;
     }
 
     for (size_t i = 0; i < calls.size (); i++) {
@@ -2420,11 +2427,13 @@ public:
 #endif
       o << i << ' ';
       calls[i]->print (o);
-      if ((mobical.shared->bad_alloc.alloc_call_index != 0)
-        && (mobical.shared->bad_alloc.alloc_call_index < i + 1)
-        && (calls[i]->type != Call::RESET)) {
+#ifdef MOBICAL_MEMORY
+      if ((mobical.shared->bad_alloc.alloc_call_index != 0) &&
+          (mobical.shared->bad_alloc.alloc_call_index < i + 1) &&
+          (calls[i]->type != Call::RESET)) {
         o << " # <----------- ignored";
       }
+#endif
       o << endl;
     }
 
@@ -2595,10 +2604,10 @@ public:
         }
       }
     } else {
-      // If reset was not called before reaching here (deallocated is not set)
-      // the leaks are false positives. In this case clear all the leaks.
-      // Otherwise, the user will get leaked memory warnings even though
-      // the memory is not freed since no reset call is present.
+      // If reset was not called before reaching here (deallocated is not
+      // set) the leaks are false positives. In this case clear all the
+      // leaks. Otherwise, the user will get leaked memory warnings even
+      // though the memory is not freed since no reset call is present.
       for (size_t index{0u}; index < MOBICAL_MEMORY_LEAK_COUNT; index++) {
         mobical.shared->leak_alloc.alloc_ptr[index] = nullptr;
       }
@@ -5778,6 +5787,19 @@ int Mobical::main (int argc, char **argv) {
     prefix ();
     cerr << "generating only plain instances (--plain)" << endl << flush;
   }
+  prefix ();
+#ifdef MOBICAL_MEMORY
+  if (mobical.bad_alloc && mobical.leak_alloc) {
+    prefix ();
+    cerr << "fuzzing memory allocation limits and leaks" << endl;
+  } else if (mobical.bad_alloc) {
+    prefix ();
+    cerr << "fuzzing memory allocation limits" << endl;
+  } else if (mobical.leak_alloc) {
+    prefix ();
+    cerr << "fuzzing memory leaks" << endl;
+  }
+#endif
 
   /*----------------------------------------------------------------------*/
 
@@ -5785,10 +5807,15 @@ int Mobical::main (int argc, char **argv) {
 
   if (mode & RANDOM) {
     prefix ();
-    if (limit >= 0)
-      cerr << "randomly generating " << limit << " traces" << endl;
-    else {
+    if (limit >= 0) {
+      cerr << "randomly generating " << limit << " traces";
+      if (bug_limit >= 0)
+        cerr << " or until " << bug_limit << " failed";
+      cerr << endl;
+    } else {
       cerr << "randomly generating traces";
+      if (bug_limit >= 0)
+        cerr << " until " << bug_limit << " failed";
       if (terminal) {
         terminal.magenta ();
         cerr << " (press ";
