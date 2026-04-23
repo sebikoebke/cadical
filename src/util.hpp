@@ -165,6 +165,18 @@ template <typename T> struct DeferDeletePtr {
   }
 };
 
+template <typename T, typename F> struct DeferDeleteFunc {
+  T *data;
+  F *func;
+  DeferDeleteFunc (T *t, F *f) : data (t), func(f) {}
+  ~DeferDeleteFunc () { (*func)(data); }
+  void release () { data = nullptr; }
+  void free () {
+    (*func)(data);
+    data = nullptr;
+  }
+};
+
 /*------------------------------------------------------------------------*/
 
 template <class T> inline void clear_n (T *base, size_t n) {

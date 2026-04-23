@@ -2911,6 +2911,8 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
 
   Gate *h = find_and_lits (this->rhs);
   Gate *g = Gate::new_gate (this->rhs, internal->lrat);
+  DeferDeleteFunc<Gate, typeof(Gate::delete_gate)>
+    delete_g(g, &Gate::delete_gate);
   g->lhs = lhs;
   g->tag = Gate_Type::And_Gate;
   if (internal->lrat) {
@@ -2946,6 +2948,7 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
       LOG ("found merged literals");
       ++internal->stats.congruence_ands;
     }
+    delete_g.release();
     Gate::delete_gate (g);
     return nullptr;
   } else {
@@ -2957,6 +2960,7 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
     g->indexed = true;
 
     table.insert (g);
+    delete_g.release();
     ++internal->stats.congruence_gates;
 #ifdef LOGGING
     g->id = fresh_id++;
@@ -3937,6 +3941,8 @@ Gate *Closure::new_xor_gate (const vector<LitClausePair> &glauses,
     assert (internal->unsat || chain.empty ());
   } else {
     g = Gate::new_gate (rhs, internal->lrat);
+    DeferDeleteFunc<Gate, typeof(Gate::delete_gate)>
+      delete_g(g, &Gate::delete_gate);
     g->lhs = lhs;
     g->tag = Gate_Type::XOr_Gate;
     g->garbage = false;
@@ -3945,6 +3951,7 @@ Gate *Closure::new_xor_gate (const vector<LitClausePair> &glauses,
       for (auto pair : glauses)
         g->pos_lhs_ids ().push_back (pair);
     table.insert (g);
+    delete_g.release();
     ++internal->stats.congruence_gates;
 #ifdef LOGGING
     g->id = fresh_id++;
@@ -7160,6 +7167,8 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
 
   bool negate_lhs = false;
   Gate *g = Gate::new_gate (rhs, internal->lrat);
+  DeferDeleteFunc<Gate, typeof(Gate::delete_gate)>
+    delete_g(g, &Gate::delete_gate);
   g->lhs = lhs;
   g->tag = Gate_Type::ITE_Gate;
   if (internal->lrat)
@@ -7189,6 +7198,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
       LOG ("found merged literals");
     }
     delete_proof_chain ();
+    delete_g.release();
     Gate::delete_gate (g);
     return h;
   } else {
@@ -7196,6 +7206,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
     // sort (begin (g->rhs), end (g->rhs));
     g->indexed = true;
     table.insert (g);
+    delete_g.release();
     ++internal->stats.congruence_gates;
 #ifdef LOGGING
     g->id = fresh_id++;
