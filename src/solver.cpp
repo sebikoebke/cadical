@@ -277,11 +277,12 @@ static void log_api_call_returns (Internal *internal, const char *name,
 #ifndef NTRACING
 /*------------------------------------------------------------------------*/
 
-#define TRACE(...) \
+#define TRACE(NAME, ...) \
   do { \
     /*if ((this == 0)) break; */ /* gcc-12 produces warning */ \
     if ((internal == 0)) \
       break; \
+    internal->stats.api_##NAME++; \
     LOG_API_CALL_BEGIN (__VA_ARGS__); \
     if (!trace_api_file) \
       break; \
@@ -391,7 +392,7 @@ Solver::Solver () {
   _state = INITIALIZING;
   internal = new Internal ();
   DeferDeletePtr<Internal> delete_internal (internal);
-  TRACE ("init");
+  TRACE (init, "init");
   external = new External (internal);
   DeferDeletePtr<External> delete_external (external);
   STATE (CONFIGURING);
@@ -424,7 +425,7 @@ Solver::Solver () {
 
 Solver::~Solver () {
 
-  TRACE ("reset");
+  TRACE (reset, "reset");
   REQUIRE_VALID_OR_SOLVING_STATE ();
   STATE (DELETING);
 
@@ -469,7 +470,7 @@ Solver::~Solver () {
 /*------------------------------------------------------------------------*/
 
 int Solver::vars () const {
-  TRACE ("vars");
+  TRACE (vars, "vars");
   REQUIRE_VALID_OR_SOLVING_STATE ();
   int res = external->max_var;
   LOG_API_CALL_RETURNS ("vars", res);
@@ -477,7 +478,7 @@ int Solver::vars () const {
 }
 
 void Solver::resize (int min_max_var) {
-  TRACE ("resize", min_max_var);
+  TRACE (resize, "resize", min_max_var);
   REQUIRE_VALID_OR_SOLVING_STATE ();
   if (state () != SOLVING)
     transition_to_steady_state ();
@@ -491,7 +492,7 @@ void Solver::resize (int min_max_var) {
 }
 
 int Solver::declare_more_variables (int number_of_vars) {
-  TRACE ("declare_more_variables", number_of_vars);
+  TRACE (declare_more_variables, "declare_more_variables", number_of_vars);
   REQUIRE_VALID_OR_SOLVING_STATE ();
   if (state () != SOLVING)
     transition_to_steady_state ();
@@ -504,7 +505,7 @@ int Solver::declare_more_variables (int number_of_vars) {
 }
 
 int Solver::declare_one_more_variable () {
-  TRACE ("declare_one_more_variable");
+  TRACE (declare_one_more_variable, "declare_one_more_variable");
   REQUIRE_VALID_OR_SOLVING_STATE ();
   if (state () != SOLVING)
     transition_to_steady_state ();
@@ -554,7 +555,7 @@ int Solver::get (const char *arg) {
 }
 
 bool Solver::set (const char *arg, int val) {
-  TRACE ("set", arg, val);
+  TRACE (set, "set", arg, val);
   REQUIRE_VALID_STATE ();
   if (strcmp (arg, "log") && strcmp (arg, "quiet") &&
       strcmp (arg, "report") && strcmp (arg, "verbose")) {
@@ -596,7 +597,7 @@ void Solver::optimize (int arg) {
 }
 
 bool Solver::limit (const char *arg, int val) {
-  TRACE ("limit", arg, val);
+  TRACE (limit, "limit", arg, val);
   REQUIRE_VALID_STATE ();
   bool res = internal->limit (arg, val);
   LOG_API_CALL_END ("limit", arg, val, res);
@@ -619,7 +620,7 @@ bool Solver::is_valid_configuration (const char *name) {
 }
 
 bool Solver::configure (const char *name) {
-  TRACE ("configure", name);
+  TRACE (configure, "configure", name);
   LOG_API_CALL_BEGIN ("configure", name);
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == CONFIGURING,
@@ -633,7 +634,7 @@ bool Solver::configure (const char *name) {
 /*===== IPASIR BEGIN =====================================================*/
 
 void Solver::add (int lit) {
-  TRACE ("add", lit);
+  TRACE (add, "add", lit);
   REQUIRE_VALID_STATE ();
   if (lit) {
     if (internal->opts.factor && internal->opts.factorcheck == 1)
@@ -721,7 +722,7 @@ void Solver::clause (const std::vector<int> &lits) {
 bool Solver::inconsistent () { return internal->unsat; }
 
 void Solver::constrain (int lit) {
-  TRACE ("constrain", lit);
+  TRACE (constrain, "constrain", lit);
   REQUIRE_VALID_STATE ();
   if (lit)
     REQUIRE_VALID_LIT (lit);
@@ -736,7 +737,7 @@ void Solver::constrain (int lit) {
 }
 
 void Solver::assume (int lit) {
-  TRACE ("assume", lit);
+  TRACE (assume, "assume", lit);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
   transition_to_steady_state ();
@@ -745,7 +746,7 @@ void Solver::assume (int lit) {
 }
 
 int Solver::lookahead () {
-  TRACE ("lookahead");
+  TRACE (lookahead, "lookahead");
   REQUIRE_VALID_OR_SOLVING_STATE ();
   transition_to_steady_state ();
   int lit = external->lookahead ();
@@ -754,19 +755,20 @@ int Solver::lookahead () {
 }
 
 Solver::CubesWithStatus Solver::generate_cubes (int depth, int min_depth) {
-  TRACE ("lookahead_cubes");
+  TRACE (lookahead_cubes, "lookahead_cubes");
   REQUIRE_VALID_OR_SOLVING_STATE ();
   auto cubes = external->generate_cubes (depth, min_depth);
-  TRACE ("lookahead_cubes");
 
   CubesWithStatus cubes2;
   cubes2.status = cubes.status;
   cubes2.cubes = cubes.cubes;
+  LOG_API_CALL_RETURNS ("lookahead_cubes", cubes2);
+  LOG_API_CALL_END ("lookahead_cubes");
   return cubes2;
 }
 
 void Solver::reset_assumptions () {
-  TRACE ("reset_assumptions");
+  TRACE (reset_assumptions, "reset_assumptions");
   REQUIRE_VALID_STATE ();
   transition_to_steady_state ();
   external->reset_assumptions ();
@@ -775,7 +777,7 @@ void Solver::reset_assumptions () {
 }
 
 void Solver::reset_constraint () {
-  TRACE ("reset_constraint");
+  TRACE (reset_constraint, "reset_constraint");
   REQUIRE_VALID_STATE ();
   transition_to_steady_state ();
   external->reset_constraint ();
@@ -786,7 +788,7 @@ void Solver::reset_constraint () {
 /*------------------------------------------------------------------------*/
 
 int Solver::propagate () {
-  TRACE ("propagate_assumptions");
+  TRACE (propagate_assumptions, "propagate_assumptions");
   REQUIRE_VALID_STATE ();
   transition_to_steady_state ();
   const int res = external->propagate_assumptions ();
@@ -803,7 +805,7 @@ int Solver::propagate () {
 }
 
 void Solver::implied (std::vector<int> &entrailed) {
-  TRACE ("implied");
+  TRACE (implied, "implied");
   REQUIRE_VALID_STATE ();
   REQUIRE (
       state () == INCONCLUSIVE || state () == SATISFIED,
@@ -863,7 +865,7 @@ int Solver::call_external_solve_and_check_results (bool preprocess_only) {
 }
 
 int Solver::solve () {
-  TRACE ("solve");
+  TRACE (solve, "solve");
   REQUIRE_READY_STATE ();
   const int res = call_external_solve_and_check_results (false);
   LOG_API_CALL_RETURNS ("solve", res);
@@ -873,7 +875,7 @@ int Solver::solve () {
 }
 
 int Solver::simplify (int rounds) {
-  TRACE ("simplify", rounds);
+  TRACE (simplify, "simplify", rounds);
   REQUIRE_READY_STATE ();
   REQUIRE (rounds >= 0, "negative number of simplification rounds '%d'",
            rounds);
@@ -911,7 +913,7 @@ int Solver::val (
 }
 
 bool Solver::flip (int lit) {
-  TRACE ("flip", lit);
+  TRACE (flip, "flip", lit);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
   REQUIRE (state () == SATISFIED, "can only flip value in satisfied state");
@@ -924,7 +926,7 @@ bool Solver::flip (int lit) {
 }
 
 bool Solver::flippable (int lit) {
-  TRACE ("flippable", lit);
+  TRACE (flippable, "flippable", lit);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
   REQUIRE (state () == SATISFIED, "can only flip value in satisfied state");
@@ -937,7 +939,7 @@ bool Solver::flippable (int lit) {
 }
 
 bool Solver::failed (int lit) {
-  TRACE ("failed", lit);
+  TRACE (failed, "failed", lit);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
   REQUIRE (state () == UNSATISFIED,
@@ -949,7 +951,7 @@ bool Solver::failed (int lit) {
 }
 
 bool Solver::constraint_failed () {
-  TRACE ("constraint_failed");
+  TRACE (constraint_failed, "constraint_failed");
   REQUIRE_VALID_STATE ();
   REQUIRE (state () == UNSATISFIED,
            "can only determine if constraint failed in unsatisfied state");
@@ -960,7 +962,7 @@ bool Solver::constraint_failed () {
 }
 
 int Solver::fixed (int lit) const {
-  TRACE ("fixed", lit);
+  TRACE (fixed, "fixed", lit);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
   int res = external->fixed (lit);
@@ -969,7 +971,7 @@ int Solver::fixed (int lit) const {
 }
 
 void Solver::phase (int lit) {
-  TRACE ("phase", lit);
+  TRACE (phase, "phase", lit);
   REQUIRE_VALID_OR_SOLVING_STATE ();
   REQUIRE_VALID_LIT (lit);
   external->phase (lit);
@@ -977,7 +979,7 @@ void Solver::phase (int lit) {
 }
 
 void Solver::unphase (int lit) {
-  TRACE ("unphase", lit);
+  TRACE (unphase, "unphase", lit);
   REQUIRE_VALID_OR_SOLVING_STATE ();
   REQUIRE_VALID_LIT (lit);
   external->unphase (lit);
@@ -1123,7 +1125,7 @@ void Solver::disconnect_external_propagator () {
 }
 
 void Solver::add_observed_var (int idx) {
-  TRACE ("observe", idx);
+  TRACE (observe, "observe", idx);
   REQUIRE_VALID_OR_SOLVING_STATE ();
   REQUIRE_VALID_LIT (idx);
   REQUIRE (external->propagator,
@@ -1133,7 +1135,7 @@ void Solver::add_observed_var (int idx) {
 }
 
 void Solver::remove_observed_var (int idx) {
-  TRACE ("unobserve", idx);
+  TRACE (unobserve, "unobserve", idx);
   REQUIRE_VALID_OR_SOLVING_STATE ();
   REQUIRE_VALID_LIT (idx);
   REQUIRE (external->propagator,
@@ -1143,7 +1145,7 @@ void Solver::remove_observed_var (int idx) {
 }
 
 void Solver::reset_observed_vars () {
-  TRACE ("reset_observed_vars");
+  TRACE (reset_observed_vars, "reset_observed_vars");
   REQUIRE_VALID_OR_SOLVING_STATE ();
   REQUIRE (
       external->propagator,
@@ -1155,7 +1157,7 @@ void Solver::reset_observed_vars () {
 /*===== IPASIR-UP END ====================================================*/
 
 int Solver::active () const {
-  TRACE ("active");
+  TRACE (active, "active");
   REQUIRE_VALID_STATE ();
   int res = internal->active ();
   LOG_API_CALL_RETURNS ("active", res);
@@ -1163,7 +1165,7 @@ int Solver::active () const {
 }
 
 int64_t Solver::redundant () const {
-  TRACE ("redundant");
+  TRACE (redundant, "redundant");
   REQUIRE_VALID_STATE ();
   int64_t res = internal->redundant ();
   LOG_API_CALL_RETURNS ("redundant", res);
@@ -1171,7 +1173,7 @@ int64_t Solver::redundant () const {
 }
 
 int64_t Solver::irredundant () const {
-  TRACE ("irredundant");
+  TRACE (irredundant, "irredundant");
   REQUIRE_VALID_STATE ();
   int64_t res = internal->irredundant ();
   LOG_API_CALL_RETURNS ("irredundant", res);
@@ -1181,7 +1183,7 @@ int64_t Solver::irredundant () const {
 /*------------------------------------------------------------------------*/
 
 void Solver::freeze (int lit) {
-  TRACE ("freeze", lit);
+  TRACE (freeze, "freeze", lit);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
   external->freeze (lit);
@@ -1189,7 +1191,7 @@ void Solver::freeze (int lit) {
 }
 
 void Solver::melt (int lit) {
-  TRACE ("melt", lit);
+  TRACE (melt, "melt", lit);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
   REQUIRE (external->frozen (lit),
@@ -1199,7 +1201,7 @@ void Solver::melt (int lit) {
 }
 
 bool Solver::frozen (int lit) const {
-  TRACE ("frozen", lit);
+  TRACE (frozen, "frozen", lit);
   REQUIRE_VALID_STATE ();
   REQUIRE_VALID_LIT (lit);
   bool res = external->frozen (lit);
@@ -1210,7 +1212,7 @@ bool Solver::frozen (int lit) const {
 /*------------------------------------------------------------------------*/
 
 bool Solver::trace_proof (FILE *external_file, const char *name) {
-  TRACE ("trace_proof", name);
+  TRACE (trace_proof, "trace_proof", name);
   REQUIRE_VALID_STATE ();
   REQUIRE (
       state () == CONFIGURING,
@@ -1224,7 +1226,7 @@ bool Solver::trace_proof (FILE *external_file, const char *name) {
 }
 
 bool Solver::trace_proof (const char *path) {
-  TRACE ("trace_proof", path);
+  TRACE (trace_proof, "trace_proof", path);
   REQUIRE_VALID_STATE ();
   REQUIRE (
       state () == CONFIGURING,
@@ -1238,7 +1240,7 @@ bool Solver::trace_proof (const char *path) {
 }
 
 void Solver::flush_proof_trace (bool print_statistics_unless_quiet) {
-  TRACE ("flush_proof_trace");
+  TRACE (flush_proof_trace, "flush_proof_trace");
   REQUIRE_VALID_STATE ();
   REQUIRE (!internal->file_tracers.empty (), "proof is not traced");
   REQUIRE (!internal->file_tracers.back ()->closed (),
@@ -1248,7 +1250,7 @@ void Solver::flush_proof_trace (bool print_statistics_unless_quiet) {
 }
 
 void Solver::close_proof_trace (bool print_statistics_unless_quiet) {
-  TRACE ("close_proof_trace");
+  TRACE (close_proof_trace, "close_proof_trace");
   REQUIRE_VALID_STATE ();
   REQUIRE (!internal->file_tracers.empty (), "proof is not traced");
   REQUIRE (!internal->file_tracers.back ()->closed (),
@@ -1333,7 +1335,7 @@ bool Solver::disconnect_proof_tracer (FileTracer *tracer) {
 /*------------------------------------------------------------------------*/
 
 void Solver::conclude () {
-  TRACE ("conclude");
+  TRACE (conclude, "conclude");
   REQUIRE_VALID_STATE ();
   REQUIRE (
       state () == UNSATISFIED || state () == SATISFIED ||
@@ -1433,7 +1435,7 @@ void Solver::configurations () { Config::usage (); }
 void Solver::statistics () {
   if (state () == DELETING)
     return;
-  TRACE ("stats");
+  TRACE (stats, "stats");
   REQUIRE_VALID_OR_SOLVING_STATE ();
   internal->print_statistics ();
   LOG_API_CALL_END ("stats");
@@ -1442,7 +1444,7 @@ void Solver::statistics () {
 void Solver::resources () {
   if (state () == DELETING)
     return;
-  TRACE ("resources");
+  TRACE (resources, "resources");
   REQUIRE_VALID_OR_SOLVING_STATE ();
   internal->print_resource_usage ();
   LOG_API_CALL_END ("resources");
@@ -1541,7 +1543,7 @@ const char *Solver::read_solution (const char *path) {
 /*------------------------------------------------------------------------*/
 
 void Solver::dump_cnf () {
-  TRACE ("dump");
+  TRACE (dump, "dump");
   REQUIRE_INITIALIZED ();
   internal->dump ();
   LOG_API_CALL_END ("dump");
@@ -1554,7 +1556,7 @@ ExternalPropagator *Solver::get_propagator () {
 }
 
 bool Solver::observed (int lit) {
-  TRACE ("observed", lit);
+  TRACE (observed, "observed", lit);
   REQUIRE_VALID_OR_SOLVING_STATE ();
   REQUIRE_VALID_LIT (lit);
   bool res = external->observed (lit);
@@ -1563,7 +1565,7 @@ bool Solver::observed (int lit) {
 }
 
 bool Solver::is_witness (int lit) {
-  TRACE ("is_witness", lit);
+  TRACE (is_witness, "is_witness", lit);
   REQUIRE_VALID_OR_SOLVING_STATE ();
   REQUIRE_VALID_LIT (lit);
   bool res = external->is_witness (lit);
@@ -1572,7 +1574,7 @@ bool Solver::is_witness (int lit) {
 }
 
 bool Solver::is_decision (int lit) {
-  TRACE ("is_decision", lit);
+  TRACE (is_decision, "is_decision", lit);
   REQUIRE_VALID_OR_SOLVING_STATE ();
   REQUIRE_VALID_LIT (lit);
   bool res = external->is_decision (lit);
@@ -1581,7 +1583,7 @@ bool Solver::is_decision (int lit) {
 }
 
 void Solver::force_backtrack (int new_level) {
-  TRACE ("force_backtrack", new_level);
+  TRACE (force_backtrack, "force_backtrack", new_level);
   REQUIRE_VALID_OR_SOLVING_STATE ();
   REQUIRE (external->propagator,
            "can not force backtrack without a connected propagator");
@@ -1783,7 +1785,7 @@ void Solver::copy (Solver &other) const {
   REQUIRE_READY_STATE ();
   REQUIRE (other.state () & CONFIGURING, "target solver already modified");
   internal->opts.copy (other.internal->opts);
-  other.resize(vars ());
+  other.resize (vars ());
   ClauseCopier clause_copier (other);
   traverse_clauses (clause_copier);
   WitnessCopier witness_copier (other.external);

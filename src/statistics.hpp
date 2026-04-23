@@ -7,6 +7,53 @@
 //      length 21,  (Always/!0/verbose/never), (relative/percent/MACRO)
 #define CADICAL_STATISTICS \
 \
+  STATISTIC (api_init,                        3, NOTHING, 0, 0) \
+  STATISTIC (api_reset,                       3, NOTHING, 0, 0) \
+  STATISTIC (api_vars,                        3, NOTHING, 0, 0) \
+  STATISTIC (api_resize,                      3, NOTHING, 0, 0) \
+  STATISTIC (api_declare_more_variables,      3, NOTHING, 0, 0) \
+  STATISTIC (api_declare_one_more_variable,   3, NOTHING, 0, 0) \
+  STATISTIC (api_set,                         3, NOTHING, 0, 0) \
+  STATISTIC (api_limit,                       3, NOTHING, 0, 0) \
+  STATISTIC (api_configure,                   3, NOTHING, 0, 0) \
+  STATISTIC (api_add,                         3, NOTHING, 0, 0) \
+  STATISTIC (api_constrain,                   3, NOTHING, 0, 0) \
+  STATISTIC (api_assume,                      3, NOTHING, 0, 0) \
+  STATISTIC (api_lookahead,                   3, NOTHING, 0, 0) \
+  STATISTIC (api_lookahead_cubes,             3, NOTHING, 0, 0) \
+  STATISTIC (api_reset_assumptions,           3, NOTHING, 0, 0) \
+  STATISTIC (api_reset_constraint,            3, NOTHING, 0, 0) \
+  STATISTIC (api_propagate_assumptions,       3, NOTHING, 0, 0) \
+  STATISTIC (api_implied,                     3, NOTHING, 0, 0) \
+  STATISTIC (api_solve,                       3, NOTHING, 0, 0) \
+  STATISTIC (api_simplify,                    3, NOTHING, 0, 0) \
+  STATISTIC (api_flip,                        3, NOTHING, 0, 0) \
+  STATISTIC (api_flippable,                   3, NOTHING, 0, 0) \
+  STATISTIC (api_failed,                      3, NOTHING, 0, 0) \
+  STATISTIC (api_constraint_failed,           3, NOTHING, 0, 0) \
+  STATISTIC (api_fixed,                       3, NOTHING, 0, 0) \
+  STATISTIC (api_phase,                       3, NOTHING, 0, 0) \
+  STATISTIC (api_unphase,                     3, NOTHING, 0, 0) \
+  STATISTIC (api_observe,                     3, NOTHING, 0, 0) \
+  STATISTIC (api_unobserve,                   3, NOTHING, 0, 0) \
+  STATISTIC (api_reset_observed_vars,         3, NOTHING, 0, 0) \
+  STATISTIC (api_active,                      3, NOTHING, 0, 0) \
+  STATISTIC (api_redundant,                   3, NOTHING, 0, 0) \
+  STATISTIC (api_irredundant,                 3, NOTHING, 0, 0) \
+  STATISTIC (api_freeze,                      3, NOTHING, 0, 0) \
+  STATISTIC (api_melt,                        3, NOTHING, 0, 0) \
+  STATISTIC (api_frozen,                      3, NOTHING, 0, 0) \
+  STATISTIC (api_trace_proof,                 3, NOTHING, 0, 0) \
+  STATISTIC (api_flush_proof_trace,           3, NOTHING, 0, 0) \
+  STATISTIC (api_close_proof_trace,           3, NOTHING, 0, 0) \
+  STATISTIC (api_conclude,                    3, NOTHING, 0, 0) \
+  STATISTIC (api_stats,                       3, NOTHING, 0, 0) \
+  STATISTIC (api_resources,                   3, NOTHING, 0, 0) \
+  STATISTIC (api_dump,                        3, NOTHING, 0, 0) \
+  STATISTIC (api_observed,                    3, NOTHING, 0, 0) \
+  STATISTIC (api_is_witness,                  3, NOTHING, 0, 0) \
+  STATISTIC (api_is_decision,                 3, NOTHING, 0, 0) \
+  STATISTIC (api_force_backtrack,             3, NOTHING, 0, 0) \
   STATISTIC (backbone_phases,        1, INTERVAL, "",    interval) \
   STATISTIC (backbone_probes,        2, relative, "per", vars) \
   STATISTIC (backbone_rounds,        2, relative, "per", backbone_phases) \
