@@ -1024,17 +1024,16 @@ Clause *Closure::new_tmp_clause (std::vector<int> &clause) {
   // This might be compiler dependent though. Crucial for correctness.
   //
   assert (c->bytes () == bytes);
-
-  clause_delete.release ();
   LOG (c, "new pointer %p", (void *) c);
 
+  if (internal->proof)
+    internal->proof->add_derived_clause (internal->clause_id, false, clause, lrat_chain);
   if (clear)
     clause.clear ();
 
-  if (internal->proof) {
-    internal->proof->add_derived_clause (c, lrat_chain);
-  }
   extra_clauses.push_back (c);
+  clause_delete.release ();
+
   assert (internal->lrat_chain.empty ());
   return c;
 }
@@ -1047,14 +1046,12 @@ Clause *Closure::new_clause () {
     clear = true;
   }
 
+  if (internal->proof)
+    internal->proof->add_derived_clause (internal->clause_id + 1, false, clause, lrat_chain);
   Clause *c = internal->new_clause (false);
 
   if (clear)
     internal->clause.clear ();
-
-  if (internal->proof) {
-    internal->proof->add_derived_clause (c, lrat_chain);
-  }
 
   return c;
 }

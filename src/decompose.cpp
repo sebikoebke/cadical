@@ -442,10 +442,10 @@ bool Internal::decompose_round () {
 
     int64_t id1 = 0;
     if (idx_frozen) {
+      if (proof)
+        proof->add_derived_clause (clause_id + 1, false, clause, lrat_chain);
       Clause *c = new_clause (false, 1);
       watch_clause(c);
-      if (proof)
-        proof->add_derived_clause (c, lrat_chain);
       LOG (c, "new clause for frozen literal %s", LOGLIT (idx));
       c->gate = true;
       id1 = c->id;
@@ -477,10 +477,10 @@ bool Internal::decompose_round () {
 
     int64_t id2 = 0;
     if (idx_frozen) {
+      if (proof)
+        proof->add_derived_clause (clause_id + 1, false, clause, lrat_chain);
       Clause *c = new_clause (false, 1);
       watch_clause(c);
-      if (proof)
-        proof->add_derived_clause (c, lrat_chain);
       LOG (c, "new clause for frozen literal %s", LOGLIT (idx));
       id2 = c->id;
       c->gate = true;

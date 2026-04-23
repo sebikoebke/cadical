@@ -80,12 +80,9 @@ public:
   void add_derived_empty_clause (int64_t, const std::vector<int64_t> &);
   void add_derived_unit_clause (int64_t, int unit,
                                 const std::vector<int64_t> &);
-  void add_derived_clause (Clause *c, const std::vector<int64_t> &);
   void add_derived_clause (int64_t, bool, const std::vector<int> &,
                            const std::vector<int64_t> &);
   void add_derived_rat_clause (int64_t, bool, int, const std::vector<int> &,
-                               const std::vector<int64_t> &);
-  void add_derived_rat_clause (Clause *c, int w,
                                const std::vector<int64_t> &);
 
   // deletion of clauses. It comes in several variants, depending if the
