@@ -82,11 +82,6 @@ ipasir2_errorcode ipasir2_solve (void *solver, int* result, int32_t const* liter
   return IPASIR2_E_OK;
 }
 
-int ipasir_val (void *solver, int lit) {
-  return ccadical_val ((CCaDiCaL *) solver, lit);
-}
-
-
 ipasir2_errorcode ipasir2_val(void* solver, int32_t lit, int32_t* result) {
   *result = ccadical_val ((CCaDiCaL *) solver, lit);
   return IPASIR2_E_OK;
