@@ -1,145 +1,150 @@
 #ifndef _hash_hpp_INCLUDED
 #define _hash_hpp_INCLUDED
 
-#include <vector>
 #include <cassert>
+#include <vector>
 
 namespace CaDiCaL {
 
 // for debugging (we cannot use LOG)
-#define MYPRINTF(...) \
- //printf(__VA_ARGS__)
+// guard to avoid warnings.
+// #define MYPRINTFLOGGING
+#define MYPRINTF(...) // printf(__VA_ARGS__)
 
-// This is a hash set that tries to follow (some of the) C++ interface without
-// promising iterator stability, which is really reducing speed. It is missing
-// the `equal_range ()` operations though.
+// This is a hash set that tries to follow (some of the) C++ interface
+// without promising iterator stability, which is really reducing speed. It
+// is missing the `equal_range ()` operations though.
 //
-// KeyEqualTmpDuplicates is used for temporary duplicates if you want to search
-// except for one element that you has already changed its hash value, but you
-// do not want to find.
+// KeyEqualTmpDuplicates is used for temporary duplicates if you want to
+// search except for one element that you has already changed its hash
+// value, but you do not want to find.
 //
-// The hash table is mostly intended to contain pointers, hence it uses 0x01 as
-// tumb.
-template <class Key, class Hash, class KeyEqual = std::equal_to<Key>, class KeyEqualTmpDuplicates = std::equal_to<Key>>
+// The hash table is mostly intended to contain pointers, hence it uses 0x01
+// as tumb.
+template <class Key, class Hash, class KeyEqual = std::equal_to<Key>,
+          class KeyEqualTmpDuplicates = std::equal_to<Key>>
 class hash {
 public:
-  using stored_pair = std::pair <size_t, Key>;
+  using stored_pair = std::pair<size_t, Key>;
 
   class iterator {
   public:
     using iterator_category = std::random_access_iterator_tag;
     using value_type = Key;
-    using difference_type = typename std::vector<stored_pair>::difference_type;
-    using pointer = Key*;
-    using reference = Key&;
+    using difference_type =
+        typename std::vector<stored_pair>::difference_type;
+    using pointer = Key *;
+    using reference = Key &;
 
-    iterator() = default;
+    iterator () = default;
 
-    iterator (const typename std::vector<stored_pair>::iterator & p) : ptr(p) {}
-    iterator operator= (const stored_pair & p) { ptr->second = p.second; return *this;}
+    iterator (const typename std::vector<stored_pair>::iterator &p)
+        : ptr (p) {}
+    iterator operator= (const stored_pair &p) {
+      ptr->second = p.second;
+      return *this;
+    }
 
-    reference& operator*() const { return ptr->second; }
+    reference &operator* () const { return ptr->second; }
     pointer operator->() const { return &(ptr->second); }
-    stored_pair raw_value () const {return *ptr;}
+    stored_pair raw_value () const { return *ptr; }
 
-    iterator& operator++() {
+    iterator &operator++ () {
       ++ptr;
       return *this;
     }
 
-    iterator operator++(int) {
+    iterator operator++ (int) {
       iterator tmp = *this;
       ++ptr;
       return tmp;
     }
 
-    iterator& operator--() {
+    iterator &operator-- () {
       --ptr;
       return *this;
     }
 
-    iterator operator--(int) {
+    iterator operator-- (int) {
       iterator tmp = *this;
       --ptr;
       return tmp;
     }
 
-    iterator operator+(difference_type n) const {
-      return iterator(ptr + n);
+    iterator operator+ (difference_type n) const {
+      return iterator (ptr + n);
     }
 
-    iterator operator-(difference_type n) const {
-      return iterator(ptr - n);
+    iterator operator- (difference_type n) const {
+      return iterator (ptr - n);
     }
 
-    iterator& operator+=(difference_type n) {
+    iterator &operator+= (difference_type n) {
       ptr += n;
       return *this;
     }
 
-    iterator& operator-=(difference_type n) {
+    iterator &operator-= (difference_type n) {
       ptr -= n;
       return *this;
     }
 
-    reference operator[](difference_type n) const {
-      return ptr[n].second;
-    }
+    reference operator[] (difference_type n) const { return ptr[n].second; }
 
-    friend bool operator==(const iterator& a, const iterator& b) {
+    friend bool operator== (const iterator &a, const iterator &b) {
       return a.ptr == b.ptr;
     }
 
-    friend bool operator!=(const iterator& a, const iterator& b) {
+    friend bool operator!= (const iterator &a, const iterator &b) {
       return a.ptr != b.ptr;
     }
 
-    friend bool operator<(const iterator& a, const iterator& b) {
+    friend bool operator< (const iterator &a, const iterator &b) {
       return a.ptr < b.ptr;
     }
 
-    friend bool operator>(const iterator& a, const iterator& b) {
+    friend bool operator> (const iterator &a, const iterator &b) {
       return a.ptr > b.ptr;
     }
 
-    friend bool operator<=(const iterator& a, const iterator& b) {
+    friend bool operator<= (const iterator &a, const iterator &b) {
       return a.ptr <= b.ptr;
     }
 
-    friend bool operator>=(const iterator& a, const iterator& b) {
+    friend bool operator>= (const iterator &a, const iterator &b) {
       return a.ptr >= b.ptr;
     }
 
-    friend iterator operator+(difference_type n, const iterator& it) {
+    friend iterator operator+ (difference_type n, const iterator &it) {
       return it + n;
     }
 
-    friend difference_type operator-(const iterator& a, const iterator& b) {
+    friend difference_type operator- (const iterator &a,
+                                      const iterator &b) {
       return a.ptr - b.ptr;
     }
 
     friend class hash;
+
   private:
     typename std::vector<stored_pair>::iterator ptr;
   };
 
-  const stored_pair tumb = std::make_pair<size_t, Key>(0,reinterpret_cast<const Key>((void*)1));
+  const stored_pair tumb = std::make_pair<size_t, Key> (
+      0, reinterpret_cast<const Key> ((void *) 1));
+
 private:
-    std::vector<stored_pair> table;
-    Hash hasher;
+  std::vector<stored_pair> table;
+  Hash hasher;
 
 public:
   hash () : hasher ({}) {};
   template <class T> hash (T h) : hasher (h) {
-    table.resize (64, std::make_pair <size_t, Key>(0, nullptr));
+    table.resize (64, std::make_pair<size_t, Key> (0, nullptr));
   }
-  iterator begin() {
-    return iterator(table.begin());
-  }
+  iterator begin () { return iterator (table.begin ()); }
 
-  iterator end() {
-    return iterator(table.end());
-  }
+  iterator end () { return iterator (table.end ()); }
 
   iterator erase (Key el) {
     const size_t hash_val = hasher (el);
@@ -154,7 +159,7 @@ public:
     }
     assert (KeyEqual (table[pos], el));
     table[pos] = tumb;
-    MYPRINTF("deleting pos %d\n", pos);
+    MYPRINTF ("deleting pos %d\n", pos);
     return iterator (table.begin () + pos + 1);
   }
 
@@ -173,17 +178,18 @@ public:
     MYPRINTF ("starting at position %zd with hash %zd\n", pos, hash_val);
     size_t hash_size = table.size ();
     stored_pair g;
-    Key res {};
+    Key res{};
 
     while ((g = table[pos]), g.second) {
-      MYPRINTF ("looking at position %zd, %zd vs %zd\n", pos, g.first, hash_val);
+      MYPRINTF ("looking at position %zd, %zd vs %zd\n", pos, g.first,
+                hash_val);
       if (g == tumb)
         ;
       else if (g.first != hash_val)
         ;
       else if (g.second == except)
         ;
-      else if (KeyEqual ()(g.second, el)) {
+      else if (KeyEqual () (g.second, el)) {
         res = g.second;
         MYPRINTF ("found id %zd at position %zd\n", g.second->id, pos);
         break;
@@ -212,15 +218,16 @@ public:
     MYPRINTF ("starting at position %zd with hash %zd\n", pos, hash_val);
     size_t hash_size = table.size ();
     stored_pair g;
-    Key res {};
+    Key res{};
 
     while ((g = table[pos]), g.second) {
-      MYPRINTF ("looking at position %zd, %zd vs %zd\n", pos, g.first, hash_val);
+      MYPRINTF ("looking at position %zd, %zd vs %zd\n", pos, g.first,
+                hash_val);
       if (g == tumb)
         ;
       else if (g.first != hash_val)
         ;
-      else if (KeyEqual ()(g.second, el)) {
+      else if (KeyEqual () (g.second, el)) {
         res = g.second;
         MYPRINTF ("found id %zd at position %zd\n", g.second->id, pos);
         break;
@@ -243,7 +250,7 @@ public:
   }
 
   iterator insert (Key el) {
-    if (is_full())
+    if (is_full ())
       resize_hash_table ();
     const size_t hash_val = hasher (el);
     const size_t start_pos = reduce_hash (hash_val);
@@ -254,7 +261,8 @@ public:
     ++entries;
 
     while ((g = table[pos]), g.second) {
-      MYPRINTF ("looking at position %zd, %zd vs %zd\n", pos, g.first, hash_val);
+      MYPRINTF ("looking at position %zd, %zd vs %zd\n", pos, g.first,
+                hash_val);
       if (g == tumb) {
         break;
       }
@@ -266,7 +274,8 @@ public:
     }
     table[pos].second = el;
     table[pos].first = hash_val;
-    MYPRINTF ("insert %zd at position %zd with hash %zd\n", el->id, pos, hash_val);
+    MYPRINTF ("insert %zd at position %zd with hash %zd\n", el->id, pos,
+              hash_val);
     return iterator (table.begin () + pos);
   }
 
@@ -292,11 +301,9 @@ public:
   }
 #endif
 
-  void clear () {
-    table.clear ();
-  };
+  void clear () { table.clear (); };
 
-  private:
+private:
   size_t collisions = 0;
   size_t entries = 0;
   size_t reduce_hash (size_t hash, size_t other_size, size_t other_size2) {
@@ -316,22 +323,28 @@ public:
   }
 
   void resize_hash_table () {
-    MYPRINTF("resize\n");
-    decltype(table) new_table;
-    size_t new_size = 2*table.size ();
-    new_table.resize (new_size, std::make_pair <size_t, Key>(0, nullptr));
+    MYPRINTF ("resize\n");
+    decltype (table) new_table;
+    size_t new_size = 2 * table.size ();
+    new_table.resize (new_size, std::make_pair<size_t, Key> (0, nullptr));
     const size_t old_entries = entries;
     size_t flushed = 0;
+#ifdef MYPRINTFLOGGING
     auto old_pos = 0;
+#endif
 
     for (auto el : table) {
       if (!el.second) {
+#ifdef MYPRINTFLOGGING
         ++old_pos;
+#endif
         continue;
       }
-      if (el == tumb){
+      if (el == tumb) {
         ++flushed;
+#ifdef MYPRINTFLOGGING
         ++old_pos;
+#endif
         continue;
       }
 
@@ -341,23 +354,25 @@ public:
           new_pos = 0;
       }
       new_table[new_pos] = el;
-      MYPRINTF ("inserting id %zd at position %zd was at %zd, with hash %zd\n", el.second->id, new_pos, old_pos, el.first);
+#ifdef MYPRINTFLOGGING
+      MYPRINTF (
+          "inserting id %zd at position %zd was at %zd, with hash %zd\n",
+          el.second->id, new_pos, old_pos, el.first);
       ++old_pos;
+#endif
     }
 
     table = std::move (new_table);
     entries = old_entries - flushed;
-    MYPRINTF("end of resize\n");
+    MYPRINTF ("end of resize\n");
   }
 
   bool is_full () const {
     if (2 * entries < table.size ())
-       return false;
-     return true;
+      return false;
+    return true;
   }
-
-
 };
 
-}
+} // namespace CaDiCaL
 #endif

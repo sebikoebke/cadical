@@ -145,7 +145,7 @@ Gate *Gate::new_gate (size_t n, bool lrat) {
   if (!raw)
     throw std::bad_alloc ();
   Gate *g = new (raw) Gate ();
-  DeferDeleteFunc<Gate, typeof (Gate::delete_gate)> delete_g (
+  DeferDeleteFunc<Gate, decltype (Gate::delete_gate)> delete_g (
       g, &Gate::delete_gate);
   if (lrat) {
     g->lrat_reasons = new Gate::LRAT_Reasons ();
@@ -161,7 +161,7 @@ Gate *Gate::new_gate (const std::vector<int> &v, bool lrat) {
   if (!raw)
     throw std::bad_alloc ();
   Gate *g = new (raw) Gate (n);
-  DeferDeleteFunc<Gate, typeof (Gate::delete_gate)> delete_g (
+  DeferDeleteFunc<Gate, decltype (Gate::delete_gate)> delete_g (
       g, &Gate::delete_gate);
   for (int i = 0; i < n; ++i)
     g->rhs[i] = v[i];
@@ -180,7 +180,7 @@ Gate *Gate::new_gate (const_literal_iterator begin,
   if (!raw)
     throw std::bad_alloc ();
   Gate *g = new (raw) Gate (n);
-  DeferDeleteFunc<Gate, typeof (Gate::delete_gate)> delete_g (
+  DeferDeleteFunc<Gate, decltype (Gate::delete_gate)> delete_g (
       g, &Gate::delete_gate);
   auto u = begin;
   for (int i = 0; i < n; ++i, ++u) {
@@ -2915,7 +2915,7 @@ Gate *Closure::new_and_gate (Clause *base_clause, int lhs) {
 
   Gate *h = find_and_lits (this->rhs);
   Gate *g = Gate::new_gate (this->rhs, internal->lrat);
-  DeferDeleteFunc<Gate, typeof (Gate::delete_gate)> delete_g (
+  DeferDeleteFunc<Gate, decltype (Gate::delete_gate)> delete_g (
       g, &Gate::delete_gate);
   g->lhs = lhs;
   g->tag = Gate_Type::And_Gate;
@@ -3945,7 +3945,7 @@ Gate *Closure::new_xor_gate (const vector<LitClausePair> &glauses,
     assert (internal->unsat || chain.empty ());
   } else {
     g = Gate::new_gate (rhs, internal->lrat);
-    DeferDeleteFunc<Gate, typeof (Gate::delete_gate)> delete_g (
+    DeferDeleteFunc<Gate, decltype (Gate::delete_gate)> delete_g (
         g, &Gate::delete_gate);
     g->lhs = lhs;
     g->tag = Gate_Type::XOr_Gate;
@@ -7179,7 +7179,7 @@ Gate *Closure::new_ite_gate (int lhs, int cond, int then_lit, int else_lit,
 
   bool negate_lhs = false;
   Gate *g = Gate::new_gate (rhs, internal->lrat);
-  DeferDeleteFunc<Gate, typeof (Gate::delete_gate)> delete_g (
+  DeferDeleteFunc<Gate, decltype (Gate::delete_gate)> delete_g (
       g, &Gate::delete_gate);
   g->lhs = lhs;
   g->tag = Gate_Type::ITE_Gate;

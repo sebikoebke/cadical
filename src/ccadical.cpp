@@ -16,7 +16,7 @@ struct Wrapper : Learner, Terminator, FixedAssignmentListener {
 
   struct {
     void *state;
-    void (*function) (void* data, int32_t fixed);
+    void (*function) (void *data, int32_t fixed);
   } fixed_listener;
 
   struct {
@@ -31,7 +31,8 @@ struct Wrapper : Learner, Terminator, FixedAssignmentListener {
     void *state;
     int max_length;
     int *begin_clause, *end_clause, *capacity_clause;
-    void (*function) (void *, int32_t const *, int32_t len, void* proofmeta);
+    void (*function) (void *, int32_t const *, int32_t len,
+                      void *proofmeta);
   } learner2;
 
   bool terminate () {
@@ -55,7 +56,7 @@ struct Wrapper : Learner, Terminator, FixedAssignmentListener {
         size_t count = learner.end_clause - learner.begin_clause;
         size_t size = count ? 2 * count : 1;
         learner.begin_clause =
-          (int *) realloc (learner.begin_clause, size * sizeof (int));
+            (int *) realloc (learner.begin_clause, size * sizeof (int));
         learner.end_clause = learner.begin_clause + count;
         learner.capacity_clause = learner.begin_clause + size;
       }
@@ -71,18 +72,19 @@ struct Wrapper : Learner, Terminator, FixedAssignmentListener {
         size_t count = learner2.end_clause - learner2.begin_clause;
         size_t size = count ? 2 * count : 1;
         learner2.begin_clause =
-          (int *) realloc (learner2.begin_clause, size * sizeof (int));
+            (int *) realloc (learner2.begin_clause, size * sizeof (int));
         learner2.end_clause = learner2.begin_clause + count;
         learner2.capacity_clause = learner2.begin_clause + size;
       }
       *learner2.end_clause++ = lit;
       if (!lit) {
-        learner2.function (learner2.state, learner2.begin_clause, learner.end_clause - learner.begin_clause, nullptr);
+        learner2.function (learner2.state, learner2.begin_clause,
+                           learner.end_clause - learner.begin_clause,
+                           nullptr);
         learner2.end_clause = learner2.begin_clause;
       }
     }
   }
-
 
   void notify_fixed_assignment (int lit) {
     fixed_listener.function (fixed_listener.state, lit);
@@ -131,20 +133,22 @@ void ccadical_set_option (CCaDiCaL *wrapper, const char *name, int val) {
   ((Wrapper *) wrapper)->solver->set (name, val);
 }
 
-COption* ccadical_options (CCaDiCaL *, size_t *len) {
-  std::vector<COption> solver_options;
-  solver_options.resize(CaDiCaL::number_of_options + 1);
+COption *ccadical_options (CCaDiCaL *, size_t *len) {
+  COption *solver_options = new COption[CaDiCaL::number_of_options];
+  // solver_options = (COption *) malloc (CaDiCaL::number_of_options + 1);
 
-  for (CaDiCaL::Option* option = CaDiCaL::Options::begin(); option != CaDiCaL::Options::end(); ++option) {
-    COption opt;
+  size_t idx = 0;
+  for (CaDiCaL::Option *option = CaDiCaL::Options::begin ();
+       option != CaDiCaL::Options::end (); ++option) {
+    COption opt = solver_options[idx++];
     opt.name = option->name;
     opt.def = option->def;
     opt.lo = option->lo;
     opt.hi = option->hi;
-    solver_options.push_back (opt);
+    // solver_options.push_back (opt);
   }
-  *len = solver_options.size ();
-  return solver_options.data ();
+  *len = CaDiCaL::number_of_options;
+  return solver_options;
 }
 
 void ccadical_limit (CCaDiCaL *wrapper, const char *name, int val) {
@@ -223,7 +227,8 @@ void ccadical_set_learn (CCaDiCaL *ptr, void *state, int max_length,
 }
 
 void ccadical_set_learn2 (CCaDiCaL *ptr, void *state, int max_length,
-                         void (*learn) (void *state, int const *clause, int32_t len, void* proofmeta)) {
+                          void (*learn) (void *state, int const *clause,
+                                         int32_t len, void *proofmeta)) {
   Wrapper *wrapper = (Wrapper *) ptr;
   wrapper->learner2.state = state;
   wrapper->learner2.max_length = max_length;
@@ -235,7 +240,7 @@ void ccadical_set_learn2 (CCaDiCaL *ptr, void *state, int max_length,
 }
 
 void ccadical_set_fixed_listener (CCaDiCaL *ptr, void *state,
-                         void (*fixed) (void *state, int fixed)) {
+                                  void (*fixed) (void *state, int fixed)) {
   Wrapper *wrapper = (Wrapper *) ptr;
   wrapper->fixed_listener.state = state;
   wrapper->fixed_listener.function = fixed;
@@ -244,7 +249,6 @@ void ccadical_set_fixed_listener (CCaDiCaL *ptr, void *state,
   else
     wrapper->solver->disconnect_fixed_listener ();
 }
-
 
 void ccadical_freeze (CCaDiCaL *ptr, int lit) {
   ((Wrapper *) ptr)->solver->freeze (lit);
