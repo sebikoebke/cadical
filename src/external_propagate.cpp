@@ -952,9 +952,10 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
   // out-of-order if best watch smaller highest.
   if (v.trail < m.trail && opts.elevate > 0) {
     assert (highest_idx);
+    int *lits = res->literals;
     if (highest_idx != 1) {
-      res->literals[1] = highest_literal;
-      res->literals[highest_idx] = pos1;
+      lits[1] = highest_literal;
+      lits[highest_idx] = pos1;
     }
     if (from_propagator)
       stats.up_learn_out_of_order++;
