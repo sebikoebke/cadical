@@ -140,7 +140,7 @@ COption *ccadical_options (CCaDiCaL *, size_t *len) {
   size_t idx = 0;
   for (CaDiCaL::Option *option = CaDiCaL::Options::begin ();
        option != CaDiCaL::Options::end (); ++option) {
-    COption opt = solver_options[idx++];
+    COption &opt = solver_options[idx++];
     opt.name = option->name;
     opt.def = option->def;
     opt.lo = option->lo;
