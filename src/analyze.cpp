@@ -511,7 +511,8 @@ struct analyze_trail_larger {
 
 // Generate new driving clause and compute jump level.
 
-Clause *Internal::new_driving_clause (const int glue, int &jump) {
+Clause *Internal::new_driving_clause (const int glue, int &jump,
+                                      int &driving_level) {
 
   const size_t size = clause.size ();
   Clause *res;
@@ -542,6 +543,7 @@ Clause *Internal::new_driving_clause (const int glue, int &jump) {
            analyze_trail_negative_rank (this), analyze_trail_larger (this));
 
     jump = var (clause[1]).level;
+    driving_level = var (clause[0]).level;
     res = new_learned_redundant_clause (glue);
     res->used = max_used;
   }
@@ -1216,8 +1218,9 @@ void Internal::analyze () {
     uip = 0;
     while (!uip) {
       if (!i) {
-        lazy_external_up_out_of_order_clause (uip);
-        if (unsat)
+        if (lazy_external_up_out_of_order_clause (uip))
+          return;
+        else if (unsat)
           return;
         else if (uip) {
           open = 1;
@@ -1320,7 +1323,9 @@ void Internal::analyze () {
   // flipped 1st UIP literal.
   //
   int jump;
-  Clause *driving_clause = new_driving_clause (glue, jump);
+  int driving;
+  Clause *driving_clause = new_driving_clause (glue, jump, driving);
+  assert (driving == level);
   UPDATE_AVERAGE (averages.current.jump, jump);
 
   int new_level = determine_actual_backtrack_level (jump);
@@ -1366,14 +1371,17 @@ void Internal::analyze () {
 //   - the clause becomes empty (unsat must be answered)
 //   - the clause is a unit (backtrack and set the clause)
 //   - the clause is a new conflict on lower level and we restart the
+//   - the clause is a fake conflict with only one decision level
 //   analysis
 //
 // TODO: we do not really need to keep the clause longer than the conflict
 // analysis.
-void Internal::lazy_external_up_out_of_order_clause (int &uip) {
+bool Internal::lazy_external_up_out_of_order_clause (int &uip) {
   assert (!opts.exteagerreasons);
   assert (external_prop);
   LOG (clause, "out-of-order conflict");
+  uip = 0;
+  bool exiting = 0;
   if (clause.empty ()) {
     LOG (lrat_chain, "lrat_chain:");
     LOG (clause, "clause:");
@@ -1390,6 +1398,7 @@ void Internal::lazy_external_up_out_of_order_clause (int &uip) {
     if (external->learner)
       external->export_learned_empty_clause ();
     conflict = 0;
+    exiting = 1;
   } else if (clause.size () == 1) {
     LOG ("found out-of-order unit");
     uip = -clause[0];
@@ -1399,11 +1408,24 @@ void Internal::lazy_external_up_out_of_order_clause (int &uip) {
     clause.clear ();
   } else {
     int jump;
+    int driving;
     const int glue = (int) clause.size () - 1;
-    conflict = new_driving_clause (glue, jump);
+    conflict = new_driving_clause (glue, jump, driving);
     UPDATE_AVERAGE (averages.current.level, jump);
-    backtrack (jump);
-    LOG (conflict, "new conflict");
+    backtrack (driving);
+
+    if (jump != driving) {
+      LOG (conflict, "fake conflict");
+      int forced = 0;
+      const int conflict_level = otfs_find_backtrack_level (forced);
+      int new_level = determine_actual_backtrack_level (conflict_level);
+      backtrack (new_level);
+
+      LOG ("forcing %d", forced);
+      search_assign_driving (forced, conflict);
+      exiting = 1;
+    } else
+      LOG (conflict, "new conflict");
   }
   // Clean up.
   //
@@ -1412,10 +1434,13 @@ void Internal::lazy_external_up_out_of_order_clause (int &uip) {
   clear_analyzed_levels ();
   clause.clear ();
 
-  if (unsat) {
+  if (exiting) {
+    conflict = 0;
+    clear_unit_analyzed_literals ();
     lrat_chain.clear ();
     STOP (analyze);
   }
+  return 0;
 }
 
 // We wait reporting a learned unit until propagation of that unit is

@@ -817,7 +817,7 @@ struct Internal {
                         int &antecedent_size);
   void analyze_reason (int lit, Clause *, int &open, int &resolvent_size,
                        int &antecedent_size);
-  Clause *new_driving_clause (const int glue, int &jump);
+  Clause *new_driving_clause (const int glue, int &jump, int &);
   int find_conflict_level (int &forced);
   int determine_actual_backtrack_level (int jump);
   void otfs_strengthen_clause (Clause *, int, int,
@@ -826,7 +826,7 @@ struct Internal {
   int otfs_find_backtrack_level (int &forced);
   Clause *on_the_fly_strengthen (Clause *conflict, int lit);
   void update_decision_rate_average ();
-  void lazy_external_up_out_of_order_clause (int &);
+  bool lazy_external_up_out_of_order_clause (int &);
   void analyze ();
   void iterate (); // report learned unit clause
 
