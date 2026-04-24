@@ -39,6 +39,7 @@ static const char *USAGE =
 "  --space <MB>      set space limit (none=0, default=%d)\n"
 "  --bad-alloc       generate failing memory allocations, monitor for crashes\n"
 "  --leak-alloc      track memory allocations, monitor for memory leaks\n"
+"  --terminator      generate termination requests, monitor for crashes\n"
 "\n"
 "  --do-not-ignore-resource-limits consider out-of-time or memory as error\n"
 "\n"
@@ -161,6 +162,10 @@ extern "C" {
 #ifdef MOBICAL_MEMORY
 #include <cxxabi.h>
 #include <dlfcn.h>
+#include <execinfo.h>
+#endif
+#ifdef MOBICAL_TERMINATE
+#include <cxxabi.h>
 #include <execinfo.h>
 #endif
 #include <unistd.h>
@@ -453,6 +458,18 @@ struct Shared {
         *stack_array[MOBICAL_MEMORY_LEAK_COUNT][MOBICAL_MEMORY_STACK_COUNT];
     size_t stack_size[MOBICAL_MEMORY_LEAK_COUNT];
   } leak_alloc;
+#endif
+
+#ifdef MOBICAL_TERMINATE
+#define MOBICAL_TERMINATE_STACK_COUNT 64
+  struct {
+    size_t terminate_call_index;
+    void *terminate_stack_array[MOBICAL_TERMINATE_STACK_COUNT];
+    size_t terminate_stack_size;
+    size_t signal_call_index;
+    void *signal_stack_array[MOBICAL_TERMINATE_STACK_COUNT];
+    size_t signal_stack_size;
+  } limit_terminate;
 #endif
 };
 
@@ -1316,6 +1333,9 @@ class Mobical : public Handler {
   bool bad_alloc = false;
   bool leak_alloc = false;
 #endif
+#ifdef MOBICAL_TERMINATE
+  bool terminator = false;
+#endif
 
   Terminal &terminal = terr;
 
@@ -1572,11 +1592,15 @@ struct Call {
     MAXALLOC        = shift ( 38 ),
     LEAKALLOC       = shift ( 39 ),
 #endif
-    PROPAGATE_ASSUMPTIONS = shift (40),
-    IMPLIED_LITERALS = shift (41),
-    RESET_ASSUMPTIONS = shift (42),
+#ifdef MOBICAL_TERMINATE
+    TERMINATE       = shift ( 40 ),
+#endif
 
-    RESERVE = shift (  43 ),
+    PROPAGATE_ASSUMPTIONS = shift ( 41 ),
+    IMPLIED_LITERALS = shift ( 42 ),
+    RESET_ASSUMPTIONS = shift ( 43 ),
+
+    RESERVE = shift ( 44 ),
 
     // clang-format on
 
@@ -1585,6 +1609,9 @@ struct Call {
              PHASE | RESERVE
 #ifdef MOBICAL_MEMORY
              | MAXALLOC | LEAKALLOC
+#endif
+#ifdef MOBICAL_TERMINATE
+             | TERMINATE
 #endif
     ,
     CONFIG = INIT | SET | CONFIGURE | ALWAYS | TRACEPROOF,
@@ -1718,6 +1745,19 @@ struct LeakAllocCall : public Call {
   void print (ostream &o) { o << "leak_alloc"; }
   Call *copy () { return new LeakAllocCall (); }
   const char *keyword () { return "leak_alloc"; }
+};
+#endif
+
+#ifdef MOBICAL_TERMINATE
+struct TerminateCall : public Call {
+  TerminateCall (int val) : Call (TERMINATE, 0, 0, 0, val) {}
+  void execute (Solver *&s, ExtendMap *&extendmap) {
+    (void) s;
+    (void) extendmap;
+  }
+  void print (ostream &o) { o << "terminate " << val; }
+  Call *copy () { return new TerminateCall (val); }
+  const char *keyword () { return "terminate"; }
 };
 #endif
 
@@ -2281,7 +2321,11 @@ struct CloseProofTraceCall : public Call {
 
 /*------------------------------------------------------------------------*/
 
-class Trace {
+class Trace
+#ifdef MOBICAL_TERMINATE
+  : public Terminator
+#endif
+{
 
   int64_t id;
   uint64_t seed;
@@ -2312,6 +2356,24 @@ public:
   static int64_t memory_leak_next_free;
 #endif
 
+#ifdef MOBICAL_TERMINATE
+  static int64_t limit_terminate;
+  static int64_t limit_terminate_remaining;
+  bool terminate () override {
+    // Send termination signal once when counter reaches 0.
+    if (!limit_terminate || !limit_terminate_remaining)
+      return false;
+    if (--limit_terminate_remaining > 0u)
+      return false;
+
+    mobical.shared->limit_terminate.terminate_call_index = trace_call_index;
+    mobical.shared->limit_terminate.terminate_stack_size =
+        backtrace (mobical.shared->limit_terminate.terminate_stack_array,
+                   MOBICAL_TERMINATE_STACK_COUNT);
+    return true;
+  }
+#endif
+
 #define SIGNALS \
   SIGNAL (SIGINT) \
   SIGNAL (SIGSEGV) \
@@ -2319,7 +2381,8 @@ public:
   SIGNAL (SIGTERM) \
   SIGNAL (SIGBUS) \
   SIGNAL (SIGUSR1) \
-  SIGNAL (SIGUSR2)
+  SIGNAL (SIGUSR2) \
+  SIGNAL (SIGTSTP)
 
 #define SIGNAL(SIG) static void (*old_##SIG##_handler) (int);
   SIGNALS
@@ -2329,11 +2392,19 @@ public:
   static void reset_child_signal_handlers ();
 
 #ifdef MOBICAL_MEMORY
+#define MOBICAL_PRINT_TRACE
   static void hooks_install (void);
   static void hooks_uninstall (void);
   static void *hook_malloc (size_t);
   static void *hook_realloc (void *, size_t);
   static void hook_free (void *);
+#endif
+
+#ifdef MOBICAL_TERMINATE
+#define MOBICAL_PRINT_TRACE
+#endif
+
+#ifdef MOBICAL_PRINT_TRACE
   static void print_trace (void **, size_t, ostream &, size_t);
 #endif
 
@@ -2380,7 +2451,11 @@ public:
            " (4 / SIGUSR2)"
         << endl;
     else if (code == 5)
-      o << "# status: unknown signal was raised (5)" << endl;
+      o << "# status: termination request lead to crash / assertion"
+           " (5 / SIGTSTP)"
+        << endl;
+    else if (code == 6)
+      o << "# status: unknown signal was raised (6)" << endl;
     else {
       o << "# ------------------------------------------------------------"
         << endl;
@@ -2412,6 +2487,16 @@ public:
       if (mobical.shared->bad_alloc.signal_call_index == i + 1)
         o << "# V--------------------------------------------------------"
              "-------------- bad alloc: crashed / assertion"
+          << endl;
+#endif
+#ifdef MOBICAL_TERMINATE
+      if (mobical.shared->limit_terminate.terminate_call_index == i + 1)
+        o << "# V--------------------------------------------------------"
+             "-------------- terminate: termination requested"
+          << endl;
+      if (mobical.shared->limit_terminate.signal_call_index == i + 1)
+        o << "# V--------------------------------------------------------"
+             "-------------- terminate: crashed / assertion"
           << endl;
 #endif
       o << i << ' ';
@@ -2462,6 +2547,26 @@ public:
       }
     }
 #endif
+#ifdef MOBICAL_TERMINATE
+    if (mobical.shared->limit_terminate.terminate_call_index > 0) {
+      o << "# ---------------------------------------------------" << endl;
+      o << "# CaDiCal was tried to be terminated here:" << endl;
+      assert (mobical.shared->limit_terminate.terminate_stack_size <=
+              MOBICAL_TERMINATE_STACK_COUNT);
+      print_trace (mobical.shared->limit_terminate.terminate_stack_array,
+                   mobical.shared->limit_terminate.terminate_stack_size, o, 0);
+      o << "#" << endl;
+    }
+    if (mobical.shared->limit_terminate.signal_call_index > 0) {
+      o << "# ---------------------------------------------------" << endl;
+      o << "# A crash / assertion happened here:" << endl;
+      assert (mobical.shared->limit_terminate.signal_stack_size <=
+              MOBICAL_TERMINATE_STACK_COUNT);
+      print_trace (mobical.shared->limit_terminate.signal_stack_array,
+                   mobical.shared->limit_terminate.signal_stack_size, o, 0);
+      o << "#" << endl;
+    }
+#endif
   }
 
   void execute () {
@@ -2476,6 +2581,10 @@ public:
     std::memset (&mobical.shared->leak_alloc, 0,
                  sizeof (mobical.shared->leak_alloc));
     hooks_install ();
+#endif
+#ifdef MOBICAL_TERMINATE
+    limit_terminate = 0;
+    limit_terminate_remaining = 0;
 #endif
 
     executed++;
@@ -2512,6 +2621,12 @@ public:
           // Set the flag before the reset call such that memory leaks
           // are found when the reset call leaks memory.
           deallocated = true;
+        }
+#endif
+#ifdef MOBICAL_TERMINATE
+        if (c->type == Call::TERMINATE) {
+          limit_terminate = 1;
+          limit_terminate_remaining = c->val;
         }
 #endif
 
@@ -2552,6 +2667,11 @@ public:
           c->execute (solver, extendmap);
         // initialize options after INIT or CONFIGURE
         if (c->type == Call::INIT || c->type == Call::CONFIGURE) {
+#ifdef MOBICAL_TERMINATE
+          // Connect terminator but never disconnect it
+          // (might violate API contract on failed allocation).
+          solver->connect_terminator(this);
+#endif
           for (auto &o : mobical.mopts) {
             if (o.fix (&mobical.mopts)) {
               solver->set (o.name, o.val (&mobical.mopts));
@@ -2575,6 +2695,7 @@ public:
 #endif
       }
     }
+
 #ifdef MOBICAL_MEMORY
     // Delete the mock pointer to ignore these memory leaks
     // in case the reset call failed due to a bad memory allocation.
@@ -3454,6 +3575,10 @@ void Trace::generate (uint64_t i, uint64_t s) {
   if (mobical.leak_alloc && (random.pick_int (0, 2) == 0))
     push_back (new LeakAllocCall ());
 #endif
+#ifdef MOBICAL_TERMINATE
+  if (mobical.terminator && (random.pick_int (0, 2) == 0))
+    push_back (new TerminateCall (random.pick_log (1e1, 1e4)));
+#endif
 
   push_back (new InitCall ());
 
@@ -3754,6 +3879,10 @@ int64_t Trace::memory_bad_failed = 0;
 int64_t Trace::memory_leak_alloc = 0;
 int64_t Trace::memory_leak_next_free = 0;
 #endif
+#ifdef MOBICAL_TERMINATE
+int64_t Trace::limit_terminate = 0;
+int64_t Trace::limit_terminate_remaining = 0;
+#endif
 
 #define SIGNAL(SIG) void (*Trace::old_##SIG##_handler) (int);
 SIGNALS
@@ -3779,6 +3908,20 @@ void Trace::child_signal_handler (int sig) {
     // create a unique result code.
     reset_child_signal_handlers ();
     raise (SIGUSR1);
+  }
+#endif
+#ifdef MOBICAL_TERMINATE
+  if (limit_terminate && !limit_terminate_remaining) {
+    mobical.shared->limit_terminate.signal_call_index = trace_call_index;
+    mobical.shared->limit_terminate.signal_stack_size =
+        backtrace (mobical.shared->limit_terminate.signal_stack_array,
+                   MOBICAL_TERMINATE_STACK_COUNT);
+    // The signal probably has been raised as a result
+    // of the termination request and an assertion failing.
+    // Raise a custom signal code for the parent to
+    // create a unique result code.
+    reset_child_signal_handlers ();
+    raise (SIGTSTP);
   }
 #endif
 
@@ -3841,6 +3984,7 @@ void *Trace::hook_malloc (size_t size) {
   }
   // Default allocator
   void *ptr = (*libc_malloc) (size);
+
   // Leak detection
   if (memory_leak_alloc > 0) {
     for (size_t offset{0u}; offset < MOBICAL_MEMORY_LEAK_COUNT; offset++) {
@@ -3943,7 +4087,9 @@ void Trace::hook_free (void *ptr) {
     }
   }
 }
+#endif
 
+#ifdef MOBICAL_PRINT_TRACE
 void Trace::print_trace (void **stack_array, size_t stack_size, ostream &os,
                          size_t start_index) {
   char **stack_text = backtrace_symbols (stack_array, stack_size);
@@ -4012,8 +4158,10 @@ int Trace::fork_and_execute () {
       res = 3; // Bad allocation caused signal.
     else if (WTERMSIG (status) == SIGUSR2)
       res = 4; // Leaked allocation caused signal.
+    else if (WTERMSIG (status) == SIGTSTP)
+      res = 5; // Termination caused signal.
     else
-      res = 5;
+      res = 6;
 
   } else {
 
@@ -5231,6 +5379,15 @@ void Reader::parse () {
       mobical.leak_alloc = true;
       c = new LeakAllocCall ();
 #endif
+#ifdef MOBICAL_TERMINATE
+    } else if (!strcmp (keyword, "terminate")) {
+      mobical.terminator = true;
+      if (!first)
+        error ("first argument to 'terminate' missing");
+      if (!parse_int_str (first, val))
+        error ("invalid first argument '%s' to 'terminate'", first);
+      c = new TerminateCall (val);
+#endif
     } else if (!strcmp (keyword, "propagate_assumptions")) {
       c = new PropagateAssumptionsCall ();
     } else if (!strcmp (keyword, "implied")) {
@@ -5250,9 +5407,12 @@ void Reader::parse () {
 #ifdef MOBICAL_MEMORY
             | Call::MAXALLOC | Call::LEAKALLOC
 #endif
+#ifdef MOBICAL_TERMINATE
+            | Call::TERMINATE
+#endif
           )))
-        error ("first call has to be an 'init', 'max_alloc' or 'leak_alloc'"
-               " call");
+        error ("first call has to be an 'init', 'max_alloc', 'leak_alloc'"
+               " or 'terminate' call");
 
       if (state == Call::RESET)
         error ("'%s' after 'reset'", c->keyword ());
@@ -5607,6 +5767,14 @@ int Mobical::main (int argc, char **argv) {
            "time");
     } else if (!strcmp (argv[i], "--leak-alloc")) {
       die ("--leak-alloc requires memory fuzzing to be enabled at compile "
+           "time");
+#endif
+#ifdef MOBICAL_TERMINATE
+    } else if (!strcmp (argv[i], "--terminator")) {
+      terminator = true;
+#else
+    } else if (!strcmp (argv[i], "--terminator")) {
+      die ("--terminator requires terminator fuzzing to be enabled at compile "
            "time");
 #endif
     } else if (!strcmp (argv[i], "--do-not-ignore-resource-limits")) {
