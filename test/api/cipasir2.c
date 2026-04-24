@@ -50,6 +50,7 @@ static int formula (void *solver) {
     printf("adding clause of length %d\n", i);
     i=0;
   }
+  free (clause);
   return max;
 }
 
