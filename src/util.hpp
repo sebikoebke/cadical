@@ -165,10 +165,11 @@ template <typename T> struct DeferDeletePtr {
   }
 };
 
-template <typename T, typename F> struct DeferDeleteFunc {
+template <typename T, typename F = void (*)(T*&)>
+struct DeferDeleteFunc {
   T *data;
-  F *func;
-  DeferDeleteFunc (T *t, F *f) : data (t), func(f) {}
+  F func;
+  DeferDeleteFunc (T *t, F f) : data (t), func(f) {}
   ~DeferDeleteFunc () { (*func)(data); }
   void release () { data = nullptr; }
   void free () {
