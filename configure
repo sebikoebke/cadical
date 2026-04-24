@@ -175,6 +175,7 @@ do
     --check-missed) checkmissed=yes;;
     --coverage) coverage=yes;;
     --profile) profile=yes;;
+
     --memory-fuzzing) memory_fuzzing=yes;;
 
     --competition) competition=yes;;
