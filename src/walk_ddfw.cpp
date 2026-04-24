@@ -66,15 +66,17 @@ struct DDFW_Tagged {
   }
 };
 
+struct DDFWCompactBinary {
+  int lit, other;
+};
+
 // This is the main structure containing all informations about any
 // clause: its weight, the critical variable (if any), the number of
 // true literals, and the position in the array of broken clauses.
 struct DDFW_Counter {
   union {
     Clause *clause; // pointer to the clause itself
-    struct {
-      int lit, other;
-    } binary_clause;
+    DDFWCompactBinary binary_clause;
   };
   double weight;
   unsigned critical_var; // critical literal if any
