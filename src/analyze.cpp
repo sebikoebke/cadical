@@ -1325,7 +1325,6 @@ void Internal::analyze () {
   int jump;
   int driving;
   Clause *driving_clause = new_driving_clause (glue, jump, driving);
-  assert (driving == level);
   UPDATE_AVERAGE (averages.current.jump, jump);
 
   int new_level = determine_actual_backtrack_level (jump);
