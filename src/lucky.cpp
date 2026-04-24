@@ -528,6 +528,10 @@ int Internal::lucky_phases () {
     }
   }
 
+  res = trivially_false_satisfiable ();
+  if (!res)
+    res = trivially_true_satisfiable();
+
   const int64_t old_active = stats.vars_active;
   if (!res)
     do {
