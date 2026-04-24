@@ -147,6 +147,8 @@ int Internal::trivially_false_satisfiable () {
       return unlucky (-1);
     if (val (idx))
       continue;
+    if (flags (idx).unused())
+      continue;
     lucky_assume_decision (-idx);
     if (propagate ())
       continue;
