@@ -1440,7 +1440,7 @@ bool Internal::lazy_external_up_out_of_order_clause (int &uip) {
     lrat_chain.clear ();
     STOP (analyze);
   }
-  return 0;
+  return exiting;
 }
 
 // We wait reporting a learned unit until propagation of that unit is
