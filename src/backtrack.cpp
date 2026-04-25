@@ -146,8 +146,10 @@ void Internal::backtrack_without_updating_phases (int new_level) {
       // literals on the trail without breaking the solver (after some
       // modifications to 'analyze' - see 'opts.chrono' guarded code there).
 #ifdef LOGGING
-      if (!v.level)
+      if (!v.level) {
         LOG ("reassign %d @ 0 unit clause %d", lit, lit);
+        assert (!lrat || unit_id(lit));
+      }
       else
         LOG (v.reason, "reassign %d @ %d", lit, v.level);
 #endif

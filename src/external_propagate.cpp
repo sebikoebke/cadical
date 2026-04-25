@@ -833,7 +833,6 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
     stats.up_learn++;
   if (from_propagator && !res)
     stats.up_learn_unit++;
-
   // new unit clause. For now just backtrack.
   if (!res && (force_no_backtrack ||
                (val (clause[0]) > 0 && opts.elevate > 0 &&
@@ -849,6 +848,7 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
     assert (val (clause[0]));
     v.level = 0;
     v.reason = 0;
+    LOG ("elevate %s to level 0", LOGLIT (idx));
     const unsigned uidx = vlit (clause[0]);
     if (lrat || frat)
       unit_clauses (uidx) = new_id;
@@ -887,12 +887,13 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
 
     Var &v = var (pos0);
     LOG (res,
-         "elevate assignment of %d from level %d to level %d with lazy "
+         "elevate assignment of %s from level %d to level %d with lazy "
          "reason clause",
-         pos0, l0, l1);
+         LOGLIT (pos0), l0, l1);
     if (v.level != l1)
       stats.up_learn_lazy_elevate++;
     v.level = l1;
+    LOG ("elevate %s to level %d", LOGLIT (pos0), l1);
     return;
   }
   assert (!force_no_backtrack);
@@ -943,7 +944,7 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
   const int highest_literal = clause[highest_idx];
 
   // highest trail level variable
-  Var &m = var (highest_literal);
+  const Var &m = var (highest_literal);
   assert (l0 >= m.level);
 
   // best watch variable
@@ -960,10 +961,10 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
     if (from_propagator)
       stats.up_learn_out_of_order++;
     LOG (res,
-         "ignore out-of-order missed assignment of %d from level %d to "
+         "ignore out-of-order missed assignment of %s from level %d to "
          "level %d with new "
          "reason clause",
-         pos0, var (pos0).level, var (pos1).level);
+         LOGLIT (pos0), var (pos0).level, var (pos1).level);
     return;
   }
 
@@ -974,9 +975,9 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
     // maximum as well, so no need to backtrack we simply reassign the
     // reason and level of the propagation
     LOG (res,
-         "elevate assignment of %d from level %d to level %d with new "
+         "elevate assignment of %s from level %d to level %d with new "
          "reason clause",
-         pos0, var (pos0).level, var (pos1).level);
+         LOGLIT (pos0), var (pos0).level, var (pos1).level);
 
     assert (l1 < l0);
     assert (var (pos1).trail < var (pos0).trail);
@@ -984,6 +985,7 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
 
     v.level = l1;
     v.reason = res;
+    LOG ("elevate %s to level %d", LOGLIT (pos0), l1);
 
     if (from_propagator)
       stats.up_learn_elevating++;

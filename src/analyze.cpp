@@ -975,7 +975,7 @@ void Internal::fix_trail_levels () {
   assert (trix < trail.size ());
   for (size_t i = trix; i < trail.size (); i++) {
     const int lit = trail[i];
-    const Clause *reason = var (lit).reason;
+    Clause *reason = var (lit).reason;
     if (!reason || reason == external_reason)
       continue;
 
@@ -994,6 +994,13 @@ void Internal::fix_trail_levels () {
            var (lit).level, res);
 
     var (lit).level = res;
+    if (lrat && !res) {
+      auto tmp = std::move (lrat_chain);
+      lrat_chain.clear ();
+      build_chain_for_units(lit, reason, false);
+      learn_unit_clause (lit);
+      lrat_chain = std::move (tmp);
+    }
   }
   out_of_order_level = -1;
   out_of_order_trail = -1;
