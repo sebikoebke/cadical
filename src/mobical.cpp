@@ -3595,15 +3595,28 @@ void Trace::generate (uint64_t i, uint64_t s) {
   seed = s;
   Random random (seed);
 
+  // avoid different traces with MEMORY or TERMINATE
+  int mallocall = random.pick_int (0, 2);
+  int mallocallsize = random.pick_log (1e2, 1e6);
+  int leakallocall = random.pick_int (0, 2);
+  int terminatecall = random.pick_int (0, 2);
+  int terminatecallsize = random.pick_log (1e1, 1e4);
 #ifdef MOBICAL_MEMORY
-  if (mobical.bad_alloc && (random.pick_int (0, 2) == 0))
-    push_back (new MaxAllocCall (random.pick_log (1e2, 1e6)));
-  if (mobical.leak_alloc && (random.pick_int (0, 2) == 0))
+  if (mobical.bad_alloc && (mallocall == 0))
+    push_back (new MaxAllocCall (mallocallsize));
+  if (mobical.leak_alloc && (leakallocall == 0))
     push_back (new LeakAllocCall ());
+#else
+  (void) mallocall;
+  (void) mallocallsize;
+  (void) leakallocall;
 #endif
 #ifdef MOBICAL_TERMINATE
-  if (mobical.terminator && (random.pick_int (0, 2) == 0))
-    push_back (new TerminateCall (random.pick_log (1e1, 1e4)));
+  if (mobical.terminator && (terminatecall == 0))
+    push_back (new TerminateCall (terminatecallsize));
+#else
+  (void) terminatecall;
+  (void) terminatecallsize;
 #endif
 
   push_back (new InitCall ());
@@ -3640,7 +3653,6 @@ void Trace::generate (uint64_t i, uint64_t s) {
   int minvars, maxvars = 0;
 
   for (int call = 0; call < calls; call++) {
-
     int range;
     double ratio;
     int uniform;
