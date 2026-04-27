@@ -4560,6 +4560,7 @@ static bool is_basic (Call *c) {
   case Call::CONCLUDE:
   case Call::FREEZE:
   case Call::MELT:
+  case Call::PHASE:
   case Call::LIMIT:
   case Call::OPTIMIZE:
   case Call::OBSERVE:
