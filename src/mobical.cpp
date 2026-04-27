@@ -1090,7 +1090,7 @@ public:
       MLOG ("cb_decide force_bt due to " << lit << std::endl);
       const int level = level_map[lit];
       if (level) {
-        s->force_backtrack (level - 1);
+        s->force_backtrack (level);
         forced_bt++;
       } else {
         MLOG ("cb_decide returns 0" << std::endl);
@@ -1181,7 +1181,7 @@ public:
 #endif
     for (const auto &lit : lits) {
       observed_trail.back ().push_back (lit);
-      level_map[lit] = observed_trail.size ();
+      level_map[lit] = observed_trail.size () - 1;
       value_map[lit] = 1;
       value_map[-lit] = -1;
       unassigned_reasons.erase (lit);
