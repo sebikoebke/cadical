@@ -551,6 +551,7 @@ private:
   size_t lemma_per_cb = 2;
   bool logging = false;
   size_t forced_bt = 0;
+  size_t level;
 
   struct Decisions {
     int lit;
@@ -691,6 +692,7 @@ public:
   MockPropagator (Solver *solver, ExtendMap *map,
                   bool with_logging = false) {
     observed_trail.push_back (std::vector<int> ());
+    level = 0;
     s = solver;
     extendmap = map;
     logging = logging || with_logging;
@@ -1088,9 +1090,9 @@ public:
     external_decide.pop_back ();
     if (value_map[lit] < 0) {
       MLOG ("cb_decide force_bt due to " << lit << std::endl);
-      const int level = level_map[lit];
+      const int level = level_map[abs (lit)];
       if (level) {
-        s->force_backtrack (level);
+        s->force_backtrack (level - 1);
         forced_bt++;
       } else {
         MLOG ("cb_decide returns 0" << std::endl);
@@ -1125,7 +1127,7 @@ public:
           propagate = INT_MIN;
           break;
         } else if (tmp < 0) {
-          if (!max || level_map[lit] > level_map[max])
+          if (!max || level_map[abs (lit)] > level_map[abs (max)])
             max = lit;
           continue;
         } else if (propagate) {
@@ -1181,7 +1183,7 @@ public:
 #endif
     for (const auto &lit : lits) {
       observed_trail.back ().push_back (lit);
-      level_map[lit] = observed_trail.size () - 1;
+      level_map[abs (lit)] = level;
       value_map[lit] = 1;
       value_map[-lit] = -1;
       unassigned_reasons.erase (lit);
@@ -1198,7 +1200,9 @@ public:
     MLOG ("notify new decision level " << observed_trail.size () - 1
                                        << " -> " << observed_trail.size ()
                                        << std::endl);
+    level++;
     observed_trail.push_back (std::vector<int> ());
+    assert (level == observed_trail.size () - 1);
   }
 
   void notify_backtrack (size_t new_level) override {
@@ -1229,6 +1233,7 @@ public:
 #endif
       observed_trail.pop_back ();
     }
+    level = new_level;
   }
 
   /* ----------------- ExternalPropagator functions end
