@@ -1364,7 +1364,7 @@ static void failing (kitten *kitten) {
     }
   }
 
-  // this is bfs not dfs so it does not kitten->work for lrat :/
+  // this is bfs not dfs so it does not work for lrat :/
   /*
   for (size_t next = 0; next < SIZE_STACK (kitten->analyzed); next++) {
     const unsigned idx = PEEK_STACK (kitten->analyzed, next);
