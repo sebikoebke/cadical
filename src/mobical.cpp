@@ -1088,8 +1088,14 @@ public:
     external_decide.pop_back ();
     if (value_map[lit] < 0) {
       MLOG ("cb_decide force_bt due to " << lit << std::endl);
-      s->force_backtrack (level_map[lit]);
-      forced_bt++;
+      const int level = level_map[lit];
+      if (level) {
+        s->force_backtrack (level - 1);
+        forced_bt++;
+      } else {
+        MLOG ("cb_decide returns 0" << std::endl);
+        return 0;
+      }
     } else if (value_map[lit] > 0) {
       MLOG ("cb_decide returns 0" << std::endl);
       return 0;
