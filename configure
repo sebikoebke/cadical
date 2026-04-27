@@ -26,6 +26,7 @@ coverage=no
 flexible=yes
 profile=no
 memory_fuzzing=no
+terminator_fuzzing=no
 contracts=yes
 tracing=yes
 unlocked=yes
@@ -175,7 +176,9 @@ do
     --check-missed) checkmissed=yes;;
     --coverage) coverage=yes;;
     --profile) profile=yes;;
+
     --memory-fuzzing) memory_fuzzing=yes;;
+    --terminator-fuzzing) terminator_fuzzing=yes;;
 
     --competition) competition=yes;;
 
@@ -356,6 +359,7 @@ fi
 [ $coverage = yes ] && CFLAGS="$CFLAGS -ftest-coverage -fprofile-arcs"
 
 [ $memory_fuzzing = yes ] && CXXFLAGS="$CXXFLAGS -rdynamic -fno-omit-frame-pointer -DMOBICAL_MEMORY"
+[ $terminator_fuzzing = yes ] && CXXFLAGS="$CXXFLAGS -rdynamic -fno-omit-frame-pointer -DMOBICAL_TERMINATE"
 
 if [ $pedantic = yes ]
 then
