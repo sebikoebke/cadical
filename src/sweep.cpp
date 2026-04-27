@@ -35,13 +35,6 @@ bool Internal::sweep_flip (int lit) {
   return res;
 }
 
-int Internal::sweep_flip_and_implicant (int lit) {
-  START (sweepimplicant);
-  int res = kitten_flip_and_implicant_for_signed_literal (citten, lit);
-  STOP (sweepimplicant);
-  return res;
-}
-
 void Internal::sweep_set_kitten_ticks_limit (Sweeper &sweeper) {
   uint64_t remaining = 0;
   const uint64_t current = sweeper.current_ticks;

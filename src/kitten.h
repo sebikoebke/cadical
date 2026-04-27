@@ -81,15 +81,6 @@ void kitten_trace_core (kitten *, void *state,
                                        size_t, const unsigned *, size_t,
                                        const unsigned *));
 
-int kitten_compute_prime_implicant (kitten *kitten, void *state,
-                                    bool (*ignore) (void *, unsigned));
-
-void kitten_add_prime_implicant (kitten *kitten, void *state, int side,
-                                 void (*add_implicant) (void *, int, size_t,
-                                                        const unsigned *));
-
-int kitten_flip_and_implicant_for_signed_literal (kitten *kitten, int elit);
-
 #ifdef __cplusplus
 }
 #endif

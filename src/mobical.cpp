@@ -1090,6 +1090,9 @@ public:
       MLOG ("cb_decide force_bt due to " << lit << std::endl);
       s->force_backtrack (level_map[lit]);
       forced_bt++;
+    } else if (value_map[lit] > 0) {
+      MLOG ("cb_decide returns 0" << std::endl);
+      return 0;
     }
     MLOG ("cb_decide returns " << lit << std::endl);
     return lit;
@@ -1141,32 +1144,6 @@ public:
 
     MLOG ("cb_propagate returns 0" << std::endl);
     return 0;
-  }
-
-  std::set<int> current_observed_satisfied_set (size_t &lit_sum,
-                                                int &lowest_lit,
-                                                int &highest_lit) {
-
-    lit_sum = 0;
-    lowest_lit = 0;
-    highest_lit = 0;
-    std::set<int> satisfied_literals;
-
-    for (auto level_lits : observed_trail) {
-      for (auto lit : level_lits) {
-        if (!s->observed (lit))
-          continue;
-
-        satisfied_literals.insert (lit);
-        lit_sum += abs (lit);
-
-        if (!lowest_lit)
-          lowest_lit = lit;
-        highest_lit = lit;
-      }
-    }
-
-    return satisfied_literals;
   }
 
   int cb_add_reason_clause_lit (int plit) override {
@@ -3359,15 +3336,12 @@ void Trace::generate_lemmas (Random &random) {
   if (random.generate_double () >= 0.05) {
     const int nof_lemmas = random.pick_int (30, 175);
     for (int i = 0; i < nof_lemmas; i++) {
-      // more propagate calls
-      bool propagate = random.generate_double () < 0.7;
       // Tiny tiny chance to generate an empty lemma
       if (random.generate_double () < 0.003) {
         push_back (new LemmaCall (0));
       } else {
-        int count = pick_size (random, 4);
-        if (count > ovars)
-          count = ovars;
+        bool propagate = random.generate_double () < 0.7;
+        int count = pick_size (random, ovars);
         const int max_idx = ovars - 1;
         bool *picked = new bool[max_idx + 1];
         for (int i = 0; i <= max_idx; i++)
