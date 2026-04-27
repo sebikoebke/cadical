@@ -139,8 +139,8 @@ void Internal::renotify_full_trail_between_trail_pos (
   assert (assigned.empty ());
   int j = start_level;
 #ifdef LOGGING
-  LOG ("starting notification of level %d from trail %d .. %d",
-       up_level, start_level, end_level);
+  LOG ("starting notification of level %d from trail %d .. %d", up_level,
+       start_level, end_level);
 #else
   (void) up_level;
 #endif
@@ -161,8 +161,7 @@ void Internal::renotify_full_trail_between_trail_pos (
 
     int elit = externalize (ilit); // TODO: double-check tainting
 
-    LOG ("notifying elit %d @ %d aka %s", up_level, elit,
-         LOGLIT (ilit));
+    LOG ("notifying elit %d @ %d aka %s", up_level, elit, LOGLIT (ilit));
     assert (elit);
     // Fixed variables might get mapped (during compact) to another
     // non-observed but fixed variable.
@@ -200,8 +199,8 @@ void Internal::renotify_full_trail () {
     const int start_level = 0;
     const int end_level =
         (control.size () > 1 ? control[1].trail : end_of_trail);
-    renotify_full_trail_between_trail_pos (
-        start_level, end_level, up_level, assigned, false);
+    renotify_full_trail_between_trail_pos (start_level, end_level, up_level,
+                                           assigned, false);
   }
 
   // notify all intermediate levels
@@ -211,16 +210,16 @@ void Internal::renotify_full_trail () {
     up_level++;
     LOG ("notification of %d", up_level);
 
-    renotify_full_trail_between_trail_pos (
-        start_level, end_level, up_level, assigned, true);
+    renotify_full_trail_between_trail_pos (start_level, end_level, up_level,
+                                           assigned, true);
   }
 
   // and the current level if there is non-root level one
   if (level) {
     const int start_level = control.back ().trail;
     up_level++;
-    renotify_full_trail_between_trail_pos (
-        start_level, end_of_trail, up_level, assigned, true);
+    renotify_full_trail_between_trail_pos (start_level, end_of_trail,
+                                           up_level, assigned, true);
   }
   assert (up_level == level);
   notified = trail.size ();
@@ -1253,8 +1252,12 @@ int Internal::ask_decision () {
   int elit = external->propagator->cb_decide ();
   forced_backt_allowed = false;
   stats.up_cb++;
+  stats.up_cb_decide++;
+  if (elit)
+    stats.up_cb_decided++;
 
   if (level_before != level) {
+    stats.up_force_bt++;
 
     propagate ();
     assert (!unsat);

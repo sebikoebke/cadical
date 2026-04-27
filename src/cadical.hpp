@@ -1212,6 +1212,8 @@ private:
   bool is_witness (int lit);
 
   friend struct LemmaCall;
+  friend struct DecideCall;
+  friend struct PropagateLemmaCall;
   friend struct ObserveCall;
   friend struct DisconnectCall;
   friend class MockPropagator;
