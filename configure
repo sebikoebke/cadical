@@ -104,8 +104,10 @@ where '<option>' is one of the following
 
 --coverage         compile with '-ftest-coverage -fprofile-arcs' for 'gcov'
 --profile          compile with '-pg' to profile with 'gprof'
---memory-fuzzing   compile with '-rdynamic -fno-omit-frame-pointer' and
+--memory           compile with '-rdynamic -fno-omit-frame-pointer' and
                    '-DMOBICAL_MEMORY' to fuzz for bad memory allocation handling
+--terminator       compile with '-rdynamic -fno-omit-frame-pointer' and
+                   '-DMOBICAL_TERMINATE' to fuzz for bad terminator handling
 
 --no-contracts     compile without API contract checking code
 --no-tracing       compile without API call tracing code
@@ -177,8 +179,8 @@ do
     --coverage) coverage=yes;;
     --profile) profile=yes;;
 
-    --memory-fuzzing) memory_fuzzing=yes;;
-    --terminator-fuzzing) terminator_fuzzing=yes;;
+    --memory) memory_fuzzing=yes;;
+    --terminator) terminator_fuzzing=yes;;
 
     --competition) competition=yes;;
 

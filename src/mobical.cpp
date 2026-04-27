@@ -37,9 +37,9 @@ static const char *USAGE =
 "  -<n>              specify the number of solving phases explicitly\n"
 "  --time <seconds>  set time limit per trace (none=0, default=%d)\n"
 "  --space <MB>      set space limit (none=0, default=%d)\n"
-"  --bad-alloc       generate failing memory allocations, monitor for crashes\n"
-"  --leak-alloc      track memory allocations, monitor for memory leaks\n"
-"  --terminator      generate termination requests, monitor for crashes\n"
+"  --no-bad-alloc    switch off failing memory allocations, monitor for crashes\n"
+"  --no-leak-alloc   switch off tracking of memory allocations, monitor for memory leaks\n"
+"  --no-terminator   switch off generation of termination requests, monitor for crashes\n"
 "\n"
 "  --do-not-ignore-resource-limits consider out-of-time or memory as error\n"
 "\n"
@@ -1287,11 +1287,11 @@ class Mobical : public Handler {
   int64_t time_limit = DEFAULT_TIME_LIMIT;   // in seconds, none if zero
   int64_t space_limit = DEFAULT_SPACE_LIMIT; // in MB, none if zero
 #ifdef MOBICAL_MEMORY
-  bool bad_alloc = false;
-  bool leak_alloc = false;
+  bool bad_alloc = true;
+  bool leak_alloc = true;
 #endif
 #ifdef MOBICAL_TERMINATE
-  bool terminator = false;
+  bool terminator = true;
 #endif
 
   Terminal &terminal = terr;
@@ -5436,19 +5436,25 @@ void Reader::parse () {
       c = new CloseProofTraceCall ();
 #ifdef MOBICAL_MEMORY
     } else if (!strcmp (keyword, "max_alloc")) {
-      mobical.bad_alloc = true;
+      if (!mobical.bad_alloc)
+        error ("Trace contains a 'max_alloc' call (run without "
+               "'--no-bad-alloc')");
       if (!first)
         error ("first argument to 'max_alloc' missing");
       if (!parse_int_str (first, val))
         error ("invalid first argument '%s' to 'max_alloc'", first);
       c = new MaxAllocCall (val);
     } else if (!strcmp (keyword, "leak_alloc")) {
-      mobical.leak_alloc = true;
+      if (!mobical.leak_alloc)
+        error ("Trace contains a 'leak_alloc' call (run without "
+               "'--no-leak-alloc')");
       c = new LeakAllocCall ();
 #endif
 #ifdef MOBICAL_TERMINATE
     } else if (!strcmp (keyword, "terminate")) {
-      mobical.terminator = true;
+      if (!mobical.terminator)
+        error ("Trace contains a 'terminate' call (run without "
+               "'--no-terminate')");
       if (!first)
         error ("first argument to 'terminate' missing");
       if (!parse_int_str (first, val))
@@ -5820,26 +5826,14 @@ int Mobical::main (int argc, char **argv) {
           (space_limit = atol (argv[i])) < 0 || space_limit > 1e9)
         die ("invalid argument '%s' to '--space' (try '-h')", argv[i]);
 #ifdef MOBICAL_MEMORY
-    } else if (!strcmp (argv[i], "--bad-alloc")) {
-      bad_alloc = true;
-    } else if (!strcmp (argv[i], "--leak-alloc")) {
-      leak_alloc = true;
-#else
-    } else if (!strcmp (argv[i], "--bad-alloc")) {
-      die ("--bad-alloc requires memory fuzzing to be enabled at compile "
-           "time");
-    } else if (!strcmp (argv[i], "--leak-alloc")) {
-      die ("--leak-alloc requires memory fuzzing to be enabled at compile "
-           "time");
+    } else if (!strcmp (argv[i], "--no-bad-alloc")) {
+      bad_alloc = false;
+    } else if (!strcmp (argv[i], "--no-leak-alloc")) {
+      leak_alloc = false;
 #endif
 #ifdef MOBICAL_TERMINATE
-    } else if (!strcmp (argv[i], "--terminator")) {
-      terminator = true;
-#else
-    } else if (!strcmp (argv[i], "--terminator")) {
-      die ("--terminator requires terminator fuzzing to be enabled at "
-           "compile "
-           "time");
+    } else if (!strcmp (argv[i], "--no-terminator")) {
+      terminator = false;
 #endif
     } else if (!strcmp (argv[i], "--do-not-ignore-resource-limits")) {
       donot.ignore_resource_limits = true;
@@ -6017,6 +6011,12 @@ int Mobical::main (int argc, char **argv) {
   } else if (mobical.leak_alloc) {
     prefix ();
     cerr << "fuzzing memory leaks" << endl;
+  }
+#endif
+#ifdef MOBICAL_TERMINATE
+  if (mobical.terminator) {
+    prefix ();
+    cerr << "generate terminate limits" << endl;
   }
 #endif
 
