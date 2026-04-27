@@ -874,6 +874,9 @@ public:
     assert (std::find (observed_fixed.begin (), observed_fixed.end (),
                        lit) == observed_fixed.end ());
     observed_fixed.push_back (lit);
+    value_map[lit] = 1;
+    value_map[-lit] = -1;
+    level_map[abs (lit)] = 0;
   };
 
   void add_prev_fixed (const std::vector<int> &fixed_assignments) {
@@ -1088,7 +1091,8 @@ public:
     }
     const int lit = next_decision.lit;
     external_decide.pop_back ();
-    if (value_map[lit] < 0) {
+
+    while (value_map[lit] < 0) {
       MLOG ("cb_decide force_bt due to " << lit << std::endl);
       const int level = level_map[abs (lit)];
       if (level) {
@@ -1098,11 +1102,13 @@ public:
         MLOG ("cb_decide returns 0" << std::endl);
         return 0;
       }
-    } else if (value_map[lit] > 0) {
+    }
+    if (value_map[lit] > 0) {
       MLOG ("cb_decide returns 0" << std::endl);
       return 0;
     }
     MLOG ("cb_decide returns " << lit << std::endl);
+    assert (!s->internal->val (lit));
     return lit;
   }
 
