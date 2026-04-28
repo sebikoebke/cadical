@@ -3303,19 +3303,28 @@ void Trace::generate_constraint (Random &random, int minvars, int maxvars,
 /*------------------------------------------------------------------------*/
 
 void Trace::generate_propagator (Random &random, int minvars, int maxvars) {
-  if (random.generate_double () < 0.85)
+  // No Propagator in 90% of cases.
+  if (!in_connection && random.generate_double () < 0.9) {
     return;
-
-  assert (minvars <= maxvars);
-  if (in_connection)
+  }
+  if (!in_connection) {
+    push_back (new ConnectCall ());
+    in_connection = true;
+  } else if (random.generate_double () < 0.1) {
+    observed_vars.clear ();
     push_back (new DisconnectCall ());
-  push_back (new ConnectCall ());
+    in_connection = false;
+    return;
+  } else if (random.generate_double () < 0.05) {
+    observed_vars.clear ();
+    push_back (new DisconnectCall ());
+    push_back (new ConnectCall ());
+  }
 
-  in_connection = true;
+  assert (in_connection);
+  assert (minvars <= maxvars);
 
   int diff = maxvars - minvars;
-
-  observed_vars.clear ();
 
   // Give a chance to add no observed variables at all
   if (random.generate_double () < 0.03)
@@ -3728,13 +3737,7 @@ void Trace::generate (uint64_t i, uint64_t s) {
           generate_implied (random), generate_propagate (random),
           generate_clause (random, minvars, maxvars, uniform);
 
-    if (in_connection && random.generate_bool ()) {
-      observed_vars.clear ();
-      push_back (new DisconnectCall ());
-      in_connection = false;
-    } else {
-      generate_propagator (random, minvars, maxvars);
-    }
+    generate_propagator (random, minvars, maxvars);
 
     generate_constraint (random, minvars, maxvars, uniform);
     generate_assume (random, maxvars);

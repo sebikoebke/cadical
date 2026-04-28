@@ -402,9 +402,9 @@ void External::add_observed_var (int elit) {
 
   int eidx = abs (elit);
 
-  REQUIRE (eidx > max_var ||
-               (!marked (witness, elit) && !marked (witness, -elit)),
-           "Only clean variables are allowed to be observed.");
+  // REQUIRE (eidx > max_var ||
+  //            (!marked (witness, elit) && !marked (witness, -elit)),
+  //         "Only clean variables are allowed to be observed.");
   // if (eidx <= max_var &&
   //     (marked (witness, elit) || marked (witness, -elit))) {
   //   LOG ("Error, only clean variables are allowed to become observed.");
@@ -413,9 +413,14 @@ void External::add_observed_var (int elit) {
   //   // TODO: here needs to come the taint and restore of the newly
   //   // observed variable. Restore_clauses must be called before continue.
   //   // LOG ("marking tainted %d", elit);
-  //   // mark (tainted, elit);
-  //   // mark (tainted, -elit);
-  //   // restore_clauses ...
+  if (marked (witness, elit)) {
+    mark (tainted, -elit);
+  }
+  if (marked (witness, -elit)) {
+    mark (tainted, elit);
+  }
+  if (!tainted.empty ())
+    restore_clauses ();
   // }
 
   if (eidx >= (int64_t) is_observed.size ())
