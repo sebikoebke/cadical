@@ -576,7 +576,7 @@
 579 add 9
 580 add 10
 581 add 0
-582 declare_more_variables 26
+582 declare_vars 26
 583 add 9
 584 add -16
 585 add -11
@@ -799,7 +799,7 @@
 802 add 13
 803 add -12
 804 add 0
-805 declare_more_variables 24
+805 declare_vars 24
 806 add 12
 807 add 14
 808 add 13
@@ -836,7 +836,7 @@
 839 add -13
 840 add 14
 841 add 0
-842 declare_one_more_variable
+842 declare_var
 843 add 15
 844 add 14
 845 add -12
@@ -861,7 +861,7 @@
 864 add 13
 865 add 13
 866 add 0
-867 declare_more_variables 52
+867 declare_vars 52
 868 add 13
 869 add 14
 870 add 15

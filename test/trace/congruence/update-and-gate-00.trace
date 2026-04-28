@@ -64,7 +64,7 @@
 63 add -3
 64 add -2
 65 add 0
-66 declare_one_more_variable
+66 declare_var
 67 add -7
 68 add 2
 69 add -5
@@ -391,7 +391,7 @@
 390 add -6
 391 add -5
 392 add 0
-393 declare_more_variables 7
+393 declare_vars 7
 394 add 8
 395 add 7
 396 add 3

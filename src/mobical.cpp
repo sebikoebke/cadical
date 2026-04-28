@@ -5589,15 +5589,21 @@ void Reader::parse () {
         break;
 
       case Call::OBSERVE:
+        if (!connected)
+          error ("'%s' can only be called after 'connect'", c->keyword ());
+        new_state = c->type;
+        break;
       case Call::DISCONNECT:
         if (!connected)
           error ("'%s' can only be called after 'connect'", c->keyword ());
+        connected = false;
         new_state = c->type;
         break;
 
       case Call::CONNECT:
         if (connected)
           error ("call 'disconnect' before call 'connect' again");
+        connected = true;
         new_state = c->type;
         break;
 
