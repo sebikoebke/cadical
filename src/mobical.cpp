@@ -916,7 +916,6 @@ public:
       for (const auto lit : *lemma) {
         if (!lit)
           continue; // eoc
-        // TODO: check
         assert (s->observed (lit));
         const signed char tmp = s->current_value (lit);
         if (tmp > 0) {
@@ -1587,7 +1586,7 @@ struct Call {
 
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN |
              MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESIZE | FIXED |
-             PHASE | RESERVE
+             PHASE | RESERVE | OBSERVE
 #ifdef MOBICAL_MEMORY
              | MAXALLOC | LEAKALLOC
 #endif
@@ -1596,8 +1595,7 @@ struct Call {
 #endif
     ,
     CONFIG = INIT | SET | CONFIGURE | ALWAYS | TRACEPROOF,
-    BEFORE =
-        ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT | OBSERVE,
+    BEFORE = ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT,
     PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE,
     DURING = LEMMA | PROPLEMMA | DECIDE,
     LITTYPE = PHASE | ADD | ASSUME | VAL | FLIP | FLIPPABLE | FAILED |
@@ -1823,9 +1821,9 @@ struct DeclareMoreVariablesCall : public Call {
     assert (!arg || i == s->vars ());
     assert (!arg || extendmap->map.back () == i);
   }
-  void print (ostream &o) { o << "declare_more_variables " << arg; }
+  void print (ostream &o) { o << "declare_vars " << arg; }
   Call *copy () { return new DeclareMoreVariablesCall (arg); }
-  const char *keyword () { return "declare_more_variables"; }
+  const char *keyword () { return "declare_vars"; }
 };
 
 struct DeclareOneMoreVariableCall : public Call {
@@ -1839,9 +1837,9 @@ struct DeclareOneMoreVariableCall : public Call {
     assert (i == s->vars ());
     assert (extendmap->map.back () == i);
   }
-  void print (ostream &o) { o << "declare_one_more_variable"; }
+  void print (ostream &o) { o << "declare_var"; }
   Call *copy () { return new DeclareOneMoreVariableCall (); }
-  const char *keyword () { return "declare_one_more_variable"; }
+  const char *keyword () { return "declare_var"; }
 };
 
 struct PhaseCall : public Call {
@@ -1942,11 +1940,7 @@ struct ConnectCall : public Call {
   ConnectCall () : Call (CONNECT) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
     // clean up if there was already one mock propagator
-    MockPropagator *prev_pointer = 0;
-    if (mobical.mock_pointer) {
-      prev_pointer = mobical.mock_pointer;
-      s->disconnect_external_propagator ();
-    }
+    assert (!mobical.mock_pointer);
 #ifdef LOGGING
     mobical.mock_pointer =
         new MockPropagator (s, extendmap, mobical.add_set_log_to_true);
@@ -1956,17 +1950,12 @@ struct ConnectCall : public Call {
     s->connect_external_propagator (mobical.mock_pointer);
     s->connect_fixed_listener (mobical.mock_pointer);
 
-    if (prev_pointer) {
-      mobical.mock_pointer->add_prev_fixed (prev_pointer->observed_fixed);
-      delete prev_pointer;
-    } else {
-      // FixedAssignmentListener does not replay previous fixed
-      // assignment, collect them here explicitly -- EXPENSIVE In practice
-      // FixedAssignmentListener is there from the beginning if needed, in
-      // mobical we do not want to wire in this.
+    // FixedAssignmentListener does not replay previous fixed
+    // assignment, collect them here explicitly -- EXPENSIVE In practice
+    // FixedAssignmentListener is there from the beginning if needed, in
+    // mobical we do not want to wire in this.
 
-      mobical.mock_pointer->collect_prev_fixed ();
-    }
+    mobical.mock_pointer->collect_prev_fixed ();
   }
   void print (ostream &o) { o << "connect mock-propagator"; }
   Call *copy () { return new ConnectCall (); }
@@ -1978,9 +1967,8 @@ struct ObserveCall : public Call {
   void execute (Solver *&s, ExtendMap *&extendmap) {
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
-    if (mp) {
-      mp->add_observed_lit (arg);
-    }
+    assert (mp);
+    mp->add_observed_lit (arg);
     (void) (extendmap);
   }
   void print (ostream &o) { o << "observe " << arg; }
@@ -2046,14 +2034,11 @@ struct DisconnectCall : public Call {
   void execute (Solver *&s, ExtendMap *&extendmap) {
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
-    if (mp)
-      mp->remove_new_observed_var ();
+    assert (mp);
     s->disconnect_fixed_listener ();
-    if (mp) {
-      s->disconnect_external_propagator ();
-      delete mp;
-      mobical.mock_pointer = 0;
-    }
+    s->disconnect_external_propagator ();
+    delete mp;
+    mobical.mock_pointer = 0;
     assert (!s->external->propagator);
     (void) (extendmap);
   }
@@ -5049,6 +5034,7 @@ void Reader::parse () {
   Call *prev = 0;
   const bool enforce = !mobical.donot.enforce;
   Call *before_trigger = 0;
+  bool connected = 0;
   char line[80];
   while ((ch = next ()) != EOF) {
     // Ignore comments (used for additional human readable information).
@@ -5195,9 +5181,9 @@ void Reader::parse () {
       if (second)
         error ("additional argument '%s' to 'resize'", second);
       c = new ResizeCall (lit);
-    } else if (!strcmp (keyword, "declare_more_variables")) {
+    } else if (!strcmp (keyword, "declare_vars")) {
       if (!parse_int_str (first, lit))
-        error ("invalid argument '%s' to 'resize'", first);
+        error ("invalid argument '%s' to 'declare_vars'", first);
       c = new DeclareMoreVariablesCall (lit);
     } else if (!strcmp (keyword, "phase")) {
       if (!first)
@@ -5233,7 +5219,7 @@ void Reader::parse () {
       c = new ConnectCall ();
     } else if (!strcmp (keyword, "disconnect")) {
       c = new DisconnectCall ();
-    } else if (!strcmp (keyword, "declare_one_more_variable")) {
+    } else if (!strcmp (keyword, "declare_var")) {
       c = new DeclareOneMoreVariableCall ();
     } else if (!strcmp (keyword, "observe")) {
       if (!first)
@@ -5516,7 +5502,7 @@ void Reader::parse () {
       c = new ImpliedCall ();
     } else if (!strcmp (keyword, "reset_assumptions")) {
       c = new ResetAssumptionsCall ();
-    } else if (!strcmp (keyword, "declare_one_more_variable")) {
+    } else if (!strcmp (keyword, "declare_var")) {
       c = new DeclareOneMoreVariableCall ();
     } else
       error ("invalid keyword '%s'", keyword);
@@ -5569,7 +5555,6 @@ void Reader::parse () {
 
       case Call::ADD:
       case Call::ASSUME:
-      case Call::OBSERVE:
         if (state != Call::BEFORE)
           before_trigger = c;
         new_state = Call::BEFORE;
@@ -5578,6 +5563,8 @@ void Reader::parse () {
       case Call::LEMMA:
       case Call::DECIDE:
       case Call::PROPLEMMA:
+        if (!connected)
+          error ("'%s' can only be called after 'connect'", c->keyword ());
         new_state = Call::DURING;
         break;
 
@@ -5601,14 +5588,25 @@ void Reader::parse () {
         new_state = Call::AFTER;
         break;
 
+      case Call::OBSERVE:
+      case Call::DISCONNECT:
+        if (!connected)
+          error ("'%s' can only be called after 'connect'", c->keyword ());
+        new_state = c->type;
+        break;
+
+      case Call::CONNECT:
+        if (connected)
+          error ("call 'disconnect' before call 'connect' again");
+        new_state = c->type;
+        break;
+
       case Call::SOLVE:
       case Call::SIMPLIFY:
       case Call::LOOKAHEAD:
       case Call::CUBING:
       case Call::PROPAGATE:
       case Call::RESET:
-      case Call::CONNECT:
-      case Call::DISCONNECT:
         new_state = c->type;
         break;
 

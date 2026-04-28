@@ -11,8 +11,8 @@
   STATISTIC (api_reset,                       3, NOTHING, 0, 0) \
   STATISTIC (api_vars,                        3, NOTHING, 0, 0) \
   STATISTIC (api_resize,                      3, NOTHING, 0, 0) \
-  STATISTIC (api_declare_more_variables,      3, NOTHING, 0, 0) \
-  STATISTIC (api_declare_one_more_variable,   3, NOTHING, 0, 0) \
+  STATISTIC (api_declare_var,                 3, NOTHING, 0, 0) \
+  STATISTIC (api_declare_vars,                3, NOTHING, 0, 0) \
   STATISTIC (api_set,                         3, NOTHING, 0, 0) \
   STATISTIC (api_limit,                       3, NOTHING, 0, 0) \
   STATISTIC (api_configure,                   3, NOTHING, 0, 0) \
