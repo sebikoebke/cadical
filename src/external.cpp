@@ -551,7 +551,7 @@ signed char External::current_val (int elit) {
 bool External::force_unassign (int elit) {
   const int eidx = abs (elit);
   const int iidx = e2i[eidx];
-  if (internal->val (iidx))
+  if (!internal->val (iidx))
     return true;
   while (internal->val (iidx)) {
     const int level = internal->var (iidx).level;
@@ -561,6 +561,7 @@ bool External::force_unassign (int elit) {
     internal->propagate ();
     assert (!internal->conflict);
   }
+  assert (!internal->val (iidx));
   internal->notify_assignments ();
   return false;
 }
