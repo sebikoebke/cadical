@@ -902,6 +902,8 @@ public:
   bool cb_check_found_model (const std::vector<int> &model) override {
     MLOG ("cb_check_found_model (" << model.size () << ") returns: ");
 
+    (void) model;
+
     // Model reconstruction can change the assignments of certain variables,
     // but the internal trail of the solver and the propagator should be
     // still in synchron.
@@ -909,23 +911,27 @@ public:
 
     for (const auto lemma : external_lemmas) {
       bool satisfied = false;
+      size_t level = 0;
 
       for (const auto lit : *lemma) {
         if (!lit)
           continue; // eoc
-
-        auto search = std::find (model.begin (), model.end (), lit);
-        if (search != model.end ()) {
+        // TODO: check
+        assert (s->observed (lit));
+        const signed char tmp = s->current_value (lit);
+        if (tmp > 0) {
           satisfied = true;
           break;
-        } else {
-          // if not satisfied, it must be falsified.
-          search = std::find (model.begin (), model.end (), -lit);
-          assert (search != model.end ());
         }
+        if (level_map[lit] > level)
+          level = level_map[lit];
+        assert (tmp < 0);
       }
 
-      if (!satisfied) {
+      if (!satisfied && lemma->propagating && level) {
+        s->force_backtrack (level - 1);
+        return false;
+      } else if (!satisfied) {
         assert (lemma->add_count == 0 || lemma->forgettable);
 
         must_add_clause = true;
