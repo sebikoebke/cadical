@@ -16,6 +16,7 @@
   STATISTIC (api_set,                         3, NOTHING, 0, 0) \
   STATISTIC (api_limit,                       3, NOTHING, 0, 0) \
   STATISTIC (api_configure,                   3, NOTHING, 0, 0) \
+  STATISTIC (api_current_value,               3, NOTHING, 0, 0) \
   STATISTIC (api_add,                         3, NOTHING, 0, 0) \
   STATISTIC (api_constrain,                   3, NOTHING, 0, 0) \
   STATISTIC (api_assume,                      3, NOTHING, 0, 0) \
@@ -319,11 +320,11 @@
   STATISTIC (up_cb_check_model,      1, percent, "%", up_cb) \
   STATISTIC (up_cb_decide,           1, percent, "%", up_cb) \
   STATISTIC (up_cb_decided,          1, percent, "%", up_cb_decide) \
+  STATISTIC (up_cb_decide_force_bt,  1, percent, "%", api_force_backtrack) \
   STATISTIC (up_cb_prop,             1, percent, "%", up_cb) \
   STATISTIC (up_cb_prop_assign,      2, percent, "%", up_cb_prop) \
   STATISTIC (up_cb_prop_clash,       2, percent, "%", up_cb_prop) \
   STATISTIC (up_cb_prop_explain,     2, percent, "%", up_cb_prop) \
-  STATISTIC (up_force_bt,            1, percent, "%", up_cb_decide) \
   STATISTIC (up_learn,               1, percent, "%", clauses) \
   STATISTIC (up_learn_conflict,      2, percent, "%", up_learn) \
   STATISTIC (up_learn_elevating,     2, percent, "%", up_learn) \

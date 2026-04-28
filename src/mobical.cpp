@@ -599,7 +599,6 @@ private:
   // The reasons of present external propagations
   std::map<int, size_t> reason_map;
   std::map<int, size_t> level_map;
-  std::map<int, signed char> value_map;
 
   // The external propagations that are currently unassigned
   std::set<int> unassigned_reasons;
@@ -703,7 +702,6 @@ public:
       delete[] l->literals, delete l;
 
     reason_map.clear ();
-    value_map.clear ();
     level_map.clear ();
 
     unassigned_reasons.clear ();
@@ -874,8 +872,6 @@ public:
     assert (std::find (observed_fixed.begin (), observed_fixed.end (),
                        lit) == observed_fixed.end ());
     observed_fixed.push_back (lit);
-    value_map[lit] = 1;
-    value_map[-lit] = -1;
     level_map[abs (lit)] = 0;
   };
 
@@ -1092,23 +1088,24 @@ public:
     const int lit = next_decision.lit;
     external_decide.pop_back ();
 
-    while (value_map[lit] < 0) {
+    if (s->current_value (lit) < 0) {
       MLOG ("cb_decide force_bt due to " << lit << std::endl);
       const int level = level_map[abs (lit)];
       if (level) {
         s->force_backtrack (level - 1);
         forced_bt++;
-      } else {
-        MLOG ("cb_decide returns 0" << std::endl);
-        return 0;
       }
-    }
-    if (value_map[lit] > 0) {
+      // this decision is ignored, but we are asked again.
       MLOG ("cb_decide returns 0" << std::endl);
       return 0;
     }
+    assert (s->current_value (lit) >= 0);
+    if (s->current_value (lit) > 0) {
+      MLOG ("cb_decide returns 0" << std::endl);
+      return 0;
+    }
+    assert (!s->internal->val (s->external->internalize (lit)));
     MLOG ("cb_decide returns " << lit << std::endl);
-    assert (!s->internal->val (lit));
     return lit;
   }
 
@@ -1128,7 +1125,12 @@ public:
       int propagate = 0;
       int max = 0;
       for (auto &lit : *lemma) {
-        const signed char tmp = value_map[lit];
+        const bool obs = s->observed (lit);
+        if (!obs) {
+          propagate = INT_MIN;
+          break;
+        }
+        const signed char tmp = s->current_value (lit);
         if (tmp > 0) {
           propagate = INT_MIN;
           break;
@@ -1190,8 +1192,7 @@ public:
     for (const auto &lit : lits) {
       observed_trail.back ().push_back (lit);
       level_map[abs (lit)] = level;
-      value_map[lit] = 1;
-      value_map[-lit] = -1;
+      assert (s->current_value (lit) > 0);
       unassigned_reasons.erase (lit);
 #ifndef NDEBUG
       MLOGC (lit << " ");
@@ -1226,7 +1227,6 @@ public:
         if (reason_map.find (lit) != reason_map.end ()) {
           unassigned_reasons.insert (lit);
         }
-        value_map[lit] = value_map[-lit] = 0;
       }
 #ifndef NDEBUG
       MLOG ("unassign during backtrack from level "
@@ -4565,6 +4565,13 @@ static bool is_basic (Call *c) {
   case Call::OPTIMIZE:
   case Call::OBSERVE:
   case Call::DECIDE:
+#ifdef MOBICAL_TERMINATE
+  case Call::TERMINATE:
+#endif
+#ifdef MOBICAL_MEMORY
+  case Call::LEAKALLOC:
+  case Call::MAXALLOC:
+#endif
     return true;
   default:
     return false;
@@ -4740,6 +4747,10 @@ bool Trace::reduce_values (int expected) {
           continue;
       } else if (c->type == Call::OPTIMIZE) {
         lo = 0, hi = 9;
+#ifdef MOBICAL_TERMINATE
+      } else if (c->type == Call::TERMINATE) {
+        lo = 0, hi = c->val;
+#endif
 #ifdef MOBICAL_MEMORY
       } else if (c->type == Call::MAXALLOC) {
         lo = 0, hi = c->val;

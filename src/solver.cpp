@@ -1573,6 +1573,20 @@ bool Solver::is_witness (int lit) {
   return res;
 }
 
+signed char Solver::current_value (int lit) {
+  TRACE (current_value, "current_value", lit);
+  REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE_VALID_LIT (lit);
+  REQUIRE (external->observed (lit),
+           "can only ask for values of observed variables");
+  int ilit = external->e2i[abs (lit)];
+  if (lit < 0)
+    ilit = -ilit;
+  signed char res = internal->val (ilit);
+  LOG_API_CALL_RETURNS ("current_value", lit, res);
+  return res;
+}
+
 bool Solver::is_decision (int lit) {
   TRACE (is_decision, "is_decision", lit);
   REQUIRE_VALID_OR_SOLVING_STATE ();

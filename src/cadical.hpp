@@ -452,6 +452,13 @@ public:
   //
   bool is_decision (int lit);
 
+  // Get the current value of an observed literal.
+  //
+  //   require (VALID_OR_SOLVING)
+  //   ensure (VALID_OR_SOLVING)
+  //
+  signed char current_value (int lit);
+
   // Force solve to backtrack to certain decision level. Can be called only
   // during 'cb_decide' and 'cb_check_final_model' of a connected External
   // Propagator. Invoking in any other time will trigger a runtime error.

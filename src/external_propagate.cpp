@@ -168,7 +168,7 @@ void Internal::renotify_full_trail_between_trail_pos (
     // This happens on root level, so notification about their assignment
     // is already done.
     assert (external->observed (elit) || fixed (ilit));
-    if (!external->ervars[abs (elit)])
+    if (external->observed (elit) && !external->ervars[abs (elit)])
       assigned.push_back (elit);
   }
 
@@ -1199,6 +1199,8 @@ void Internal::notify_assignments () {
     // is already done.
     assert (external->observed (elit) ||
             (fixed (ilit) && !external->ervars[abs (elit)]));
+    if (!external->observed (elit))
+      continue;
     notification_trail.push_back (elit);
   }
   if (notification_trail.size ()) {
@@ -1257,7 +1259,7 @@ int Internal::ask_decision () {
     stats.up_cb_decided++;
 
   if (level_before != level) {
-    stats.up_force_bt++;
+    stats.up_cb_decide_force_bt++;
 
     propagate ();
     assert (!unsat);
@@ -1271,6 +1273,7 @@ int Internal::ask_decision () {
         ((size_t) level == assumptions.size () && constraint.size ())) {
       return 0;
     }
+    return ask_decision ();
   }
 
   if (!elit)
