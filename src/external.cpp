@@ -540,6 +540,30 @@ bool External::is_decision (int elit) {
   int ilit = internalize (elit);
   return internal->is_decision (ilit);
 }
+signed char External::current_val (int elit) {
+  int ilit = e2i[abs (elit)];
+  if (elit < 0)
+    ilit = -ilit;
+  signed char res = internal->val (ilit);
+  return res;
+}
+
+bool External::force_unassign (int elit) {
+  const int eidx = abs (elit);
+  const int iidx = e2i[eidx];
+  if (internal->val (iidx))
+    return true;
+  while (internal->val (iidx)) {
+    const int level = internal->var (iidx).level;
+    if (!level)
+      return false;
+    force_backtrack (level - 1);
+    internal->propagate ();
+    assert (!internal->conflict);
+  }
+  internal->notify_assignments ();
+  return false;
+}
 
 void External::force_backtrack (int new_level) {
   assert (propagator); // REQ is is in Solver::force_backtrack

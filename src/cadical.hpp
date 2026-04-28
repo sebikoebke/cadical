@@ -470,6 +470,17 @@ public:
   //
   void force_backtrack (int new_level);
 
+  // Force solve to unassign a certain literal by (repeated) backtracking.
+  // Has the same contracts as 'force_backtrack' and can only be called
+  // on observed literals.
+  // Returns 'true' if 'lit' is successfully unassigned, 'false' if it is
+  // fixed instead. In that case, it may or may not backtrack to any level.
+  //
+  //   require (SOLVING)
+  //   ensure (SOLVING)
+  //
+  bool force_unassign (int lit);
+
   // ====== END IPASIR-UP ==================================================
 
   //------------------------------------------------------------------------

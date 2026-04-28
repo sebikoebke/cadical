@@ -1,4 +1,5 @@
 #include "cadical.hpp"
+#include "contract.hpp"
 #include "internal.hpp"
 #include <atomic>
 
@@ -1579,10 +1580,7 @@ signed char Solver::current_value (int lit) {
   REQUIRE_VALID_LIT (lit);
   REQUIRE (external->observed (lit),
            "can only ask for values of observed variables");
-  int ilit = external->e2i[abs (lit)];
-  if (lit < 0)
-    ilit = -ilit;
-  signed char res = internal->val (ilit);
+  signed char res = external->current_val (lit);
   LOG_API_CALL_RETURNS ("current_value", lit, res);
   return res;
 }
@@ -1601,7 +1599,27 @@ void Solver::force_backtrack (int new_level) {
   REQUIRE_VALID_OR_SOLVING_STATE ();
   REQUIRE (external->propagator,
            "can not force backtrack without a connected propagator");
+  REQUIRE (internal->forced_backt_allowed,
+           "not allowed to force backtrack in that state of the solver.");
+  REQUIRE (new_level >= 0,
+           "the target level of a forced backtrack must be non-negative.");
+  REQUIRE (internal->level > 0 && new_level < internal->level,
+           "the target level of a forced backtrack must be smaller than "
+           "the current decision level.");
   external->force_backtrack (new_level);
+}
+
+bool Solver::force_unassign (int lit) {
+  TRACE (force_unassign, "force_unassign", lit);
+  REQUIRE_VALID_OR_SOLVING_STATE ();
+  REQUIRE (external->propagator,
+           "can not force unassign without a connected propagator");
+  REQUIRE_VALID_LIT (lit);
+  REQUIRE (external->observed (lit),
+           "can only force unassign observed variables");
+  bool const res = external->force_unassign (lit);
+  LOG_API_CALL_RETURNS ("force_unassign", lit, res);
+  return res;
 }
 
 /*------------------------------------------------------------------------*/

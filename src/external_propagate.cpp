@@ -250,13 +250,6 @@ bool Internal::is_decision (int ilit) {
 }
 
 void Internal::force_backtrack (int new_level) {
-  REQUIRE (forced_backt_allowed,
-           "not allowed to force backtrack in that state of the solver.");
-  REQUIRE (new_level >= 0,
-           "the target level of a forced backtrack must be non-negative.");
-  REQUIRE (level > 0 && new_level < level,
-           "the target level of a forced backtrack must be smaller than "
-           "the current decision level.");
 
 #ifndef NDEBUG
   LOG ("external propagator forces backtrack to decision level"

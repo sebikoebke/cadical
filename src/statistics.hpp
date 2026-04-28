@@ -55,6 +55,7 @@
   STATISTIC (api_is_witness,                  3, NOTHING, 0, 0) \
   STATISTIC (api_is_decision,                 3, NOTHING, 0, 0) \
   STATISTIC (api_force_backtrack,             3, NOTHING, 0, 0) \
+  STATISTIC (api_force_unassign,              3, NOTHING, 0, 0) \
   STATISTIC (backbone_phases,        1, INTERVAL, "",    interval) \
   STATISTIC (backbone_probes,        2, relative, "per", vars) \
   STATISTIC (backbone_rounds,        2, relative, "per", backbone_phases) \

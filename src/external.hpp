@@ -70,7 +70,7 @@ struct External {
   size_t vsize; // Allocated external size.
 
   vector<bool> vals; // Current external (extended) assignment.
-  std::unordered_map<int, int> e2i;   // External 'idx' to internal 'lit'.
+  std::unordered_map<int, int> e2i; // External 'idx' to internal 'lit'.
 
   vector<int> assumptions; // External assumptions.
   vector<int> constraint;  // External constraint. Terminated by zero.
@@ -135,6 +135,7 @@ struct External {
   bool is_decision (int elit);
 
   void force_backtrack (int new_level);
+  bool force_unassign (int elit);
 
   //----------------------------------------------------------------------//
 
@@ -282,7 +283,7 @@ struct External {
   void enlarge (int new_max_var); // Enlarge allocated 'vsize'.
   void init (int new_max_var,
              bool extension = false); // Initialize up-to 'new_max_var'.
-  void reserve (int new_max_var); // Reserves up-to 'new_max_var'.
+  void reserve (int new_max_var);     // Reserves up-to 'new_max_var'.
 
   int internalize (
       int,
@@ -370,6 +371,8 @@ struct External {
     return val ? elit : -elit;
   }
 
+  signed char current_val (int elit);
+
   bool flip (int elit);
   bool flippable (int elit);
 
@@ -424,8 +427,8 @@ struct External {
 
   /*----------------------------------------------------------------------*/
 
-  // Copy flags for determining preprocessing state, including if a variable is
-  // an extension.
+  // Copy flags for determining preprocessing state, including if a variable
+  // is an extension.
 
   void copy_flags (External &other) const;
 

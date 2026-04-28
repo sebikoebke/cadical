@@ -1090,10 +1090,9 @@ public:
 
     if (s->current_value (lit) < 0) {
       MLOG ("cb_decide force_bt due to " << lit << std::endl);
-      const int level = level_map[abs (lit)];
-      if (level) {
-        s->force_backtrack (level - 1);
-        forced_bt++;
+      if (s->force_unassign (lit)) {
+        MLOG ("cb_decide returns " << lit << std::endl);
+        return lit;
       }
       // this decision is ignored, but we are asked again.
       MLOG ("cb_decide returns 0" << std::endl);
