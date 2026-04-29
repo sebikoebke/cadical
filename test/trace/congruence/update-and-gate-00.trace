@@ -447,7 +447,6 @@
 446 add 0
 447 connect mock-propagator
 448 observe -8
-449 observe 0
 450 observe 11
 451 freeze 1
 452 freeze -2

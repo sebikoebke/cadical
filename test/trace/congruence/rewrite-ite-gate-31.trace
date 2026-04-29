@@ -336,7 +336,6 @@
 339 observe 9
 340 observe 10
 341 observe 11
-342 observe 0
 343 freeze -1
 344 freeze -2
 345 freeze 3
@@ -1146,7 +1145,6 @@
 1149 connect mock-propagator
 1150 observe 13
 1151 observe -14
-1152 observe 0
 1153 observe -22
 1154 solve 0
 1155 lemma 14
