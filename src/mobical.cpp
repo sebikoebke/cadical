@@ -797,12 +797,16 @@ public:
 
     for (const auto lemma : external_lemmas) {
       bool satisfied = false;
+      bool unobserved = false;
       size_t level = 0;
 
       for (const auto lit : *lemma) {
         if (!lit)
           continue; // eoc
-        assert (s->observed (lit));
+        if (!s->observed (lit)) {
+          unobserved = true;
+          break;
+        }
         const signed char tmp = s->current_value (lit);
         if (tmp > 0) {
           satisfied = true;
@@ -812,6 +816,9 @@ public:
           level = level_map[lit];
         assert (tmp < 0);
       }
+      // TODO: perhaps observe?
+      if (unobserved)
+        continue;
 
       if (!satisfied && lemma->propagating && level) {
         s->force_backtrack (level - 1);

@@ -207,12 +207,6 @@ int External::internalize (int elit, bool extension) {
 void External::add (int elit) {
   assert (elit != INT_MIN);
 
-  if (elit)
-    REQUIRE (is_valid_input ((int) elit),
-             "extension variable '%d' defined by the solver internally "
-             "(all user variables have to be declared explicitly "
-             "if 'factor' is enabled)", // TODO only reason?
-             (int) abs (elit));
   reset_extended ();
 
   bool forgettable = false;
@@ -402,17 +396,9 @@ void External::add_observed_var (int elit) {
 
   int eidx = abs (elit);
 
-  // REQUIRE (eidx > max_var ||
-  //            (!marked (witness, elit) && !marked (witness, -elit)),
-  //         "Only clean variables are allowed to be observed.");
-  // if (eidx <= max_var &&
-  //     (marked (witness, elit) || marked (witness, -elit))) {
-  //   LOG ("Error, only clean variables are allowed to become observed.");
-  //   assert (false);
-
-  //   // TODO: here needs to come the taint and restore of the newly
-  //   // observed variable. Restore_clauses must be called before continue.
-  //   // LOG ("marking tainted %d", elit);
+  // TODO: here needs to come the taint and restore of the newly
+  // observed variable. Restore_clauses must be called before continue.
+  // LOG ("marking tainted %d", elit);
   if (marked (witness, elit)) {
     mark (tainted, -elit);
   }

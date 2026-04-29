@@ -638,6 +638,7 @@ void Solver::add (int lit) {
   TRACE (add, "add", lit);
   REQUIRE_VALID_STATE ();
   if (lit) {
+    REQUIRE_VALID_LIT (lit);
     if (internal->opts.factor && internal->opts.factorcheck == 1)
       REQUIRE (
           abs (lit) <= external->max_var,
@@ -652,9 +653,12 @@ void Solver::add (int lit) {
           "(checking that user variables are declared explicitly failed "
           "as 'factorcheck == 2' even if 'factor' is disabled)",
           lit, (int) abs (lit));
+    REQUIRE (external->is_valid_input ((int) lit),
+             "extension variable '%d' defined by the solver internally "
+             "(all user variables have to be declared explicitly "
+             "if 'factor' is enabled)",
+             (int) abs (lit));
   }
-  if (lit)
-    REQUIRE_VALID_LIT (lit);
   transition_to_steady_state ();
   external->add (lit);
   adding_clause = lit;
@@ -1131,6 +1135,8 @@ void Solver::add_observed_var (int idx) {
   REQUIRE_VALID_LIT (idx);
   REQUIRE (external->propagator,
            "can not observe variables without a connected propagator");
+  REQUIRE (!internal->conflict,
+           "can not observe assigned variable during conflict analysis");
   external->add_observed_var (idx);
   LOG_API_CALL_END ("observe", idx);
 }

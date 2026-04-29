@@ -29,8 +29,6 @@ void Internal::add_observed_var (int ilit) {
     // about it because it happened on an earlier decision level.
     // To not break the stack-like view of the trail, we simply backtrack to
     // undo this unnotifiable assignment.
-    REQUIRE (!conflict,
-             "can not observe assigned variable during conflict analysis");
     const int assignment_level = var (ilit).level;
     backtrack_without_updating_phases (assignment_level - 1);
   } else if (level && fixed (ilit)) {
