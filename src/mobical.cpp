@@ -1440,27 +1440,26 @@ struct Call {
     OBSERVE         = shift ( 31 ),
     UNOBSERVE       = shift ( 32 ),
     LEMMA           = shift ( 33 ),
-    PROPLEMMA       = shift ( 34 ),
-    DECIDE          = shift ( 35 ),
+    DECIDE          = shift ( 34 ),
 
-    CONCLUDE        = shift ( 36 ),
-    DISCONNECT      = shift ( 37 ),
+    CONCLUDE        = shift ( 35 ),
+    DISCONNECT      = shift ( 36 ),
 
-    TRACEPROOF      = shift ( 38 ),
-    FLUSHPROOFTRACE = shift ( 39 ),
-    CLOSEPROOFTRACE = shift ( 40 ),
+    TRACEPROOF      = shift ( 37 ),
+    FLUSHPROOFTRACE = shift ( 38 ),
+    CLOSEPROOFTRACE = shift ( 39 ),
 
 #ifdef MOBICAL_MEMORY
-    MAXALLOC        = shift ( 41 ),
-    LEAKALLOC       = shift ( 42 ),
+    MAXALLOC        = shift ( 40 ),
+    LEAKALLOC       = shift ( 41 ),
 #endif
 #ifdef MOBICAL_TERMINATE
-    TERMINATE       = shift ( 43 ),
+    TERMINATE       = shift ( 42 ),
 #endif
 
-    PROPAGATE_ASSUMPTIONS = shift ( 44 ),
-    IMPLIED_LITERALS = shift ( 45 ),
-    RESET_ASSUMPTIONS = shift ( 46 ),
+    PROPAGATE_ASSUMPTIONS = shift ( 43 ),
+    IMPLIED_LITERALS = shift ( 44 ),
+    RESET_ASSUMPTIONS = shift ( 45 ),
 
     RESERVE = shift ( 46 ),
 
@@ -1479,12 +1478,12 @@ struct Call {
     CONFIG = INIT | SET | CONFIGURE | ALWAYS | TRACEPROOF,
     BEFORE = ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT,
     PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE,
-    DURING = LEMMA | PROPLEMMA | DECIDE,
+    DURING = LEMMA | DECIDE,
     CONNECTING = CONNECT | DISCONNECT,
-    PROPAGATOR = OBSERVE | UNOBSERVE | LEMMA | PROPLEMMA | DECIDE,
+    PROPAGATOR = OBSERVE | UNOBSERVE | LEMMA | DECIDE,
     LITTYPE = PHASE | ADD | ASSUME | VAL | FLIP | FLIPPABLE | FAILED |
               FIXED | FREEZE | FROZEN | MELT | CONSTRAIN | UNOBSERVE |
-              OBSERVE | LEMMA | PROPLEMMA | DECIDE,
+              OBSERVE | LEMMA | DECIDE,
     EXTENDMAP = PHASE | ADD | ASSUME | FREEZE | CONSTRAIN,
     AFTER = VAL | FLIP | FLIPPABLE | FAILED | CONCLUDE | ALWAYS |
             FLUSHPROOFTRACE | CLOSEPROOFTRACE | PROPAGATE_ASSUMPTIONS,
@@ -1874,35 +1873,31 @@ struct ObserveCall : public Call {
   const char *keyword () { return "observe"; }
 };
 
+enum LemmaType {
+  LAZY,
+  PROPAGATING,
+  OBSERVING,
+  EAGER,
+};
+
 struct LemmaCall : public Call {
-  LemmaCall (int l) : Call (LEMMA, l) {}
+  LemmaType lemmatype;
+  LemmaCall (int l, LemmaType t, int v)
+      : Call (LEMMA, l, 0, 0, v), lemmatype (t) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
     assert (mp);
     mp->push_lemma_lit (map_arg (s, extendmap), 0, 0);
   }
-  void print (ostream &o) { o << "lemma " << arg; }
-  Call *copy () { return new LemmaCall (arg); }
-  const char *keyword () { return "lemma"; }
-};
-
-struct PropagateLemmaCall : public Call {
-  PropagateLemmaCall (int l, int v) : Call (PROPLEMMA, l, 0, 0, v) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    MockPropagator *mp =
-        static_cast<MockPropagator *> (s->get_propagator ());
-    assert (mp);
-    mp->push_lemma_lit (map_arg (s, extendmap), 1, val);
-  }
   void print (ostream &o) {
     if (arg)
-      o << "propagatelemma " << arg;
+      o << "lemma " << arg;
     else
-      o << "propagatelemma " << arg << " " << val;
+      o << "lemma " << arg << " " << lemmatype << " " << val;
   }
-  Call *copy () { return new PropagateLemmaCall (arg, val); }
-  const char *keyword () { return "propagatelemma"; }
+  Call *copy () { return new LemmaCall (arg, lemmatype, val); }
+  const char *keyword () { return "lemma"; }
 };
 
 struct DecideCall : public Call {
@@ -3254,11 +3249,14 @@ void Trace::generate_lemmas (Random &random) {
   if (random.generate_double () >= 0.05) {
     const int nof_lemmas = random.pick_int (30, 175);
     for (int i = 0; i < nof_lemmas; i++) {
+      // TODO:sizeof LemmaType
+      LemmaType lemmatype = static_cast<LemmaType> (random.pick_int (0, 3));
+      int delay = random.pick_int (0, 50);
+
       // Tiny tiny chance to generate an empty lemma
       if (random.generate_double () < 0.003) {
-        push_back (new LemmaCall (0));
+        push_back (new LemmaCall (0, lemmatype, delay));
       } else {
-        bool propagate = random.generate_double () < 0.7;
         int count = pick_size (random, ovars);
         const int max_idx = ovars - 1;
         bool *picked = new bool[max_idx + 1];
@@ -3272,10 +3270,7 @@ void Trace::generate_lemmas (Random &random) {
           picked[idx] = 1;
           int lit = random.generate_bool () ? -observed_vars[idx]
                                             : observed_vars[idx];
-          if (propagate)
-            push_back (new PropagateLemmaCall (lit, 0));
-          else
-            push_back (new LemmaCall (lit));
+          push_back (new LemmaCall (lit, lemmatype, 0));
         }
 
         delete[] picked;
@@ -3283,16 +3278,9 @@ void Trace::generate_lemmas (Random &random) {
           int idx = random.pick_int (0, max_idx);
           int lit = random.generate_bool () ? -observed_vars[idx]
                                             : observed_vars[idx];
-          if (propagate)
-            push_back (new PropagateLemmaCall (lit, 0));
-          else
-            push_back (new LemmaCall (lit));
+          push_back (new LemmaCall (lit, lemmatype, 0));
         }
-        if (propagate) {
-          int delay = random.pick_int (0, 50);
-          push_back (new PropagateLemmaCall (0, delay));
-        } else
-          push_back (new LemmaCall (0));
+        push_back (new LemmaCall (0, lemmatype, delay));
       }
     }
   }
@@ -4392,9 +4380,7 @@ bool Trace::shrink_lemmas (int expected) {
   Segments segments;
   for (size_t r = size (), l; r > 1; r = l) {
     Call *c = calls[l = r - 1];
-    while (
-        l > 0 &&
-        ((c->type != Call::LEMMA && c->type != Call::PROPLEMMA) || c->arg))
+    while (l > 0 && (c->type != Call::LEMMA || c->arg))
       c = calls[--l];
     if (!l)
       break;
@@ -4412,7 +4398,6 @@ static bool is_lit_type (Call *c) {
   case Call::ADD:
   case Call::CONSTRAIN:
   case Call::LEMMA:
-  case Call::PROPLEMMA:
     return true;
   default:
     return false;
@@ -4739,7 +4724,7 @@ bool Trace::reduce_values (int expected) {
 #endif
       } else if (c->type == Call::DECIDE) {
         lo = 0, hi = c->val;
-      } else if (c->type == Call::PROPLEMMA) {
+      } else if (c->type == Call::LEMMA) {
         lo = 0, hi = c->val;
       } else
         continue;
@@ -4819,7 +4804,6 @@ static bool has_lit_arg_type (Call *c) {
   case Call::FAILED:
   case Call::RESIZE:
   case Call::LEMMA:
-  case Call::PROPLEMMA:
   case Call::OBSERVE:
   case Call::UNOBSERVE:
     return true;
@@ -5078,7 +5062,7 @@ void Reader::parse () {
     while (p < line + n && (ch = *++p) &&
            (('a' <= ch && ch <= 'z') || ch == '_'))
       ;
-    const char *first = 0, *second = 0;
+    const char *first = 0, *second = 0, *third = 0;
     if ((ch = *p) == ' ') {
       *p++ = 0;
       first = p;
@@ -5100,8 +5084,19 @@ void Reader::parse () {
         while ((ch = *++p) && ch != ' ')
           ;
         if (ch == ' ') {
-          *p = 0;
-          error ("unexpected space after second argument '%s'", second);
+          *p++ = 0;
+          third = p;
+          ch = *p;
+          if (!ch)
+            error ("third argument missing after trailing space");
+          if (ch == ' ')
+            error ("space in place of third argument");
+          while ((ch = *++p) && ch != ' ')
+            ;
+          if (ch == ' ') {
+            *p = 0;
+            error ("unexpected space after third argument '%s'", third);
+          }
         }
       }
     } else if (ch)
@@ -5240,29 +5235,26 @@ void Reader::parse () {
         error ("argument to 'lemma' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'lemma'", first);
-      if (second)
+      if (lit && second)
         error ("additional argument '%s' to 'lemma'", second);
       if (enforce && lit == INT_MIN)
         error ("invalid literal '%d' as argument to 'lemma'", lit);
       adding = lit ? (uint64_t) Call::LEMMA : 0;
-      c = new LemmaCall (lit);
-    } else if (!strcmp (keyword, "propagatelemma")) {
-      if (!first)
-        error ("argument to 'propagatelemma' missing");
-      if (!parse_int_str (first, lit))
-        error ("invalid argument '%s' to 'propagatelemma'", first);
-      if (enforce && lit == INT_MIN)
-        error ("invalid literal '%d' as argument to 'propagatelemma'", lit);
-      if (lit && second)
-        error ("additional argument '%s' to 'propagatelemma %d'", second,
-               lit);
-      if (!lit && !second)
-        error ("missing argument '%s' to 'propagatelemma %d'", second, lit);
+      LemmaType tmpt = LAZY;
+      int tmp = 0;
+      if (second) {
+        if (!parse_int_str (second, tmp))
+          error ("invalid argument '%s' to 'lemma'", second);
+        tmpt = static_cast<LemmaType> (tmp);
+        if (enforce && static_cast<int> (tmpt) != tmp)
+          error ("invalid argument '%s' to 'lemma'", second);
+      }
       val = 0;
-      if (second && !parse_int_str (second, val))
-        error ("invalid second argument '%s' to 'propagatelemma'", second);
-      adding = lit ? (uint64_t) Call::PROPLEMMA : 0;
-      c = new PropagateLemmaCall (lit, val);
+      if (third) {
+        if (!parse_int_str (third, val))
+          error ("invalid argument '%s' to 'lemma'", third);
+      }
+      c = new LemmaCall (lit, tmpt, val);
     } else if (!strcmp (keyword, "decide")) {
       if (!first)
         error ("argument to 'decide' missing");
@@ -5512,6 +5504,9 @@ void Reader::parse () {
       c = new DeclareOneMoreVariableCall ();
     } else
       error ("invalid keyword '%s'", keyword);
+    if (enforce && third && strcmp (keyword, "lemma")) {
+      error ("invalid third argument '%s' to '%s'", third, keyword);
+    }
 
     // This checks the legal structure of traces described above.
     //
@@ -5568,7 +5563,6 @@ void Reader::parse () {
 
       case Call::LEMMA:
       case Call::DECIDE:
-      case Call::PROPLEMMA:
         if (!connected)
           error ("'%s' can only be called after 'connect'", c->keyword ());
         new_state = Call::DURING;

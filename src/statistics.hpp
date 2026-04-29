@@ -5,8 +5,8 @@
 
 //           NAME,            VERBOSITY (0-3), REFERENCE, PRINT, OTHER
 //      length 21,  (Always/!0/verbose/never), (relative/percent/MACRO)
-#define CADICAL_STATISTICS \
-\
+#ifndef NTRACING
+#define CADICAL_API_STATISTICS \
   STATISTIC (api_init,                        3, NOTHING, 0, 0) \
   STATISTIC (api_reset,                       3, NOTHING, 0, 0) \
   STATISTIC (api_vars,                        3, NOTHING, 0, 0) \
@@ -55,7 +55,14 @@
   STATISTIC (api_is_witness,                  3, NOTHING, 0, 0) \
   STATISTIC (api_is_decision,                 3, NOTHING, 0, 0) \
   STATISTIC (api_force_backtrack,             3, NOTHING, 0, 0) \
-  STATISTIC (api_force_unassign,              3, NOTHING, 0, 0) \
+  STATISTIC (api_force_unassign,              3, NOTHING, 0, 0) 
+
+#else
+#define CADICAL_API_STATISTICS
+#endif
+
+#define CADICAL_STATISTICS \
+  CADICAL_API_STATISTICS \
   STATISTIC (backbone_phases,        1, INTERVAL, "",    interval) \
   STATISTIC (backbone_probes,        2, relative, "per", vars) \
   STATISTIC (backbone_rounds,        2, relative, "per", backbone_phases) \
@@ -321,7 +328,7 @@
   STATISTIC (up_cb_check_model,      1, percent, "%", up_cb) \
   STATISTIC (up_cb_decide,           1, percent, "%", up_cb) \
   STATISTIC (up_cb_decided,          1, percent, "%", up_cb_decide) \
-  STATISTIC (up_cb_decide_force_bt,  1, percent, "%", api_force_backtrack) \
+  STATISTIC (up_cb_decide_force_bt,  1, percent, "%", up_cb_decide) \
   STATISTIC (up_cb_prop,             1, percent, "%", up_cb) \
   STATISTIC (up_cb_prop_assign,      2, percent, "%", up_cb_prop) \
   STATISTIC (up_cb_prop_clash,       2, percent, "%", up_cb_prop) \
