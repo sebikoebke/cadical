@@ -918,6 +918,13 @@ public:
   int cb_add_external_clause_lit () override {
     int lit = external_lemmas[add_lemma_idx]->next_lit ();
 
+    while (lit && !s->observed (lit)) {
+      MLOG ("cb_add_external_clause_lit "
+            << lit << " (lemma " << add_lemma_idx << "/"
+            << external_lemmas.size () << ") ignored as it is not observed"
+            << std::endl);
+      lit = external_lemmas[add_lemma_idx]->next_lit ();
+    }
     MLOG ("cb_add_external_clause_lit "
           << lit << " (lemma " << add_lemma_idx << "/"
           << external_lemmas.size () << ")" << std::endl);
