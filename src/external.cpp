@@ -396,6 +396,9 @@ void External::add_observed_var (int elit) {
 
   int eidx = abs (elit);
 
+  //internalize and in particular declares the variables
+  int ilit = internalize (elit);
+
   // TODO: here needs to come the taint and restore of the newly
   // observed variable. Restore_clauses must be called before continue.
   // LOG ("marking tainted %d", elit);
@@ -417,7 +420,6 @@ void External::add_observed_var (int elit) {
 
   LOG ("marking %d as externally watched", eidx);
 
-  int ilit = internalize (elit);
   // Will do the necessary internalization
   freeze (elit);
   is_observed[eidx] = true;
