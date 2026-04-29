@@ -13,7 +13,7 @@ namespace CaDiCaL {
 void External::check_solution_on_learned_clause () {
   assert (solution);
   for (const auto &lit : internal->clause)
-    if (sol (internal->externalize (lit)) == lit)
+    if (sign (sol (internal->externalize (lit))) == sign (lit))
       return;
   fatal_message_start ();
   fputs ("learned clause unsatisfied by solution:\n", stderr);
@@ -26,7 +26,7 @@ void External::check_solution_on_learned_clause () {
 void External::check_solution_on_shrunken_clause (Clause *c) {
   assert (solution);
   for (const auto &lit : *c)
-    if (sol (internal->externalize (lit)) == lit)
+    if (sign (sol (internal->externalize (lit))) == sign (lit))
       return;
   fatal_message_start ();
   for (const auto &lit : *c)
@@ -42,9 +42,10 @@ void External::check_no_solution_after_learning_empty_clause () {
 
 void External::check_solution_on_learned_unit_clause (int unit) {
   assert (solution);
-  if (sol (internal->externalize (unit)) == unit)
+  // names might not match, but the sign does (at least currently).
+  if (sign (sol (internal->externalize (unit))) == sign (unit))
     return;
-  FATAL ("learned unit %d contradicts solution", unit);
+  FATAL ("learned unit internal %d / external %d contradicts solution", unit, internal->externalize (unit));
 }
 
 } // namespace CaDiCaL
