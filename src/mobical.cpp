@@ -542,6 +542,12 @@ struct ExtendMap {
 };
 
 /*------------------------------------------------------------------------*/
+enum LemmaType {
+  LAZY,
+  PROPAGATING,
+  OBSERVING,
+  EAGER,
+};
 
 class MockPropagator : public ExternalPropagator,
                        public FixedAssignmentListener {
@@ -560,6 +566,7 @@ private:
     size_t delay;
     Decisions (int l, int d) : lit (l), delay (d) {};
   };
+
   struct ExternalLemma {
     size_t id;
     size_t add_count;
@@ -568,7 +575,7 @@ private:
 
     int delay;
 
-    bool propagating;
+    LemmaType type;
     bool forgettable;
     bool tainting;
     bool propagation_reason;
@@ -625,7 +632,7 @@ private:
   std::vector<int> clause;
   bool new_ovars = false;
 
-  size_t add_new_lemma (bool forgettable, bool propagating, int delay) {
+  size_t add_new_lemma (bool forgettable, LemmaType type, int delay) {
     assert (clause.size () <= (size_t) INT_MAX);
     assert (external_lemmas.size () <= (size_t) INT_MAX);
 
@@ -639,7 +646,7 @@ private:
     lemma->add_count = 0;
     lemma->size = size;
     lemma->next = 0;
-    lemma->propagating = propagating;
+    lemma->type = type;
     lemma->delay = delay;
     lemma->forgettable = forgettable;
     lemma->tainting = true;
@@ -723,7 +730,7 @@ public:
     external_decide.push_back (Decisions (lit, delay));
   }
 
-  void push_lemma_lit (int lit, bool propagating, int delay) {
+  void push_lemma_lit (int lit, LemmaType type, int delay) {
 
     if (lit)
       clause.push_back (lit);
@@ -737,7 +744,7 @@ public:
       }
       MLOGC ("0" << std::endl);
 
-      add_new_lemma (true, propagating, delay);
+      add_new_lemma (true, type, delay);
       clause.clear ();
     }
   }
@@ -820,7 +827,7 @@ public:
       if (unobserved)
         continue;
 
-      if (!satisfied && lemma->propagating && level) {
+      if (!satisfied && lemma->type == PROPAGATING && level) {
         s->force_backtrack (level - 1);
         return false;
       } else if (!satisfied) {
@@ -896,7 +903,7 @@ public:
 
       if (!external_lemmas[add_lemma_idx]->add_count &&
           !external_lemmas[add_lemma_idx]->propagation_reason &&
-          !external_lemmas[add_lemma_idx]->propagating) {
+          external_lemmas[add_lemma_idx]->type != PROPAGATING) {
 
         forgettable = external_lemmas[add_lemma_idx]->forgettable;
 
@@ -1014,7 +1021,7 @@ public:
       return 0;
 
     for (auto &lemma : external_lemmas) {
-      if (!lemma->propagating)
+      if (lemma->type != PROPAGATING)
         continue;
       if (lemma->propagation_reason)
         continue;
@@ -1873,13 +1880,6 @@ struct ObserveCall : public Call {
   const char *keyword () { return "observe"; }
 };
 
-enum LemmaType {
-  LAZY,
-  PROPAGATING,
-  OBSERVING,
-  EAGER,
-};
-
 struct LemmaCall : public Call {
   LemmaType lemmatype;
   LemmaCall (int l, LemmaType t, int v)
@@ -1888,7 +1888,7 @@ struct LemmaCall : public Call {
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
     assert (mp);
-    mp->push_lemma_lit (map_arg (s, extendmap), 0, 0);
+    mp->push_lemma_lit (map_arg (s, extendmap), lemmatype, 0);
   }
   void print (ostream &o) {
     if (arg)
