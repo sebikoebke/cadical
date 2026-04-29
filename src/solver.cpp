@@ -1135,7 +1135,7 @@ void Solver::add_observed_var (int idx) {
   REQUIRE_VALID_LIT (idx);
   REQUIRE (external->propagator,
            "can not observe variables without a connected propagator");
-  REQUIRE (!internal->conflict,
+  REQUIRE (internal->unsat || !internal->conflict,
            "can not observe assigned variable during conflict analysis");
   external->add_observed_var (idx);
   LOG_API_CALL_END ("observe", idx);

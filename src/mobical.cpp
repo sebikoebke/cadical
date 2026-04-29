@@ -668,7 +668,7 @@ private:
 #define MLOG(str) \
   do { \
     if (logging) \
-      std::cout << "[mock-propagator] " << str; \
+      std::cout << "c [mock-propagator] " << str; \
   } while (false)
 #define MLOGC(str) \
   do { \
@@ -781,17 +781,12 @@ public:
   /* -------------------- ExternalPropagator functions -----------------*/
 
   bool cb_check_found_model (const std::vector<int> &model) override {
-    MLOG ("cb_check_found_model (" << model.size () << ") returns: ");
-
+    MLOG ("cb_check_found_model (" << model.size () << ") started");
     size_t assigned = model.size ();
     for (auto &level : observed_trail) {
       for (auto &lit : level) {
-        if (!assigned--)
-          s->internal->error (
-              "cb_check_found_model differs from Propagator");
-        if (s->current_value (lit) <= 0)
-          s->internal->error (
-              "cb_check_found_model differs from Propagator");
+        assert (assigned--);
+        assert (s->current_value (lit) > 0);
       }
     }
 
@@ -839,10 +834,13 @@ public:
         }
         MLOGC (std::endl);
 
+        MLOG ("cb_check_found_model (" << model.size () << ") returns: ");
+        MLOGC ("false" << std::endl);
         return false;
       }
     }
 
+    MLOG ("cb_check_found_model (" << model.size () << ") returns: ");
     MLOGC ("true" << std::endl);
 
     return true;
@@ -1006,7 +1004,7 @@ public:
   }
 
   int cb_propagate () override {
-    MLOGC ("cb_propagate starts" << std::endl);
+    MLOG ("cb_propagate starts" << std::endl);
     if (external_lemmas.empty ())
       return 0;
 
@@ -1076,24 +1074,13 @@ public:
 
   void notify_assignment (const std::vector<int> &lits) override {
     MLOG ("notified " << lits.size () << " new assignments on level "
-                      << observed_trail.size () - 1);
-#ifndef NDEBUG
-    MLOGC (": [ ");
-#else
-    MLOGC (std::endl);
-#endif
+                      << observed_trail.size () - 1 << std::endl);
     for (const auto &lit : lits) {
       observed_trail.back ().push_back (lit);
       level_map[abs (lit)] = level;
       assert (s->current_value (lit) > 0);
       unassigned_reasons.erase (lit);
-#ifndef NDEBUG
-      MLOGC (lit << " ");
-#endif
     }
-#ifndef NDEBUG
-    MLOGC ("]" << std::endl);
-#endif
   }
 
   void notify_new_decision_level () override {
