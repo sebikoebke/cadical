@@ -2046,7 +2046,7 @@ struct ResetAssumptionsCall : public Call {
 };
 
 struct ResetObservedCall : public Call {
-  ResetObservedCall (int r = 0) : Call (RESET_OBSERVED) {}
+  ResetObservedCall () : Call (RESET_OBSERVED) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
     s->reset_observed_vars ();
     (void) (extendmap);
