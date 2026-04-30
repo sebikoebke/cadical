@@ -796,6 +796,12 @@ public:
         // TODO: known bug that level 0 assigned literals can be
         // notified multiple times
         // assert (assigned--);
+        // unobserve calls can lead to unobserved variables in
+        // observed_trail
+        if (!s->observed (lit)) {
+          assert (s->external->ival (abs (lit)) == lit);
+          continue;
+        }
         assert (s->current_value (lit) > 0);
       }
     }
