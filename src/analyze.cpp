@@ -1233,9 +1233,9 @@ void Internal::analyze () {
           open = 1;
           break;
         } else {
-          LOG (reason, "restarting the analysis on the new conflict");
           ++stats.conflicts;
           reason = conflict;
+          LOG (reason, "restarting the analysis on the new conflict");
           resolvent_size = 0;
           antecedent_size = 1;
           resolved = 0;
@@ -1243,6 +1243,7 @@ void Internal::analyze () {
           analyze_reason (0, reason, open, resolvent_size, antecedent_size);
           conflict_size = antecedent_size - 1;
           assert (open > 1);
+          i = trail.size ();
         }
       }
       assert (i > 0);
