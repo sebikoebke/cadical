@@ -721,7 +721,7 @@ public:
   /*-----------------functions for mobical -----------------------------*/
   void push_decide_lit (int lit, int delay) {
 
-    assert (lit);
+    assert (lit != INT_MIN);
     nof_decide++;
 
     MLOG ("push decide to position " << external_decide.size ());
@@ -988,27 +988,25 @@ public:
       return 0;
     }
 
-    Decisions back = external_decide.back ();
-    size_t idx = 0;
-    while (!s->observed (back.lit) && idx < external_decide.size ()) {
-      Decisions nd = external_decide[idx++];
-      if (!s->observed (nd.lit))
-        continue;
-      external_decide.back () = nd;
-      external_decide[idx] = back;
-      break;
-    }
     auto &next_decision = external_decide.back ();
-    if (!s->observed (next_decision.lit)) {
-      MLOG ("cb_decide returns 0" << std::endl);
-      return 0;
-    }
     if (next_decision.delay--) {
       MLOG ("cb_decide returns 0" << std::endl);
       return 0;
     }
     const int lit = next_decision.lit;
     external_decide.pop_back ();
+
+    if (!lit) {
+      MLOG ("cb_decide returns 0" << std::endl);
+      return 0;
+    }
+
+    if (!s->observed (lit)) {
+      // TODO: do we want to observe?
+      // s->add_observed_var (lit);
+      MLOG ("cb_decide returns 0" << std::endl);
+      return 0;
+    }
 
     if (s->current_value (lit) < 0) {
       MLOG ("cb_decide force_bt due to " << lit << std::endl);
@@ -3317,38 +3315,39 @@ void Trace::generate_lemmas (Random &random) {
     const int nof_lemmas = random.pick_int (30, 175);
     for (int i = 0; i < nof_lemmas; i++) {
       // TODO:sizeof LemmaType
-      LemmaType lemmatype = static_cast<LemmaType> (random.pick_int (0, 3));
+      LemmaType lemmatype = EAGER;
+      if (random.generate_double () < 0.1)
+        lemmatype = LAZY;
+      if (random.generate_double () < 0.2)
+        lemmatype = OBSERVING;
+      if (random.generate_double () < 0.6)
+        lemmatype = PROPAGATING;
       int delay = random.pick_int (0, 50);
 
-      // Tiny tiny chance to generate an empty lemma
-      if (random.generate_double () < 0.003) {
-        push_back (new LemmaCall (0, lemmatype, delay));
-      } else {
-        int count = pick_size (random, ovars);
-        const int max_idx = ovars - 1;
-        bool *picked = new bool[max_idx + 1];
-        for (int i = 0; i <= max_idx; i++)
-          picked[i] = false;
-        for (int i = 0; i < count; i++) {
-          int idx;
-          do
-            idx = random.pick_int (0, max_idx);
-          while (picked[idx]);
-          picked[idx] = 1;
-          int lit = random.generate_bool () ? -observed_vars[idx]
-                                            : observed_vars[idx];
-          push_back (new LemmaCall (lit, lemmatype, 0));
-        }
-
-        delete[] picked;
-        if (random.generate_double () < 0.1) {
-          int idx = random.pick_int (0, max_idx);
-          int lit = random.generate_bool () ? -observed_vars[idx]
-                                            : observed_vars[idx];
-          push_back (new LemmaCall (lit, lemmatype, 0));
-        }
-        push_back (new LemmaCall (0, lemmatype, delay));
+      int count = pick_size (random, ovars);
+      const int max_idx = ovars - 1;
+      bool *picked = new bool[max_idx + 1];
+      for (int i = 0; i <= max_idx; i++)
+        picked[i] = false;
+      for (int i = 0; i < count; i++) {
+        int idx;
+        do
+          idx = random.pick_int (0, max_idx);
+        while (picked[idx]);
+        picked[idx] = 1;
+        int lit = random.generate_bool () ? -observed_vars[idx]
+                                          : observed_vars[idx];
+        push_back (new LemmaCall (lit, lemmatype, 0));
       }
+
+      delete[] picked;
+      if (random.generate_double () < 0.1) {
+        int idx = random.pick_int (0, max_idx);
+        int lit = random.generate_bool () ? -observed_vars[idx]
+                                          : observed_vars[idx];
+        push_back (new LemmaCall (lit, lemmatype, 0));
+      }
+      push_back (new LemmaCall (0, lemmatype, delay));
     }
   }
 }
@@ -5359,7 +5358,7 @@ void Reader::parse () {
         error ("argument to 'decide' missing");
       if (!parse_int_str (first, lit))
         error ("invalid argument '%s' to 'decide'", first);
-      if (enforce && (lit == INT_MIN || !lit))
+      if (enforce && lit == INT_MIN)
         error ("invalid literal '%d' as argument to 'decide'", lit);
       if (!second)
         error ("missing argument '%s' to 'decide %d'", second, lit);
