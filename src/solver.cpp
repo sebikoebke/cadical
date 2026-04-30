@@ -1098,6 +1098,7 @@ void Solver::disconnect_fixed_listener () {
 /*===== IPASIR-UP BEGIN ==================================================*/
 
 void Solver::connect_external_propagator (ExternalPropagator *propagator) {
+  TRACE (connect, "connect");
   LOG_API_CALL_BEGIN ("connect_external_propagator");
   REQUIRE_VALID_STATE ();
   REQUIRE (propagator, "can not connect zero propagator");
@@ -1115,6 +1116,7 @@ void Solver::connect_external_propagator (ExternalPropagator *propagator) {
 }
 
 void Solver::disconnect_external_propagator () {
+  TRACE (disconnect, "disconnect");
   LOG_API_CALL_BEGIN ("disconnect_external_propagator");
   REQUIRE_VALID_STATE ();
   REQUIRE (external->propagator,

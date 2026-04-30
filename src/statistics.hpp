@@ -10,13 +10,12 @@
   STATISTIC (api_init,                        3, NOTHING, 0, 0) \
   STATISTIC (api_reset,                       3, NOTHING, 0, 0) \
   STATISTIC (api_vars,                        3, NOTHING, 0, 0) \
-  STATISTIC (api_resize,                      3, NOTHING, 0, 0) \
   STATISTIC (api_declare_var,                 3, NOTHING, 0, 0) \
   STATISTIC (api_declare_vars,                3, NOTHING, 0, 0) \
+  STATISTIC (api_resize,                      3, NOTHING, 0, 0) \
   STATISTIC (api_set,                         3, NOTHING, 0, 0) \
   STATISTIC (api_limit,                       3, NOTHING, 0, 0) \
   STATISTIC (api_configure,                   3, NOTHING, 0, 0) \
-  STATISTIC (api_current_value,               3, NOTHING, 0, 0) \
   STATISTIC (api_add,                         3, NOTHING, 0, 0) \
   STATISTIC (api_constrain,                   3, NOTHING, 0, 0) \
   STATISTIC (api_assume,                      3, NOTHING, 0, 0) \
@@ -35,9 +34,6 @@
   STATISTIC (api_fixed,                       3, NOTHING, 0, 0) \
   STATISTIC (api_phase,                       3, NOTHING, 0, 0) \
   STATISTIC (api_unphase,                     3, NOTHING, 0, 0) \
-  STATISTIC (api_observe,                     3, NOTHING, 0, 0) \
-  STATISTIC (api_unobserve,                   3, NOTHING, 0, 0) \
-  STATISTIC (api_reset_observed_vars,         3, NOTHING, 0, 0) \
   STATISTIC (api_active,                      3, NOTHING, 0, 0) \
   STATISTIC (api_redundant,                   3, NOTHING, 0, 0) \
   STATISTIC (api_irredundant,                 3, NOTHING, 0, 0) \
@@ -54,6 +50,12 @@
   STATISTIC (api_observed,                    3, NOTHING, 0, 0) \
   STATISTIC (api_is_witness,                  3, NOTHING, 0, 0) \
   STATISTIC (api_is_decision,                 3, NOTHING, 0, 0) \
+  STATISTIC (api_connect,                     3, NOTHING, 0, 0) \
+  STATISTIC (api_disconnect,                  3, NOTHING, 0, 0) \
+  STATISTIC (api_observe,                     3, NOTHING, 0, 0) \
+  STATISTIC (api_unobserve,                   3, NOTHING, 0, 0) \
+  STATISTIC (api_reset_observed_vars,         3, NOTHING, 0, 0) \
+  STATISTIC (api_current_value,               3, NOTHING, 0, 0) \
   STATISTIC (api_force_backtrack,             3, NOTHING, 0, 0) \
   STATISTIC (api_force_unassign,              3, NOTHING, 0, 0) 
 
