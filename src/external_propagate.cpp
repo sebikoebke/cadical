@@ -530,6 +530,7 @@ void Internal::add_external_clause (int propagated_elit,
   int elit = 0;
   bool propagated_lit_found = false;
 
+  assert (tmp_ext_clause.empty ());
   if (propagated_elit) {
     // Propagation reason clauses are by default assumed to be forgettable
     // irredundant. In case they would be unforgettably important, the
@@ -566,7 +567,7 @@ void Internal::add_external_clause (int propagated_elit,
   force_no_backtrack = no_backtrack;
   from_propagator = true;
   while (elit) {
-    external->add (elit);
+    tmp_ext_clause.push_back (elit);
     if (propagated_elit) {
       elit =
           external->propagator->cb_add_reason_clause_lit (propagated_elit);
@@ -584,10 +585,13 @@ void Internal::add_external_clause (int propagated_elit,
                   external->is_observed[abs (elit)]),
         "external (reason) clause must contain only observed variables.");
   }
-  external->add (elit);
-
   REQUIRE (!propagated_elit || propagated_lit_found,
            "external reason clause must contain the propagated literal.");
+  tmp_ext_clause.push_back (elit);
+  for (auto &tmp : tmp_ext_clause)
+    external->add (tmp);
+  tmp_ext_clause.clear ();
+
 #ifdef NCONTRACTS
   (void) propagated_lit_found;
 #endif

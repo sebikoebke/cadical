@@ -195,6 +195,7 @@ struct Internal {
   bool private_steps; // no notification of ext. prop during these steps
   vector<int> notification_trail; // vector used for notifying assignments
   vector<int> notify_model_trail; // vector used for check model
+  vector<int> tmp_ext_clause;     // vector used for adding external clauses
   int out_of_order_level;         // lowest out-of-order level to fix
   int out_of_order_trail;     // highest out-of-order literal on the trail
   char rephased;              // last type of resetting phases

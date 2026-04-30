@@ -413,8 +413,11 @@ void External::add_observed_var (int elit) {
   if (marked (witness, -elit)) {
     mark (tainted, elit);
   }
-  if (!tainted.empty ())
+  if (!tainted.empty ()) {
+    if (!eclause.empty ()) {
+    }
     restore_clauses ();
+  }
   // }
 
   if (eidx >= (int64_t) is_observed.size ())
