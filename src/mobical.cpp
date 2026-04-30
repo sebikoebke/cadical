@@ -810,14 +810,14 @@ public:
 
     for (const auto lemma : external_lemmas) {
       bool satisfied = false;
-      bool unobserved = false;
+      int unobserved = 0;
       size_t level = 0;
 
       for (const auto lit : *lemma) {
         if (!lit)
           continue; // eoc
         if (!s->observed (lit)) {
-          unobserved = true;
+          unobserved = lit;
           break;
         }
         const signed char tmp = s->current_value (lit);
@@ -829,9 +829,10 @@ public:
           level = level_map[lit];
         assert (tmp < 0);
       }
-      // TODO: perhaps observe?
-      if (unobserved)
+      if (unobserved && lemma->type == OBSERVING) {
+        s->add_observed_var (unobserved);
         continue;
+      }
 
       if (!satisfied && lemma->type == PROPAGATING && level) {
         s->force_backtrack (level - 1);
@@ -909,8 +910,11 @@ public:
 
       if (!external_lemmas[add_lemma_idx]->add_count &&
           !external_lemmas[add_lemma_idx]->propagation_reason &&
-          external_lemmas[add_lemma_idx]->type != PROPAGATING) {
+          external_lemmas[add_lemma_idx]->type != PROPAGATING &&
+          external_lemmas[add_lemma_idx]->type != LAZY &&
+          !external_lemmas[add_lemma_idx]->delay--) {
 
+        external_lemmas[add_lemma_idx]->delay = 0;
         forgettable = external_lemmas[add_lemma_idx]->forgettable;
 
         MLOGC ("true (new lemma was found, "
@@ -926,27 +930,32 @@ public:
 
       add_lemma_idx++;
     }
+    if (add_lemma_idx >= external_lemmas.size ())
+      add_lemma_idx = 0;
     MLOGC ("false." << std::endl);
 
     return false;
   }
 
   int cb_add_external_clause_lit () override {
-    int lit = external_lemmas[add_lemma_idx]->next_lit ();
+    auto lemma = external_lemmas[add_lemma_idx];
+    int lit = lemma->next_lit ();
 
+    if (lemma->type == OBSERVING && lit && !s->observed (lit))
+      s->add_observed_var (lit);
     while (lit && !s->observed (lit)) {
       MLOG ("cb_add_external_clause_lit "
             << lit << " (lemma " << add_lemma_idx << "/"
             << external_lemmas.size () << ") ignored as it is not observed"
             << std::endl);
-      lit = external_lemmas[add_lemma_idx]->next_lit ();
+      lit = lemma->next_lit ();
     }
     MLOG ("cb_add_external_clause_lit "
           << lit << " (lemma " << add_lemma_idx << "/"
           << external_lemmas.size () << ")" << std::endl);
 
     if (!lit)
-      external_lemmas[add_lemma_idx++]->add_count++;
+      lemma->add_count++;
 
     return lit;
   }
