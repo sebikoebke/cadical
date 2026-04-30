@@ -48,7 +48,6 @@
   STATISTIC (api_resources,             3, NOTHING, 0, 0) \
   STATISTIC (api_dump,                  3, NOTHING, 0, 0) \
   STATISTIC (api_observed,              3, NOTHING, 0, 0) \
-  STATISTIC (api_is_witness,            3, NOTHING, 0, 0) \
   STATISTIC (api_is_decision,           3, NOTHING, 0, 0) \
   STATISTIC (api_connect,               3, NOTHING, 0, 0) \
   STATISTIC (api_disconnect,            3, NOTHING, 0, 0) \

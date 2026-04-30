@@ -131,7 +131,6 @@ struct External {
   void reset_observed_vars ();
 
   bool observed (int elit);
-  bool is_witness (int elit);
   bool is_decision (int elit);
 
   void force_backtrack (int new_level);

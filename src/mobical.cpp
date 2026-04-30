@@ -3445,11 +3445,9 @@ void Trace::generate_failed (Random &random, int vars) {
 }
 
 void Trace::generate_conclude (Random &random) {
-  if (random.generate_double () < 0.05)
+  if (random.generate_double () < 0.95)
     return;
-  if (random.generate_double () < 0.05) {
-    push_back (new ConcludeCall ());
-  }
+  push_back (new ConcludeCall ());
 }
 
 void Trace::generate_frozen (Random &random, int vars) {

@@ -1227,7 +1227,6 @@ private:
   //
   ExternalPropagator *get_propagator ();
   bool observed (int lit);
-  bool is_witness (int lit);
 
   friend struct LemmaCall;
   friend struct DecideCall;

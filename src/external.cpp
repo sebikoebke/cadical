@@ -519,15 +519,6 @@ bool External::observed (int elit) {
   return is_observed[eidx];
 }
 
-bool External::is_witness (int elit) {
-  assert (elit);
-  assert (elit != INT_MIN);
-  int eidx = abs (elit);
-  if (eidx > max_var)
-    return false;
-  return (marked (witness, elit) || marked (witness, -elit));
-}
-
 bool External::is_decision (int elit) {
   assert (elit);
   assert (elit != INT_MIN);
