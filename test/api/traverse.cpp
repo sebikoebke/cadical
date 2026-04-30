@@ -85,7 +85,9 @@ struct ClauseChecker : ClauseIterator {
   }
 };
 
-int main () {
+void traverse_witness () {
+
+  cout << "---- [ traverse witness ] -----------------------" << endl;
 
   Solver cadical;
   cadical.set ("lucky", 0);
@@ -152,11 +154,51 @@ int main () {
 
   cout << "clauses" << endl;
   ClauseChecker clause_checker;
-  cadical.traverse_clauses (clause_checker);
+  cadical.traverse_irredundant_clauses (clause_checker);
 
   cout << "witnesses" << endl;
   WitnessChecker witness_checker;
   cadical.traverse_witnesses_backward (witness_checker);
+}
 
-  return 0;
+static int lit (int p, int h, int n) {
+  assert (1 < n);
+  assert (0 < p), assert (p <= n);
+  assert (0 < h), assert (h < n);
+  return (p - 1) * n + h;
+}
+
+static void ph (Solver &solver, int n) {
+  assert (1 < n);
+  for (int h = 1; h < n; h++) {
+    for (int p = 1; p < n; p++) {
+      for (int q = p + 1; q <= n; q++) {
+        solver.add (-lit (p, h, n));
+        solver.add (-lit (q, h, n));
+        solver.add (0);
+      }
+    }
+  }
+  for (int p = 1; p <= n; p++) {
+    for (int h = 1; h < n; h++)
+      solver.add (lit (p, h, n));
+    solver.add (0);
+  }
+}
+
+void traverse_redundant () {
+  cout << "---- [ traverse redundant ] ---------------------" << endl;
+
+  Solver cadical;
+  cadical.set ("lucky", 0);
+  cadical.set ("factor", 0);
+  cadical.set ("preprocesslight", false);
+  ph (cadical, 6);
+  cadical.solve ();
+  cadical.statistics ();
+}
+
+int main () {
+  traverse_witness ();
+  traverse_redundant ();
 }

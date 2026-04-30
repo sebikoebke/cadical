@@ -955,7 +955,8 @@ public:
   void options (); // Print current option and value list.
 
   //------------------------------------------------------------------------
-  // Traverse irredundant clauses or the extension stack in reverse order.
+  // Traverse clauses or the extension stack.  Units are considered to be
+  // irredundant.  The extension stack is traversed in reverse order.
   //
   // The return value is false if traversal is aborted early due to one of
   // the visitor functions returning false.  See description of the
@@ -964,7 +965,16 @@ public:
   //   require (VALID)
   //   ensure (VALID)
   //
-  bool traverse_clauses (ClauseIterator &) const;
+  bool traverse_all_clauses (ClauseIterator &) const;
+  bool traverse_irredundant_clauses (ClauseIterator &) const;
+  bool traverse_redundant_clauses (ClauseIterator &) const;
+
+  // Deprecated: old usage was to traverse only the irredundant clauses.
+  //
+  bool traverse_clauses (ClauseIterator & it) const {
+    return traverse_irredundant_clauses (it);
+  }
+
   bool traverse_witnesses_backward (WitnessIterator &) const;
   bool traverse_witnesses_forward (WitnessIterator &) const;
 

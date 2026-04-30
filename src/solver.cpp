@@ -1582,13 +1582,29 @@ void Solver::force_backtrack (int new_level) {
 
 /*------------------------------------------------------------------------*/
 
-bool Solver::traverse_clauses (ClauseIterator &it) const {
-  LOG_API_CALL_BEGIN ("traverse_clauses");
+bool Solver::traverse_all_clauses (ClauseIterator &it) const {
+  LOG_API_CALL_BEGIN ("traverse_all_clauses");
   REQUIRE_VALID_STATE ();
   bool res = external->traverse_all_frozen_units_as_clauses (it) &&
-             internal->traverse_clauses (it) &&
+             internal->traverse_all_clauses (it) &&
              internal->traverse_constraint (it);
-  LOG_API_CALL_RETURNS ("traverse_clauses", res);
+  LOG_API_CALL_RETURNS ("traverse_all_clauses", res);
+  return res;
+}
+
+bool Solver::traverse_irredundant_clauses (ClauseIterator &it) const {
+  LOG_API_CALL_BEGIN ("traverse_irredundant_clauses");
+  REQUIRE_VALID_STATE ();
+  bool res = internal->traverse_irredundant_clauses (it);
+  LOG_API_CALL_RETURNS ("traverse_irredundant_clauses", res);
+  return res;
+}
+
+bool Solver::traverse_redundant_clauses (ClauseIterator &it) const {
+  LOG_API_CALL_BEGIN ("traverse_redundant_clauses");
+  REQUIRE_VALID_STATE ();
+  bool res = internal->traverse_redundant_clauses (it);
+  LOG_API_CALL_RETURNS ("traverse_redundant_clauses", res);
   return res;
 }
 

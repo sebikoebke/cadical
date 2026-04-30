@@ -1234,14 +1234,17 @@ bool Internal::traverse_constraint (ClauseIterator &it) {
 }
 /*------------------------------------------------------------------------*/
 
-bool Internal::traverse_clauses (ClauseIterator &it) {
+bool Internal::traverse_clauses (ClauseIterator &it, bool irredundant,
+                                 bool redundant) {
   vector<int> eclause;
   if (unsat)
     return it.clause (eclause);
   for (const auto &c : clauses) {
     if (c->garbage)
       continue;
-    if (c->redundant)
+    if (!irredundant && !c->redundant)
+      continue;
+    if (!redundant && c->redundant)
       continue;
     bool satisfied = false;
     for (const auto &ilit : *c) {

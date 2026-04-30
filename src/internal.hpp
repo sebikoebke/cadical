@@ -1713,9 +1713,23 @@ struct Internal {
   void dump (Clause *);
   void dump ();
 
-  // Export and traverse all irredundant (non-unit) clauses.
+  // Export and traverse all (non-unit) clauses.  The second and third
+  // argument determine which clauses we want to traverse.
   //
-  bool traverse_clauses (ClauseIterator &);
+  bool traverse_clauses (ClauseIterator &, bool irredundant,
+                         bool redundant);
+
+  bool traverse_all_clauses (ClauseIterator &it) {
+    return traverse_clauses (it, true, true);
+  }
+
+  bool traverse_irredundant_clauses (ClauseIterator &it) {
+    return traverse_clauses (it, true, false);
+  }
+
+  bool traverse_redundant_clauses (ClauseIterator &it) {
+    return traverse_clauses (it, false, true);
+  }
 
   // Export and traverse all irredundant (non-unit) clauses.
   //

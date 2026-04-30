@@ -1,3 +1,8 @@
+Version 3.0.0-traverse-redundant-clauses
+----------------------------------------
+
+- Added `traverse_redundant_clauses` to the API.
+
 Version 3.0.0
 -------------
 
