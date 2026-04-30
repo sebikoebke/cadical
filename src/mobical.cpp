@@ -835,10 +835,15 @@ public:
         return false;
       }
 
+      if (unobserved)
+        continue;
+
       if (!satisfied && lemma->type == PROPAGATING && level) {
         s->force_backtrack (level - 1);
         return false;
-      } else if (!satisfied) {
+      }
+
+      if (!satisfied) {
         assert (lemma->add_count == 0 || lemma->forgettable);
 
         must_add_clause = true;
