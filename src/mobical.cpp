@@ -4498,8 +4498,11 @@ bool Trace::shrink_propagator (int expected) {
     simplified.push_back (c->copy ());
   }
   progress ();
-  if (!connected)
+  if (!connected) {
+    notify ();
     return false;
+  }
+  assert (simplified.calls.size () < calls.size ());
   if (simplified.fork_and_execute () == expected) {
     clear ();
     for (auto c : simplified.calls)
@@ -4524,13 +4527,16 @@ bool Trace::shrink_propagator (int expected) {
         continue;
       }
     }
+    assert (simplified.calls.size () < calls.size ());
     if (simplified.fork_and_execute () == expected) {
       if (removed_connected)
         connected--;
       clear ();
       for (auto c : simplified.calls)
         push_back (c->copy ());
-      notify ();
+      simplified.clear ();
+      reduced = true;
+      progress ();
     }
   }
   while (connected--) {
@@ -4541,7 +4547,7 @@ bool Trace::shrink_propagator (int expected) {
         remove_next_disconnect = true;
         continue;
       }
-      if (c->type == Call::CONNECT && remove_next_disconnect) {
+      if (c->type == Call::DISCONNECT && remove_next_disconnect) {
         remove_next_disconnect = false;
         continue;
       }
@@ -4550,13 +4556,17 @@ bool Trace::shrink_propagator (int expected) {
       }
       simplified.push_back (c->copy ());
     }
+    assert (simplified.calls.size () < calls.size ());
     if (simplified.fork_and_execute () == expected) {
       clear ();
       for (auto c : simplified.calls)
         push_back (c->copy ());
-      notify ();
+      reduced = true;
+      simplified.clear ();
+      progress ();
     }
   }
+  notify ();
   return reduced;
 }
 
