@@ -1487,7 +1487,6 @@ struct Call {
     PROPAGATE_ASSUMPTIONS = shift ( 44 ),
     IMPLIED_LITERALS = shift ( 45 ),
     RESET_ASSUMPTIONS = shift ( 46 ),
-    RESET_CONSTRAINT = shift ( 47 ),
     RESET_OBSERVED = shift ( 48 ),
 
     RESERVE = shift ( 49 ),
@@ -1507,7 +1506,7 @@ struct Call {
     ,
     CONFIG = INIT | SET | CONFIGURE | ALWAYS | TRACEPROOF,
     BEFORE = ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT |
-             RESET_ASSUMPTIONS | RESET_CONSTRAINT,
+             RESET_ASSUMPTIONS,
     PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE,
     DURING = LEMMA | DECIDE,
     CONNECTING = CONNECT | DISCONNECT,
@@ -2024,17 +2023,6 @@ struct ImpliedCall : public Call {
   void print (ostream &o) { o << "implied"; }
   Call *copy () { return new ImpliedCall (arg); }
   const char *keyword () { return "implied"; }
-};
-
-struct ResetConstraintCall : public Call {
-  ResetConstraintCall () : Call (RESET_CONSTRAINT) {}
-  void execute (Solver *&s, ExtendMap *&extendmap) {
-    s->reset_constraint ();
-    (void) (extendmap);
-  }
-  void print (ostream &o) { o << "reset_constraint"; }
-  Call *copy () { return new ResetConstraintCall (); }
-  const char *keyword () { return "reset_constraint"; }
 };
 
 struct ResetAssumptionsCall : public Call {
@@ -3226,9 +3214,8 @@ void Trace::generate_constraint (Random &random, int minvars, int maxvars,
   }
   push_back (new ConstrainCall (0));
   if (random.generate_double () < 0.01)
-    push_back (new ResetConstraintCall);
-  if (random.generate_bool ())
     return;
+  // Generating a new constraint deletes the old one.
   clause.clear ();
   for (int i = 0; i < size; i++) {
     int lit = pick_literal (random, minvars, maxvars, clause);
@@ -4530,7 +4517,6 @@ static bool is_basic (Call *c) {
   case Call::RESET_OBSERVED:
   case Call::DECIDE:
   case Call::RESET_ASSUMPTIONS:
-  case Call::RESET_CONSTRAINT:
 #ifdef MOBICAL_TERMINATE
   case Call::TERMINATE:
 #endif
@@ -5609,10 +5595,6 @@ void Reader::parse () {
       if (first)
         error ("additional argument to 'reset_assumptions'");
       c = new ResetAssumptionsCall ();
-    } else if (!strcmp (keyword, "reset_constraint")) {
-      if (first)
-        error ("additional argument to 'reset_constraint'");
-      c = new ResetConstraintCall ();
     } else if (!strcmp (keyword, "reset_observed")) {
       if (first)
         error ("additional argument to 'reset_observed'");

@@ -22,7 +22,6 @@
   STATISTIC (api_lookahead,             3, NOTHING, 0, 0) \
   STATISTIC (api_lookahead_cubes,       3, NOTHING, 0, 0) \
   STATISTIC (api_reset_assumptions,     3, NOTHING, 0, 0) \
-  STATISTIC (api_reset_constraint,      3, NOTHING, 0, 0) \
   STATISTIC (api_propagate_assumptions, 3, NOTHING, 0, 0) \
   STATISTIC (api_implied,               3, NOTHING, 0, 0) \
   STATISTIC (api_solve,                 3, NOTHING, 0, 0) \

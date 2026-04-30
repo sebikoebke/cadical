@@ -563,8 +563,11 @@ public:
 
   CubesWithStatus generate_cubes (int, int min_depth = 0);
 
+  // Reset assumptions and constraint. Since the lifetime of these is only
+  // until the next 'solve' call, it is usually not necessary to call
+  // 'reset_assumptions' explicitly.
+  //
   void reset_assumptions ();
-  void reset_constraint ();
 
   // Return the current state of the solver as defined above.
   //

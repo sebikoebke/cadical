@@ -778,16 +778,8 @@ void Solver::reset_assumptions () {
   transition_to_steady_state ();
   external->reset_assumptions ();
   external->reset_concluded ();
-  LOG_API_CALL_END ("reset_assumptions");
-}
-
-void Solver::reset_constraint () {
-  TRACE (reset_constraint, "reset_constraint");
-  REQUIRE_VALID_STATE ();
-  transition_to_steady_state ();
   external->reset_constraint ();
-  external->reset_concluded ();
-  LOG_API_CALL_END ("reset_constraint");
+  LOG_API_CALL_END ("reset_assumptions");
 }
 
 /*------------------------------------------------------------------------*/

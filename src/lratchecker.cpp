@@ -555,6 +555,7 @@ void LratChecker::add_assumption_clause (int64_t id, const vector<int> &c,
 void LratChecker::add_assumption (int a) { assumptions.push_back (a); }
 
 void LratChecker::add_constraint (const vector<int> &c) {
+  assert (constraint.empty ());
   constraint.clear ();
   for (auto &lit : c) {
     assert (lit);
