@@ -908,11 +908,10 @@ public:
 
     while (add_lemma_idx < external_lemmas.size ()) {
 
-      if (!external_lemmas[add_lemma_idx]->add_count &&
-          !external_lemmas[add_lemma_idx]->propagation_reason &&
-          external_lemmas[add_lemma_idx]->type != PROPAGATING &&
-          external_lemmas[add_lemma_idx]->type != LAZY &&
-          !external_lemmas[add_lemma_idx]->delay--) {
+      auto lemma = external_lemmas[add_lemma_idx];
+      if (!lemma->add_count && !lemma->propagation_reason &&
+          lemma->type != PROPAGATING && lemma->type != LAZY &&
+          !lemma->delay--) {
 
         external_lemmas[add_lemma_idx]->delay = 0;
         forgettable = external_lemmas[add_lemma_idx]->forgettable;
@@ -1088,10 +1087,12 @@ public:
 
     size_t reason_id = reason_map[plit];
 
-    int lit = external_lemmas[reason_id]->next_lit ();
+    auto lemma = external_lemmas[reason_id];
+    assert (lemma->type == PROPAGATING);
+    int lit = lemma->next_lit ();
 
     if (!lit) {
-      external_lemmas[reason_id]->add_count++;
+      lemma->add_count++;
       MLOG ("reason clause (id: " << reason_id << ") is added."
                                   << std::endl);
     }
@@ -1149,8 +1150,7 @@ public:
     level = new_level;
   }
 
-  /* ----------------- ExternalPropagator functions end
-   * ------------------*/
+  /* ---------------- ExternalPropagator functions end -------------------*/
 };
 
 // This is the class for the Mobical application.
