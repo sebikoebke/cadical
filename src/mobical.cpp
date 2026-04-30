@@ -818,7 +818,7 @@ public:
           continue; // eoc
         if (!s->observed (lit)) {
           unobserved = lit;
-          break;
+          continue;
         }
         const signed char tmp = s->current_value (lit);
         if (tmp > 0) {
