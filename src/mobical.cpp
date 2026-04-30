@@ -1429,68 +1429,69 @@ struct Call {
     RESIZE          = shift (  7 ),
 
     PHASE           = shift (  8 ),
+    UNPHASE         = shift (  9 ),
 
-    ADD             = shift (  9 ),
-    ASSUME          = shift ( 10 ),
+    ADD             = shift ( 10 ),
+    ASSUME          = shift ( 11 ),
 
-    SOLVE           = shift ( 11 ),
-    SIMPLIFY        = shift ( 12 ),
-    LOOKAHEAD       = shift ( 13 ),
-    CUBING          = shift ( 14 ),
-    PROPAGATE       = shift ( 15 ),
+    SOLVE           = shift ( 12 ),
+    SIMPLIFY        = shift ( 13 ),
+    LOOKAHEAD       = shift ( 14 ),
+    CUBING          = shift ( 15 ),
+    PROPAGATE       = shift ( 16 ),
 
-    VAL             = shift ( 16 ),
-    FLIP            = shift ( 17 ),
-    FLIPPABLE       = shift ( 18 ),
-    FAILED          = shift ( 19 ),
-    FIXED           = shift ( 20 ),
+    VAL             = shift ( 17 ),
+    FLIP            = shift ( 18 ),
+    FLIPPABLE       = shift ( 19 ),
+    FAILED          = shift ( 20 ),
+    FIXED           = shift ( 21 ),
 
-    FREEZE          = shift ( 21 ),
-    FROZEN          = shift ( 22 ),
-    MELT            = shift ( 23 ),
+    FREEZE          = shift ( 22 ),
+    FROZEN          = shift ( 23 ),
+    MELT            = shift ( 24 ),
 
-    LIMIT           = shift ( 24 ),
-    OPTIMIZE        = shift ( 25 ),
+    LIMIT           = shift ( 25 ),
+    OPTIMIZE        = shift ( 26 ),
 
-    DUMP            = shift ( 26 ),
-    STATS           = shift ( 27 ),
+    DUMP            = shift ( 27 ),
+    STATS           = shift ( 28 ),
 
-    RESET           = shift ( 28 ),
+    RESET           = shift ( 29 ),
 
-    CONSTRAIN       = shift ( 29 ),
+    CONSTRAIN       = shift ( 30 ),
 
-    CONNECT         = shift ( 30 ),
-    OBSERVE         = shift ( 31 ),
-    UNOBSERVE       = shift ( 32 ),
-    LEMMA           = shift ( 33 ),
-    DECIDE          = shift ( 34 ),
+    CONNECT         = shift ( 31 ),
+    OBSERVE         = shift ( 32 ),
+    UNOBSERVE       = shift ( 33 ),
+    LEMMA           = shift ( 34 ),
+    DECIDE          = shift ( 35 ),
 
-    CONCLUDE        = shift ( 35 ),
-    DISCONNECT      = shift ( 36 ),
+    CONCLUDE        = shift ( 36 ),
+    DISCONNECT      = shift ( 37 ),
 
-    TRACEPROOF      = shift ( 37 ),
-    FLUSHPROOFTRACE = shift ( 38 ),
-    CLOSEPROOFTRACE = shift ( 39 ),
+    TRACEPROOF      = shift ( 38 ),
+    FLUSHPROOFTRACE = shift ( 39 ),
+    CLOSEPROOFTRACE = shift ( 40 ),
 
 #ifdef MOBICAL_MEMORY
-    MAXALLOC        = shift ( 40 ),
-    LEAKALLOC       = shift ( 41 ),
+    MAXALLOC        = shift ( 41 ),
+    LEAKALLOC       = shift ( 42 ),
 #endif
 #ifdef MOBICAL_TERMINATE
-    TERMINATE       = shift ( 42 ),
+    TERMINATE       = shift ( 43 ),
 #endif
 
-    PROPAGATE_ASSUMPTIONS = shift ( 43 ),
-    IMPLIED_LITERALS = shift ( 44 ),
-    RESET_ASSUMPTIONS = shift ( 45 ),
+    PROPAGATE_ASSUMPTIONS = shift ( 44 ),
+    IMPLIED_LITERALS = shift ( 45 ),
+    RESET_ASSUMPTIONS = shift ( 46 ),
 
-    RESERVE = shift ( 46 ),
+    RESERVE = shift ( 47 ),
 
     // clang-format on
 
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN |
              MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESIZE | FIXED |
-             PHASE | RESERVE | OBSERVE | UNOBSERVE
+             PHASE | UNPHASE | RESERVE | OBSERVE | UNOBSERVE
 #ifdef MOBICAL_MEMORY
              | MAXALLOC | LEAKALLOC
 #endif
@@ -1504,10 +1505,10 @@ struct Call {
     DURING = LEMMA | DECIDE,
     CONNECTING = CONNECT | DISCONNECT,
     PROPAGATOR = OBSERVE | UNOBSERVE | LEMMA | DECIDE,
-    LITTYPE = PHASE | ADD | ASSUME | VAL | FLIP | FLIPPABLE | FAILED |
-              FIXED | FREEZE | FROZEN | MELT | CONSTRAIN | UNOBSERVE |
-              OBSERVE | LEMMA | DECIDE,
-    EXTENDMAP = PHASE | ADD | ASSUME | FREEZE | CONSTRAIN,
+    LITTYPE = PHASE | UNPHASE | ADD | ASSUME | VAL | FLIP | FLIPPABLE |
+              FAILED | FIXED | FREEZE | FROZEN | MELT | CONSTRAIN |
+              UNOBSERVE | OBSERVE | LEMMA | DECIDE,
+    EXTENDMAP = PHASE | UNPHASE | ADD | ASSUME | FREEZE | CONSTRAIN,
     AFTER = VAL | FLIP | FLIPPABLE | FAILED | CONCLUDE | ALWAYS |
             FLUSHPROOFTRACE | CLOSEPROOFTRACE | PROPAGATE_ASSUMPTIONS,
   };
@@ -1754,6 +1755,17 @@ struct DeclareOneMoreVariableCall : public Call {
   void print (ostream &o) { o << "declare_var"; }
   Call *copy () { return new DeclareOneMoreVariableCall (); }
   const char *keyword () { return "declare_var"; }
+};
+
+struct UnPhaseCall : public Call {
+  UnPhaseCall (int max_var) : Call (UNPHASE, max_var) {}
+  void execute (Solver *&s, ExtendMap *&extendmap) {
+    fflush (stdout);
+    s->unphase (map_arg (s, extendmap));
+  }
+  void print (ostream &o) { o << "unphase " << arg; }
+  Call *copy () { return new UnPhaseCall (arg); }
+  const char *keyword () { return "unphase"; }
 };
 
 struct PhaseCall : public Call {
@@ -3424,12 +3436,20 @@ void Trace::generate_phase (Random &random, int vars) {
     if (fraction < random.generate_double ())
       continue;
     int lit = random.generate_bool () ? -idx : idx;
-    push_back (new PhaseCall (lit));
+    bool unphase = random.generate_double () < 0.05;
+    if (unphase)
+      push_back (new UnPhaseCall (lit));
+    else
+      push_back (new PhaseCall (lit));
   }
   if (random.generate_double () < 0.05) {
     int idx = random.pick_int (vars + 1, vars * 1.5 + 1);
     int lit = random.generate_bool () ? -idx : idx;
-    push_back (new PhaseCall (lit));
+    bool unphase = random.generate_double () < 0.05;
+    if (unphase)
+      push_back (new UnPhaseCall (lit));
+    else
+      push_back (new PhaseCall (lit));
   }
 }
 
@@ -4459,6 +4479,7 @@ static bool is_basic (Call *c) {
   case Call::FREEZE:
   case Call::MELT:
   case Call::PHASE:
+  case Call::UNPHASE:
   case Call::LIMIT:
   case Call::OPTIMIZE:
   case Call::OBSERVE:
@@ -5210,6 +5231,14 @@ void Reader::parse () {
       if (second)
         error ("additional argument '%s' to 'phase'", second);
       c = new PhaseCall (lit);
+    } else if (!strcmp (keyword, "unphase")) {
+      if (!first)
+        error ("argument to 'unphase' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'unphase'", first);
+      if (second)
+        error ("additional argument '%s' to 'unphase'", second);
+      c = new UnPhaseCall (lit);
     } else if (!strcmp (keyword, "add")) {
       if (!first)
         error ("argument to 'add' missing");

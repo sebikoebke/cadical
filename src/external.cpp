@@ -377,6 +377,11 @@ void External::unphase (int elit) {
     goto UNUSED;
   if (elit < 0)
     ilit = -ilit;
+  if (!internal->imports.empty ()) {
+    if (extended)
+      reset_extended ();
+    internal->activating_all_new_imported_literals ();
+  }
   internal->unphase (ilit);
 }
 
@@ -396,7 +401,7 @@ void External::add_observed_var (int elit) {
 
   int eidx = abs (elit);
 
-  //internalize and in particular declares the variables
+  // internalize and in particular declares the variables
   int ilit = internalize (elit);
 
   // TODO: here needs to come the taint and restore of the newly
