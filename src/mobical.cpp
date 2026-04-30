@@ -1768,7 +1768,7 @@ struct UnPhaseCall : public Call {
   UnPhaseCall (int max_var) : Call (UNPHASE, max_var) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
     fflush (stdout);
-    s->unphase (map_arg (s, extendmap));
+    s->unphase (map_arg (s, extendmap, 0));
   }
   void print (ostream &o) { o << "unphase " << arg; }
   Call *copy () { return new UnPhaseCall (arg); }
