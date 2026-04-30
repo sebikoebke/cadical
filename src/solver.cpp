@@ -1154,13 +1154,13 @@ void Solver::remove_observed_var (int idx) {
 }
 
 void Solver::reset_observed_vars () {
-  TRACE (reset_observed_vars, "reset_observed_vars");
+  TRACE (reset_observed, "reset_observed");
   REQUIRE_VALID_OR_SOLVING_STATE ();
   REQUIRE (
       external->propagator,
       "can not reset observed variables without a connected propagator");
   external->reset_observed_vars ();
-  LOG_API_CALL_END ("reset_observed_vars");
+  LOG_API_CALL_END ("reset_observed");
 }
 
 /*===== IPASIR-UP END ====================================================*/

@@ -1484,14 +1484,17 @@ struct Call {
     PROPAGATE_ASSUMPTIONS = shift ( 44 ),
     IMPLIED_LITERALS = shift ( 45 ),
     RESET_ASSUMPTIONS = shift ( 46 ),
+    RESET_CONSTRAINT = shift ( 47 ),
+    RESET_OBSERVED = shift ( 48 ),
 
-    RESERVE = shift ( 47 ),
+    RESERVE = shift ( 49 ),
 
     // clang-format on
 
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN |
              MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESIZE | FIXED |
-             PHASE | UNPHASE | RESERVE | OBSERVE | UNOBSERVE
+             PHASE | UNPHASE | RESERVE | OBSERVE | UNOBSERVE |
+             RESET_OBSERVED
 #ifdef MOBICAL_MEMORY
              | MAXALLOC | LEAKALLOC
 #endif
@@ -1500,11 +1503,12 @@ struct Call {
 #endif
     ,
     CONFIG = INIT | SET | CONFIGURE | ALWAYS | TRACEPROOF,
-    BEFORE = ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT,
+    BEFORE = ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT |
+             RESET_ASSUMPTIONS | RESET_CONSTRAINT,
     PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE,
     DURING = LEMMA | DECIDE,
     CONNECTING = CONNECT | DISCONNECT,
-    PROPAGATOR = OBSERVE | UNOBSERVE | LEMMA | DECIDE,
+    PROPAGATOR = OBSERVE | UNOBSERVE | RESET_OBSERVED | LEMMA | DECIDE,
     LITTYPE = PHASE | UNPHASE | ADD | ASSUME | VAL | FLIP | FLIPPABLE |
               FAILED | FIXED | FREEZE | FROZEN | MELT | CONSTRAIN |
               UNOBSERVE | OBSERVE | LEMMA | DECIDE,
@@ -2019,15 +2023,37 @@ struct ImpliedCall : public Call {
   const char *keyword () { return "implied"; }
 };
 
+struct ResetConstraintCall : public Call {
+  ResetConstraintCall () : Call (RESET_CONSTRAINT) {}
+  void execute (Solver *&s, ExtendMap *&extendmap) {
+    s->reset_constraint ();
+    (void) (extendmap);
+  }
+  void print (ostream &o) { o << "reset_constraint"; }
+  Call *copy () { return new ResetConstraintCall (); }
+  const char *keyword () { return "reset_constraint"; }
+};
+
 struct ResetAssumptionsCall : public Call {
-  ResetAssumptionsCall (int r = 0) : Call (RESET_ASSUMPTIONS, 0, r) {}
+  ResetAssumptionsCall () : Call (RESET_ASSUMPTIONS) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
     s->reset_assumptions ();
     (void) (extendmap);
   }
   void print (ostream &o) { o << "reset_assumptions"; }
-  Call *copy () { return new ResetAssumptionsCall (arg); }
+  Call *copy () { return new ResetAssumptionsCall (); }
   const char *keyword () { return "reset_assumptions"; }
+};
+
+struct ResetObservedCall : public Call {
+  ResetObservedCall (int r = 0) : Call (RESET_OBSERVED) {}
+  void execute (Solver *&s, ExtendMap *&extendmap) {
+    s->reset_observed_vars ();
+    (void) (extendmap);
+  }
+  void print (ostream &o) { o << "reset_observed"; }
+  Call *copy () { return new ResetObservedCall (); }
+  const char *keyword () { return "reset_observed"; }
 };
 
 struct LookaheadCall : public Call {
@@ -3196,6 +3222,17 @@ void Trace::generate_constraint (Random &random, int minvars, int maxvars,
     clause.push_back (lit);
   }
   push_back (new ConstrainCall (0));
+  if (random.generate_double () < 0.01)
+    push_back (new ResetConstraintCall);
+  if (random.generate_bool ())
+    return;
+  clause.clear ();
+  for (int i = 0; i < size; i++) {
+    int lit = pick_literal (random, minvars, maxvars, clause);
+    push_back (new ConstrainCall (lit));
+    clause.push_back (lit);
+  }
+  push_back (new ConstrainCall (0));
 }
 
 /*------------------------------------------------------------------------*/
@@ -3230,6 +3267,8 @@ void Trace::generate_propagator (Random &random, int minvars, int maxvars) {
       }
     }
     observed_vars.resize (q - observed_vars.begin ());
+  } else if (random.generate_double () < 0.05) {
+    push_back (new ResetObservedCall ());
   }
 
   assert (in_connection);
@@ -3337,6 +3376,8 @@ void Trace::generate_assume (Random &random, int vars) {
     int lit = random.generate_bool () ? -idx : idx;
     push_back (new AssumeCall (lit));
   }
+  if (random.generate_double () < 0.01)
+    push_back (new ResetAssumptionsCall ());
   delete[] picked;
   if (random.generate_double () < 0.1) {
     int idx = random.pick_int (1, max_vars);
@@ -4484,7 +4525,10 @@ static bool is_basic (Call *c) {
   case Call::OPTIMIZE:
   case Call::OBSERVE:
   case Call::UNOBSERVE:
+  case Call::RESET_OBSERVED:
   case Call::DECIDE:
+  case Call::RESET_ASSUMPTIONS:
+  case Call::RESET_CONSTRAINT:
 #ifdef MOBICAL_TERMINATE
   case Call::TERMINATE:
 #endif
@@ -5552,12 +5596,28 @@ void Reader::parse () {
       c = new TerminateCall (val);
 #endif
     } else if (!strcmp (keyword, "propagate_assumptions")) {
+      if (first)
+        error ("additional argument to 'propagate_assumptions'");
       c = new PropagateAssumptionsCall ();
     } else if (!strcmp (keyword, "implied")) {
+      if (first)
+        error ("additional argument to 'implied'");
       c = new ImpliedCall ();
     } else if (!strcmp (keyword, "reset_assumptions")) {
+      if (first)
+        error ("additional argument to 'reset_assumptions'");
       c = new ResetAssumptionsCall ();
+    } else if (!strcmp (keyword, "reset_constraint")) {
+      if (first)
+        error ("additional argument to 'reset_constraint'");
+      c = new ResetConstraintCall ();
+    } else if (!strcmp (keyword, "reset_observed")) {
+      if (first)
+        error ("additional argument to 'reset_observed'");
+      c = new ResetObservedCall ();
     } else if (!strcmp (keyword, "declare_var")) {
+      if (first)
+        error ("additional argument to 'declare_var'");
       c = new DeclareOneMoreVariableCall ();
     } else
       error ("invalid keyword '%s'", keyword);
@@ -5625,6 +5685,14 @@ void Reader::parse () {
         new_state = Call::DURING;
         break;
 
+      case Call::OBSERVE:
+      case Call::UNOBSERVE:
+      case Call::RESET_OBSERVED:
+        if (!connected)
+          error ("'%s' can only be called after 'connect'", c->keyword ());
+        new_state = c->type;
+        break;
+
       case Call::VAL:
       case Call::FLIP:
       case Call::FLIPPABLE:
@@ -5645,12 +5713,6 @@ void Reader::parse () {
         new_state = Call::AFTER;
         break;
 
-      case Call::OBSERVE:
-      case Call::UNOBSERVE:
-        if (!connected)
-          error ("'%s' can only be called after 'connect'", c->keyword ());
-        new_state = c->type;
-        break;
       case Call::DISCONNECT:
         if (!connected)
           error ("'%s' can only be called after 'connect'", c->keyword ());
