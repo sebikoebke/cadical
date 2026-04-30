@@ -4499,6 +4499,7 @@ bool Trace::shrink_propagator (int expected) {
   }
   progress ();
   if (!connected) {
+    assert (simplified.calls.size () == calls.size ());
     notify ();
     return false;
   }
@@ -4526,6 +4527,7 @@ bool Trace::shrink_propagator (int expected) {
         removed_connected = true;
         continue;
       }
+      simplified.push_back (c->copy ());
     }
     assert (simplified.calls.size () < calls.size ());
     if (simplified.fork_and_execute () == expected) {
