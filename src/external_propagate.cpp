@@ -46,9 +46,6 @@ void Internal::add_observed_var (int ilit) {
 //
 void Internal::remove_observed_var (int ilit) {
   if (!fixed (ilit) && level && val (ilit)) {
-    REQUIRE (
-        !conflict,
-        "can not unobserve assigned variable during conflict analysis");
     const int assignment_level = var (ilit).level;
     backtrack_without_updating_phases (assignment_level - 1);
   }
@@ -575,6 +572,10 @@ void Internal::add_external_clause (int propagated_elit,
           external->propagator->cb_add_reason_clause_lit (propagated_elit);
       if (elit == propagated_elit)
         propagated_lit_found = true;
+      REQUIRE (
+          !elit || elit == propagated_elit ||
+              external->current_val (elit) < 0,
+          "external reason clause must only contain falsified literals");
     } else
       elit = external->propagator->cb_add_external_clause_lit ();
 
@@ -1281,7 +1282,7 @@ int Internal::ask_decision () {
   if (elit < 0)
     ilit = -ilit;
 
-  assert (fixed (ilit) || observed (ilit));
+  assert (observed (ilit));
 
   LOG ("Asking external propagator for decision returned: %d (internal: "
        "%d, fixed: %d, val: %d)",
