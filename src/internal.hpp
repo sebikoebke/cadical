@@ -194,6 +194,7 @@ struct Internal {
   bool forced_backt_allowed;  // external propagator can force backtracking
   bool private_steps; // no notification of ext. prop during these steps
   vector<int> notification_trail; // vector used for notifying assignments
+  vector<int> notify_model_trail; // vector used for check model
   int out_of_order_level;         // lowest out-of-order level to fix
   int out_of_order_trail;     // highest out-of-order literal on the trail
   char rephased;              // last type of resetting phases

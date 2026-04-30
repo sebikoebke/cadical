@@ -559,7 +559,7 @@ Clause *Internal::new_driving_clause (const int glue, int &jump,
 // not have to fix the clause
 
 inline int Internal::otfs_find_backtrack_level (int &forced) {
-  assert (opts.otfs);
+  assert (opts.otfs || external_prop);
   int res = 0;
 
   for (const auto &lit : *conflict) {
@@ -997,7 +997,7 @@ void Internal::fix_trail_levels () {
     if (lrat && !res) {
       auto tmp = std::move (lrat_chain);
       lrat_chain.clear ();
-      build_chain_for_units(lit, reason, false);
+      build_chain_for_units (lit, reason, false);
       learn_unit_clause (lit);
       lrat_chain = std::move (tmp);
     }

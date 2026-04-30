@@ -1049,7 +1049,7 @@ bool Internal::external_check_solution () {
     external->reset_extended ();
     external->extend ();
 
-    assert (!notification_trail.size ());
+    assert (notify_model_trail.empty ());
 
     // Here the variables must be filtered by external->is_observed,
     // because fixed variables are internally not necessarily observed
@@ -1066,7 +1066,7 @@ bool Internal::external_check_solution () {
         if (!external->is_observed[idx])
           continue;
         const int lit = external->ival (idx);
-        notification_trail.push_back (lit);
+        notify_model_trail.push_back (lit);
 #ifndef NDEBUG
 #ifdef LOGGING
         bool p = external->vals[idx];
@@ -1082,8 +1082,8 @@ bool Internal::external_check_solution () {
     size_t assigned = num_assigned;
     int level_before = level;
     bool is_consistent =
-        external->propagator->cb_check_found_model (notification_trail);
-    notification_trail.clear ();
+        external->propagator->cb_check_found_model (notify_model_trail);
+    notify_model_trail.clear ();
     stats.up_cb++;
     forced_backt_allowed = false;
 
