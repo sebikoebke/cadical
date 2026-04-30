@@ -788,7 +788,7 @@ public:
   /* -------------------- ExternalPropagator functions -----------------*/
 
   bool cb_check_found_model (const std::vector<int> &model) override {
-    MLOG ("cb_check_found_model (" << model.size () << ") started");
+    MLOG ("cb_check_found_model (" << model.size () << ") started" << endl);
 #ifndef NDEBUG
     // size_t assigned = model.size ();
     for (auto &level : observed_trail) {
@@ -830,8 +830,9 @@ public:
         assert (tmp < 0);
       }
       if (unobserved && lemma->type == OBSERVING) {
+        // this might trigger a bt
         s->add_observed_var (unobserved);
-        continue;
+        return false;
       }
 
       if (!satisfied && lemma->type == PROPAGATING && level) {
@@ -843,10 +844,10 @@ public:
         must_add_clause = true;
         must_add_idx = lemma->id;
 
-        MLOGC ("false (external clause  "
-               << lemma->id << "/" << external_lemmas.size ()
-               << " is not satisfied: (forgettable: " << lemma->forgettable
-               << ", size: " << lemma->size << "): ");
+        MLOG ("false (external clause  "
+              << lemma->id << "/" << external_lemmas.size ()
+              << " is not satisfied: (forgettable: " << lemma->forgettable
+              << ", size: " << lemma->size << "): ");
         for (auto const &l : *lemma) {
           MLOGC (l << " ");
           (void) l;
