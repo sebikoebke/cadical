@@ -7853,10 +7853,16 @@ bool Internal::extract_gates (bool remove_units_before_run) {
       mark_satisfied_clauses_as_garbage (); // breaks watch lists
       connect_watches ();
     }
+
+#ifdef NOPTIONS
+    assert (opts.deduplicate);
+    mark_duplicated_binary_clauses_as_garbage ();
+#else
     const bool dedup = opts.deduplicate;
     opts.deduplicate = true;
     mark_duplicated_binary_clauses_as_garbage ();
     opts.deduplicate = dedup;
+#endif
   } else if (remove_units_before_run) {
     // to remove false literals from clauses
     // It makes the technique stronger as long clauses

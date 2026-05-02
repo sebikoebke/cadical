@@ -245,8 +245,12 @@ const char *Parser::parse_dimacs_non_profiled (int &vars, int strict) {
     MSG ("found %s'p inccnf'%s header", tout.green_code (),
          tout.normal_code ());
 
+  #if !defined (NOPTIONS)
     // Cube & Conquer 'inccnf' format is not compatible with factor:
     internal->opts.factor = 0;
+  #else
+    PER ("icnf not compatible with NOPTIONS");
+  #endif
 
     strict = FORCED;
   } else

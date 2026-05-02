@@ -4,12 +4,14 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
+#ifndef NOPTIONS
 // By default, e.g., for library usage, the 'opts.report' value is zero
 // ('false') but can be set to '1' by the stand alone solver.  Using here
 // a static default value avoids that the stand alone solver reports that
 // '--report=1' is different from the default in 'print ()' below.
 //
 int Options::reportdefault;
+#endif
 
 /*------------------------------------------------------------------------*/
 
@@ -103,7 +105,7 @@ void Options::initialize_from_environment (int &val, const char *name,
 
 Options::Options (Internal *s) : internal (s) {
   assert (number_of_options == sizeof Options::table / sizeof (Option));
-
+#if !defined (NOPTIONS)
   // First initialize them according to defaults in 'options.hpp'.
   //
   const char *prev = "";
@@ -148,6 +150,7 @@ Options::Options (Internal *s) : internal (s) {
   initialize_from_environment (N, #N, L, H);
   OPTIONS
 #undef OPTION
+#endif
 }
 
 /*------------------------------------------------------------------------*/
@@ -244,7 +247,7 @@ void Options::usage () {
 /*------------------------------------------------------------------------*/
 
 void Options::optimize (int val) {
-
+#if !defined (NOPTIONS)
   if (val < 0) {
     LOG ("ignoring negative optimization mode '%d'", val);
     return;
@@ -286,11 +289,16 @@ void Options::optimize (int val) {
 #undef OPTION
   if (increased)
     MSG ("optimization mode '-O%d' increased %u limits", val, increased);
+#else
+  (void) val;
+  MSG ("cannot set value when compiled without options");
+#endif
 }
 
 /*------------------------------------------------------------------------*/
 
 void Options::disable_preprocessing () {
+#if !defined (NOPTIONS)
   size_t count = 0;
 #define OPTION(N, V, L, H, O, P, R, D) \
   do { \
@@ -310,6 +318,7 @@ void Options::disable_preprocessing () {
 #ifndef LOGGING
   (void) count;
 #endif
+#endif
 }
 
 bool Options::is_preprocessing_option (const char *name) {
@@ -320,6 +329,7 @@ bool Options::is_preprocessing_option (const char *name) {
 /*------------------------------------------------------------------------*/
 
 void Options::reset_default_values () {
+#if !defined(NOPTIONS)
   size_t count = 0;
 #define OPTION(N, V, L, H, O, P, R, D) \
   do { \
@@ -337,11 +347,15 @@ void Options::reset_default_values () {
 #ifndef LOGGING
   (void) count;
 #endif
+#else
+  LOG ("no options setting, as no option is compiled in");
+#endif
 }
 
 /*------------------------------------------------------------------------*/
 
 void Options::copy (Options &other) const {
+#if !defined (NOPTIONS)
 #ifdef LOGGING
   Internal *internal = other.internal;
 #endif
@@ -354,6 +368,9 @@ void Options::copy (Options &other) const {
   }
   OPTIONS
 #undef OPTION
+#else
+  (void) other;
+#endif
 }
 
 } // namespace CaDiCaL

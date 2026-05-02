@@ -386,7 +386,12 @@ public:
   // get that change of the default value (from 'false' to 'true') shown
   // during calls to 'print ()', which is confusing to the user.
   //
+
+#ifdef NOPTIONS
+   static const int reportdefault = 0;
+#else
   static int reportdefault;
+#endif
 
   Options (Internal *);
 
@@ -397,10 +402,17 @@ public:
 private:
   int __start_of_options__; // Used by 'val' below.
 public:
+#ifdef NOPTIONS
 #define OPTION(N, V, L, H, O, P, R, D) \
-  int N; // Access option values by name.
+  static const int N = V; // Access option values by name.
   OPTIONS
 #undef OPTION
+#else
+#define OPTION(N, V, L, H, O, P, R, D) \
+  int N = V; // Access option values by name.
+  OPTIONS
+#undef OPTION
+#endif
 
   // It would be more elegant to use an anonymous 'struct' of the actual
   // option values overlayed with an 'int values[number_of_options]' array

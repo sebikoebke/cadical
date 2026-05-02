@@ -973,6 +973,7 @@ void App::init () {
   max_var = 0;
   timesup = false;
 
+#if !defined(NOPTIONS)
   // Call 'new Solver' only after setting 'reportdefault' and do not
   // add this call to the member initialization above. This is because for
   // stand-alone usage the default report default value is 'true' while for
@@ -980,6 +981,7 @@ void App::init () {
   // 'options.hpp' related to 'reportdefault' for details.
 
   CaDiCaL::Options::reportdefault = 1;
+#endif
   solver = new Solver ();
   Signal::set (this);
 }

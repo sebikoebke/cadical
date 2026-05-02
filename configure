@@ -38,6 +38,7 @@ contrib=yes
 ipasir=yes
 shared=no
 pic=no
+deactivate_options=no
 
 #--------------------------------------------------------------------------#
 
@@ -117,6 +118,8 @@ where '<option>' is one of the following
 --competition      configure for the competition
                    ('--quiet', '--no-contracts', '--no-tracing')
 
+--no-options       hard-code options
+
 -f...              pass '-f<option>[=<val>]' options to the makefile
 -W...              pass '-W<warning>' options to the makefile
 -m32               pass '-m32' to the compiler (compile for 32 bit)
@@ -183,6 +186,7 @@ do
     --terminator) terminator_fuzzing=yes;;
 
     --competition) competition=yes;;
+    --no-options) deactivate_options=yes;;
 
     --no-closefrom) closefrom=no;;
     --no-flexible) flexible=no;;
@@ -368,14 +372,13 @@ then
   CXXFLAGS="$CXXFLAGS --pedantic -Werror -std=c++11"
   CFLAGS="$CFLAGS --pedantic -Werror"
   case x"$CXX" in
-    x*g++*|x*clang++*) 
+    x*g++*|x*clang++*)
       CXXFLAGS="${CXXFLAGS} -Wp,-D_GLIBCXX_ASSERTIONS"
     ;;
   esac
   case x"$CC" in
-    x*g++*|x*clang++*) 
+    x*g++*|x*clang++*)
       CFLAGS="${CFLAGS} -Wp,-D_GLIBCXX_ASSERTIONS"
-    ;;
   esac
 fi
 
@@ -392,6 +395,7 @@ fi
 [ $shared = yes -a $pic = no ] && CFLAGS="$CFLAGS -fpic"
 
 [ $checkmissed = yes ] && CXXFLAGS="$CXXFLAGS -DCHECKMISSED"
+[ $deactivate_options = yes ] && CXXFLAGS="$CXXFLAGS -DNOPTIONS"
 
 CXXFLAGS="$CXXFLAGS$options"
 CFLAGS="$CFLAGS$options"
@@ -430,7 +434,7 @@ fi
 # would fail (configuration flag '-p').  However, older versions of 'gcc'
 # (such as 4.8) would disallow these new forms of macros unless we
 # explicitly enforce the new standard with '-std=c++17'.  Here we try to
-# figure out whether we need that flag. 
+# figure out whether we need that flag.
 
 feature=./configure-requires-c++11
 cat <<EOF > $feature.cpp

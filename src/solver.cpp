@@ -872,6 +872,7 @@ int Solver::solve () {
 }
 
 int Solver::simplify (int rounds) {
+#if !defined (NOPTIONS)
   TRACE (simplify, "simplify", rounds);
   REQUIRE_READY_STATE ();
   REQUIRE (rounds >= 0, "negative number of simplification rounds '%d'",
@@ -883,6 +884,12 @@ int Solver::simplify (int rounds) {
   internal->opts.lucky = lucky;
   LOG_API_CALL_RETURNS ("simplify", rounds, res);
   return res;
+#else
+  (void) rounds;
+  REQUIRE (false,
+         "cannot call simplify when compiled with NOPTIONS");
+  return 0;
+#endif
 }
 
 /*------------------------------------------------------------------------*/
