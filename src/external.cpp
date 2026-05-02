@@ -397,16 +397,22 @@ void External::add_observed_var (int elit) {
 
   assert (elit);
   assert (elit != INT_MIN);
-  reset_extended (); // tainting!
 
   int eidx = abs (elit);
+
+  if (eidx >= (int64_t) is_observed.size ())
+    is_observed.resize (1 + (size_t) eidx, false);
+  else if (is_observed[eidx])
+    return;
 
   // internalize and in particular declares the variables
   int ilit = internalize (elit);
 
-  // TODO: here needs to come the taint and restore of the newly
-  // observed variable. Restore_clauses must be called before continue.
-  // LOG ("marking tainted %d", elit);
+  // taint and restore of the newly observed variable.
+  // Restore_clauses must be called before continue.
+
+  reset_extended (); // tainting!
+
   if (marked (witness, elit)) {
     mark (tainted, -elit);
   }
@@ -418,13 +424,6 @@ void External::add_observed_var (int elit) {
     }
     restore_clauses ();
   }
-  // }
-
-  if (eidx >= (int64_t) is_observed.size ())
-    is_observed.resize (1 + (size_t) eidx, false);
-
-  if (is_observed[eidx])
-    return;
 
   LOG ("marking %d as externally watched", eidx);
 

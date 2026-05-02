@@ -872,7 +872,7 @@ int Solver::solve () {
 }
 
 int Solver::simplify (int rounds) {
-#if !defined (NOPTIONS)
+#if !defined(NOPTIONS)
   TRACE (simplify, "simplify", rounds);
   REQUIRE_READY_STATE ();
   REQUIRE (rounds >= 0, "negative number of simplification rounds '%d'",
@@ -886,8 +886,7 @@ int Solver::simplify (int rounds) {
   return res;
 #else
   (void) rounds;
-  REQUIRE (false,
-         "cannot call simplify when compiled with NOPTIONS");
+  REQUIRE (false, "cannot call simplify when compiled with NOPTIONS");
   return 0;
 #endif
 }
@@ -1136,8 +1135,6 @@ void Solver::add_observed_var (int idx) {
   REQUIRE_VALID_LIT (idx);
   REQUIRE (external->propagator,
            "can not observe variables without a connected propagator");
-  REQUIRE (internal->unsat || !internal->conflict,
-           "can not observe assigned variable during conflict analysis");
   external->add_observed_var (idx);
   LOG_API_CALL_END ("observe", idx);
 }

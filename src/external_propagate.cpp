@@ -25,6 +25,8 @@ void Internal::add_observed_var (int ilit) {
   // backtrack and re-play again every levels' notification to the
   // propagator
   if (val (ilit) && level && !fixed (ilit)) {
+    if (!unsat && conflict)
+      FATAL ("can not observe fixed variable during conflict analysis");
     // The variable is already assigned, but we can not send a notification
     // about it because it happened on an earlier decision level.
     // To not break the stack-like view of the trail, we simply backtrack to
@@ -32,6 +34,8 @@ void Internal::add_observed_var (int ilit) {
     const int assignment_level = var (ilit).level;
     backtrack_without_updating_phases (assignment_level - 1);
   } else if (level && fixed (ilit)) {
+    if (!unsat && conflict)
+      FATAL ("can not observe fixed variable during conflict analysis");
     backtrack_without_updating_phases (0);
   }
   activating_all_new_imported_literals ();
@@ -284,10 +288,9 @@ bool Internal::external_propagate () {
 
     int elit = external->propagator->cb_propagate ();
 
-    REQUIRE (
-        !elit || ((size_t) abs (elit) < external->is_observed.size () &&
-                  external->is_observed[abs (elit)]),
-        "external propagations are only allowed over observed variables.");
+    if (elit && !external->observed (elit))
+      FATAL ("external propagations are only allowed over observed "
+             "variables.");
 
     stats.up_cb++;
     stats.up_cb_prop++;
@@ -546,10 +549,9 @@ void Internal::add_external_clause (int propagated_elit,
   } else
     elit = external->propagator->cb_add_external_clause_lit ();
 
-  REQUIRE (
-      !elit || ((size_t) abs (elit) < external->is_observed.size () &&
-                external->is_observed[abs (elit)]),
-      "external (reason) clause must contain only observed variables.");
+  if (elit && !external->observed (elit))
+    FATAL (
+        "external (reason) clause must contain only observed variables.");
 
   // we need to be build a new LRAT chain if we are already in the middle of
   // the analysis (like during failed assumptions)
@@ -573,20 +575,19 @@ void Internal::add_external_clause (int propagated_elit,
           external->propagator->cb_add_reason_clause_lit (propagated_elit);
       if (elit == propagated_elit)
         propagated_lit_found = true;
-      REQUIRE (
-          !elit || elit == propagated_elit ||
-              external->current_val (elit) < 0,
-          "external reason clause must only contain falsified literals");
+      if (elit && elit != propagated_elit &&
+          external->current_val (elit) >= 0)
+        FATAL (
+            "external reason clause must only contain falsified literals");
     } else
       elit = external->propagator->cb_add_external_clause_lit ();
 
-    REQUIRE (
-        !elit || ((size_t) abs (elit) < external->is_observed.size () &&
-                  external->is_observed[abs (elit)]),
-        "external (reason) clause must contain only observed variables.");
+    if (elit && !external->observed (elit))
+      FATAL (
+          "external (reason) clause must contain only observed variables.");
   }
-  REQUIRE (!propagated_elit || propagated_lit_found,
-           "external reason clause must contain the propagated literal.");
+  if (propagated_elit && !propagated_lit_found)
+    FATAL ("external reason clause must contain the propagated literal.");
   tmp_ext_clause.push_back (elit);
   for (auto &tmp : tmp_ext_clause)
     external->add (tmp);
@@ -1276,9 +1277,8 @@ int Internal::ask_decision () {
     return 0;
   LOG ("external propagator proposes decision: %d", elit);
 
-  REQUIRE ((size_t) abs (elit) < external->is_observed.size () &&
-               external->is_observed[abs (elit)],
-           "external decisions are only allowed over observed variables.");
+  if (elit && !external->observed (elit))
+    FATAL ("external decisions are only allowed over observed variables.");
 
   assert (external->is_observed[abs (elit)]);
 
@@ -1292,9 +1292,9 @@ int Internal::ask_decision () {
        "%d, fixed: %d, val: %d)",
        elit, ilit, fixed (ilit), val (ilit));
 
-  REQUIRE (
-      !fixed (ilit) && !val (ilit),
-      "external decisions are only allowed over unassigned variables.");
+  if (fixed (ilit) || val (ilit))
+    FATAL (
+        "external decisions are only allowed over unassigned variables.");
 
   return ilit;
 }
