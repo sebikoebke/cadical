@@ -291,7 +291,7 @@ inline void Internal::analyze_literal (int lit, int &open,
     if (!v.reason) { // actually a unit
       --antecedent_size;
       LOG ("%d unit after explanation", -lit);
-      if (f.seen || !lrat)
+      if (!lrat)
         return;
       f.seen = true;
       unit_analyzed.push_back (lit);
@@ -1417,6 +1417,15 @@ bool Internal::lazy_external_up_out_of_order_clause (int &uip) {
     int jump;
     int driving;
     const int glue = (int) clause.size () - 1;
+    LOG (lrat_chain, "lrat_chain:");
+    LOG (clause, "clause:");
+    if (lrat) {
+      LOG (unit_chain, "unit chain: ");
+      for (auto id : unit_chain)
+        lrat_chain.push_back (id);
+      unit_chain.clear ();
+      reverse (lrat_chain.begin (), lrat_chain.end ());
+    }
     conflict = new_driving_clause (glue, jump, driving);
     UPDATE_AVERAGE (averages.current.level, jump);
     backtrack (driving);
