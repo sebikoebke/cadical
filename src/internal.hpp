@@ -195,7 +195,11 @@ struct Internal {
   bool private_steps; // no notification of ext. prop during these steps
   vector<int> notification_trail; // vector used for notifying assignments
   vector<int> notify_model_trail; // vector used for check model
-  vector<int> tmp_ext_clause;     // vector used for adding external clauses
+  vector<int> tmp_elits;          // vector used for adding external clauses
+  vector<int> tmp_eclause;        // vector used for adding external clauses
+  vector<int> tmp_clause;         // vector used for adding external clauses
+  vector<int> tmp_original;       // vector used for adding external clauses
+  vector<int64_t> tmp_lrat_chain; // vector used for adding external clauses
   int out_of_order_level;         // lowest out-of-order level to fix
   int out_of_order_trail;     // highest out-of-order literal on the trail
   char rephased;              // last type of resetting phases
@@ -840,7 +844,6 @@ struct Internal {
                             bool no_backtrack = false);
   Clause *learn_external_reason_clause (int lit, int falsified_elit = 0,
                                         bool no_backtrack = false);
-  Clause *wrapped_learn_external_reason_clause (int lit);
   void explain_external_propagations ();
   void explain_reason (int lit, Clause *, int &open);
   void move_literals_to_watch ();

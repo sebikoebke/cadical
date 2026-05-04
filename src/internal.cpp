@@ -1330,7 +1330,7 @@ void Internal::declare_variable (int ilit) {
 // versions of that. The sorting is based on the external ordering not
 // the internal ordering.
 void Internal::activating_all_new_imported_literals () {
-  LOG (imports, "declaring all new variables");
+  LOG (imports, "activating all new variables");
   if (imports.empty ())
     return;
   if (opts.varindexorder)

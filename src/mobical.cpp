@@ -1007,19 +1007,19 @@ public:
     }
 
     if (!s->observed (lit)) {
-      // TODO: do we want to observe?
-      // s->add_observed_var (lit);
+      // do we want to observe?
+      s->add_observed_var (lit);
       MLOG ("cb_decide returns 0" << std::endl);
-      return 0;
+      return lit;
     }
 
     if (s->current_value (lit) < 0) {
       MLOG ("cb_decide force_bt due to " << lit << std::endl);
       if (s->force_unassign (lit)) {
+        // this decision is ignored, but we are asked again.
         MLOG ("cb_decide returns " << lit << std::endl);
         return lit;
       }
-      // this decision is ignored, but we are asked again.
       MLOG ("cb_decide returns 0" << std::endl);
       return 0;
     }
@@ -1097,8 +1097,8 @@ public:
 
     if (!lit) {
       lemma->add_count++;
-      MLOG ("reason clause (id: " << reason_id << ") is added."
-                                  << std::endl);
+      MLOG ("reason clause for " << plit << " (id: " << reason_id
+                                 << ") is added." << std::endl);
     }
 
     return lit;

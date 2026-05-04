@@ -578,8 +578,8 @@ Clause *Internal::new_factor_clause (int witness) {
   stats.factor_added_literals += clause.size ();
   if (proof) {
     if (witness)
-      proof->add_derived_rat_clause (clause_id + 1, false, externalize (witness),
-                                     clause, lrat_chain);
+      proof->add_derived_rat_clause (
+          clause_id + 1, false, externalize (witness), clause, lrat_chain);
     else
       proof->add_derived_clause (clause_id + 1, false, clause, lrat_chain);
   }
@@ -616,7 +616,8 @@ Internal::new_hyper_ternary_resolved_clause_and_watch (bool red,
 Clause *Internal::new_clause_as (const Clause *orig) {
   external->check_learned_clause ();
   if (proof) {
-    proof->add_derived_clause (clause_id + 1, orig->redundant, clause, lrat_chain);
+    proof->add_derived_clause (clause_id + 1, orig->redundant, clause,
+                               lrat_chain);
   }
   const int new_glue = orig->glue;
   Clause *res = new_clause (orig->redundant, new_glue);

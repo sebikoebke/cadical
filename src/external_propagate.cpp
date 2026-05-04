@@ -529,80 +529,68 @@ void Internal::move_literals_to_watch () {
 //
 void Internal::add_external_clause (int propagated_elit,
                                     bool no_backtrack) {
-  assert (original.empty ());
-  int elit = 0;
-  bool propagated_lit_found = false;
-
-  assert (tmp_ext_clause.empty ());
-  if (propagated_elit) {
-    // Propagation reason clauses are by default assumed to be forgettable
-    // irredundant. In case they would be unforgettably important, the
-    // propagator can add them as an explicit unforgettable external clause
-    // or set 'are_reasons_forgettable' to false.
-    ext_clause_forgettable = external->propagator->are_reasons_forgettable;
-#ifndef NDEBUG
-    LOG ("add external reason of propagated lit: %d", propagated_elit);
-#endif
-    elit = external->propagator->cb_add_reason_clause_lit (propagated_elit);
-    if (elit == propagated_elit)
-      propagated_lit_found = true;
-  } else
-    elit = external->propagator->cb_add_external_clause_lit ();
-
-  if (elit && !external->observed (elit))
-    FATAL (
-        "external (reason) clause must contain only observed variables.");
-
-  // we need to be build a new LRAT chain if we are already in the middle of
-  // the analysis (like during failed assumptions)
-  LOG (lrat_chain, "lrat chain before");
-  std::vector<int64_t> lrat_chain_ext = std::move (lrat_chain);
-  lrat_chain.clear ();
-  clause.clear ();
-
-  // Read out the external lemma into original and simplify it into clause
-  assert (clause.empty ());
-  assert (original.empty ());
-
   assert (!force_no_backtrack);
   assert (!from_propagator);
   force_no_backtrack = no_backtrack;
   from_propagator = true;
-  while (elit) {
-    tmp_ext_clause.push_back (elit);
-    if (propagated_elit) {
+
+  int elit = 0;
+  bool propagated_lit_found = false;
+
+  assert (tmp_elits.empty ());
+
+  while (true) {
+    if (propagated_elit)
       elit =
           external->propagator->cb_add_reason_clause_lit (propagated_elit);
-      if (elit == propagated_elit)
-        propagated_lit_found = true;
-      if (elit && elit != propagated_elit &&
-          external->current_val (elit) >= 0)
-        FATAL (
-            "external reason clause must only contain falsified literals");
-    } else
+    else
       elit = external->propagator->cb_add_external_clause_lit ();
+    LOG ("cb_add %d", elit);
 
-    if (elit && !external->observed (elit))
-      FATAL (
-          "external (reason) clause must contain only observed variables.");
+    tmp_elits.push_back (elit);
+
+    if (!elit)
+      break;
+
+    if (elit == propagated_elit)
+      propagated_lit_found = true;
+
+    if (!external->observed (elit))
+      FATAL ("external clause must contain only observed variables.");
+    if (propagated_elit && elit != propagated_elit &&
+        external->current_val (elit) >= 0)
+      FATAL ("external reason clause must only contain falsified literals");
   }
   if (propagated_elit && !propagated_lit_found)
     FATAL ("external reason clause must contain the propagated literal.");
-  tmp_ext_clause.push_back (elit);
-  for (auto &tmp : tmp_ext_clause)
+
+  // copy the state from adding clauses to enable adding external clauses
+  // everywhere.
+  tmp_lrat_chain = std::move (lrat_chain);
+  lrat_chain.clear ();
+  tmp_clause = std::move (clause);
+  clause.clear ();
+  tmp_original = std::move (original);
+  original.clear ();
+  tmp_eclause = std::move (external->eclause);
+  external->eclause.clear ();
+
+  for (auto &tmp : tmp_elits)
     external->add (tmp);
-  tmp_ext_clause.clear ();
+  tmp_elits.clear ();
 
-#ifdef NCONTRACTS
-  (void) propagated_lit_found;
-#endif
-
-  assert (original.empty ());
+  // copy the old state back.
+  assert (lrat_chain.empty ());
   assert (clause.empty ());
+  assert (original.empty ());
+  assert (external->eclause.empty ());
+  lrat_chain = std::move (tmp_lrat_chain);
+  clause = std::move (tmp_clause);
+  original = std::move (tmp_original);
+  external->eclause = std::move (tmp_eclause);
+
   force_no_backtrack = false;
   from_propagator = false;
-  lrat_chain = std::move (lrat_chain_ext);
-  LOG (lrat_chain, "lrat chain after");
 }
 
 /*----------------------------------------------------------------------------*/
@@ -767,6 +755,11 @@ Clause *Internal::learn_external_reason_clause (int ilit,
   } else
     elit = falsified_elit;
 
+  // Propagation reason clauses are by default assumed to be forgettable
+  // irredundant. In case they would be unforgettably important, the
+  // propagator can add them as an explicit unforgettable external
+  // clause or set 'are_reasons_forgettable' to false.
+  ext_clause_forgettable = external->propagator->are_reasons_forgettable;
   LOG ("ilit: %d, elit: %d", ilit, elit);
   add_external_clause (elit, no_backtrack);
 
@@ -785,38 +778,6 @@ Clause *Internal::learn_external_reason_clause (int ilit,
 
   clause = std::move (clause_tmp);
   return newest_clause;
-}
-
-/*----------------------------------------------------------------------------*/
-//
-// Helper function to be able to call learn_external_reason_clause when the
-// internal clause is already used in the caller side (for example during
-// proof checking). These calls are assumed to be without a falsified elit.
-// Dont use it in general instead of learn_external_reason_clause because it
-// does not support the corner cases where a literal remains in clause.
-//
-Clause *Internal::wrapped_learn_external_reason_clause (int ilit) {
-  Clause *res;
-  std::vector<int64_t> chain_tmp{std::move (lrat_chain)};
-  lrat_chain.clear ();
-  if (clause.empty ()) {
-    res = learn_external_reason_clause (ilit, 0, true);
-  } else {
-    std::vector<int> clause_tmp{std::move (clause)};
-    clause.clear ();
-    res = learn_external_reason_clause (ilit, 0, true);
-    // The learn_external_reason clause can leave a literal in clause when
-    // there is a falsified elit arg. Here it is not allowed to
-    // happen.
-    assert (clause.empty ());
-
-    clause = std::move (clause_tmp);
-    clause_tmp.clear ();
-  }
-  assert (lrat_chain.empty ());
-  lrat_chain = std::move (chain_tmp);
-  chain_tmp.clear ();
-  return res;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -882,14 +843,16 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
     assert (val (pos0) >= 0);
 
     Var &v = var (pos0);
-    LOG (res,
-         "elevate assignment of %s from level %d to level %d with lazy "
-         "reason clause",
-         LOGLIT (pos0), l0, l1);
-    if (v.level != l1)
+    if (v.level != l1) {
       stats.up_learn_lazy_elevate++;
+      LOG (res,
+           "elevate assignment of %s from level %d to level %d with lazy "
+           "reason clause",
+           LOGLIT (pos0), l0, l1);
+      LOG ("elevate %s to level %d", LOGLIT (pos0), l1);
+    } else
+      LOG (res, "add assignment %s lazy reason clause", LOGLIT (pos0));
     v.level = l1;
-    LOG ("elevate %s to level %d", LOGLIT (pos0), l1);
     return;
   }
   assert (!force_no_backtrack);
