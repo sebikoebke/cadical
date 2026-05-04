@@ -420,8 +420,8 @@ void External::add_observed_var (int elit) {
     mark (tainted, elit);
   }
   if (!tainted.empty ()) {
-    if (!eclause.empty ()) {
-    }
+    if (internal->force_no_backtrack)
+      FATAL ("can not add ");
     restore_clauses ();
   }
 

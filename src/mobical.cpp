@@ -542,11 +542,26 @@ struct ExtendMap {
 };
 
 /*------------------------------------------------------------------------*/
+
+enum MockForceType {
+  NOTIFY_ASSIGNMENT,
+  NOTIFY_NEW_DECISION_LEVEL,
+  NOTIFY_BACKTRACK,
+  CB_DECIDE,
+  CB_ADD_REASON_CLAUSE_LIT,
+  CB_PROPAGATE,
+  CB_CHECK_FOUND_MODEL,
+  CB_HAS_EXTERNAL_CLAUSE,
+  CB_ADD_EXTERNAL_CLAUSE_LIT,
+  LAST_MOCK_FORCE_TYPE,
+};
+
 enum LemmaType {
   LAZY,
   PROPAGATING,
   OBSERVING,
   EAGER,
+  LAST_LEMMA_TYPE,
 };
 
 class MockPropagator : public ExternalPropagator,
@@ -565,6 +580,12 @@ private:
     int lit;
     size_t delay;
     Decisions (int l, int d) : lit (l), delay (d) {};
+  };
+
+  struct MockForce {
+    int lit;
+    size_t delay;
+    MockForce (int l, int d) : lit (l), delay (d) {};
   };
 
   struct ExternalLemma {
@@ -604,6 +625,7 @@ private:
   // The list of all external lemmas (including reason clauses)
   std::vector<ExternalLemma *> external_lemmas;
   std::vector<Decisions> external_decide;
+  std::unordered_map<MockForceType, std::vector<MockForce>> external_forces;
 
   // The reasons of present external propagations
   std::map<int, size_t> reason_map;
@@ -730,6 +752,39 @@ public:
     external_decide.push_back (Decisions (lit, delay));
   }
 
+  void push_force (int lit, MockForceType type, int delay) {
+    external_forces[type].push_back (MockForce (lit, delay));
+  }
+
+  bool get_force (MockForceType type) {
+    int lit = 0;
+    if (external_forces[type].empty ())
+      return false;
+    if (external_forces[type].back ().delay--)
+      return false;
+    lit = external_forces[type].back ().lit;
+    external_forces[type].pop_back ();
+    // clang-format off
+    MLOG ("activate force "
+          << (type == NOTIFY_ASSIGNMENT ? "NOTIFY_ASSIGNMENT"
+           : (type == NOTIFY_NEW_DECISION_LEVEL ? "NOTIFY_NEW_DECISION_LEVEL"
+           : (type == NOTIFY_BACKTRACK ? "NOTIFY_BACKTRACK"
+           : (type == CB_DECIDE ? "CB_DECIDE"
+           : (type == CB_ADD_REASON_CLAUSE_LIT ? "CB_ADD_REASON_CLAUSE_LIT"
+           : (type == CB_PROPAGATE ? "CB_PROPAGATE"
+           : (type == CB_CHECK_FOUND_MODEL ? "CB_CHECK_FOUND_MODEL"
+           : (type == CB_HAS_EXTERNAL_CLAUSE ? "CB_HAS_EXTERNAL_CLAUSE"
+           : (type == CB_ADD_EXTERNAL_CLAUSE_LIT ? "CB_ADD_EXTERNAL_CLAUSE_LIT"
+           : "LAST_MOCK_FORCE_TYPE")))))))))
+          << " on " << lit << std::endl);
+    // clang-format on
+    if (!s->observed (lit))
+      s->add_observed_var (lit);
+    if (s->current_value (lit))
+      s->force_unassign (lit);
+    return true;
+  }
+
   void push_lemma_lit (int lit, LemmaType type, int delay) {
 
     if (lit)
@@ -808,6 +863,9 @@ public:
 #endif
     (void) model;
 
+    // Calls to solver that might force it to backtrack.
+    get_force (CB_CHECK_FOUND_MODEL);
+
     for (const auto lemma : external_lemmas) {
       bool satisfied = false;
       int unobserved = 0;
@@ -880,6 +938,9 @@ public:
   bool cb_has_external_clause (bool &forgettable) override {
     MLOG ("cb_has_external_clause returns: ");
 
+    // Calls to solver that might force it to backtrack.
+    get_force (CB_HAS_EXTERNAL_CLAUSE);
+
     forgettable = false;
 
     if (external_lemmas.empty ()) {
@@ -943,6 +1004,9 @@ public:
   }
 
   int cb_add_external_clause_lit () override {
+    // Calls to solver that might force it to backtrack.
+    get_force (CB_ADD_EXTERNAL_CLAUSE_LIT);
+
     auto lemma = external_lemmas[add_lemma_idx];
     int lit = lemma->next_lit ();
 
@@ -967,6 +1031,8 @@ public:
 
   int cb_decide () override {
     MLOG ("cb_decide starts." << std::endl);
+    // Calls to solver that might force it to backtrack.
+    get_force (CB_DECIDE);
 
     if (!unassigned_reasons.empty ()) {
 #ifdef LOGGING
@@ -1035,6 +1101,9 @@ public:
 
   int cb_propagate () override {
     MLOG ("cb_propagate starts" << std::endl);
+    // Calls to solver that might force it to backtrack.
+    get_force (CB_PROPAGATE);
+
     if (external_lemmas.empty ())
       return 0;
 
@@ -1085,6 +1154,9 @@ public:
 
   int cb_add_reason_clause_lit (int plit) override {
 
+    // Calls to solver that might force it to backtrack.
+    get_force (CB_ADD_REASON_CLAUSE_LIT);
+
     // At that point there is no need to assume that the trails are in
     // synchron.
     assert (reason_map.find (plit) != reason_map.end ());
@@ -1113,6 +1185,8 @@ public:
       assert (s->current_value (lit) > 0);
       unassigned_reasons.erase (lit);
     }
+    // Calls to solver that might force it to backtrack.
+    get_force (NOTIFY_ASSIGNMENT);
   }
 
   void notify_new_decision_level () override {
@@ -1122,6 +1196,8 @@ public:
     level++;
     observed_trail.push_back (std::vector<int> ());
     assert (level == observed_trail.size () - 1);
+    // Calls to solver that might force it to backtrack.
+    get_force (NOTIFY_NEW_DECISION_LEVEL);
   }
 
   void notify_backtrack (size_t new_level) override {
@@ -1152,6 +1228,8 @@ public:
       observed_trail.pop_back ();
     }
     level = new_level;
+    // Calls to solver that might force it to backtrack.
+    get_force (NOTIFY_BACKTRACK);
   }
 
   /* ---------------- ExternalPropagator functions end -------------------*/
@@ -1383,7 +1461,7 @@ void Mobical::warning (const char *fmt, ...) {
 //     (ADD|ASSUME|ALWAYS)*
 //     [
 //       (SOLVE|SIMPLIFY|LOOKAHEAD)
-//       (LEMMA|CONTINUE)*
+//       (LEMMA|FORCE|DECIDE)*
 //       (VAL|FLIP|FAILED|ALWAYS|CONCLUDE|FLUSHPROOFTRACE|CLOSEPROOFTRACE)*
 //     ]
 //   )*
@@ -1468,25 +1546,26 @@ struct Call {
     UNOBSERVE       = shift ( 33 ),
     LEMMA           = shift ( 34 ),
     DECIDE          = shift ( 35 ),
+    FORCE           = shift ( 36 ),
 
-    CONCLUDE        = shift ( 36 ),
-    DISCONNECT      = shift ( 37 ),
+    CONCLUDE        = shift ( 37 ),
+    DISCONNECT      = shift ( 38 ),
 
-    TRACEPROOF      = shift ( 38 ),
-    FLUSHPROOFTRACE = shift ( 39 ),
-    CLOSEPROOFTRACE = shift ( 40 ),
+    TRACEPROOF      = shift ( 39 ),
+    FLUSHPROOFTRACE = shift ( 40 ),
+    CLOSEPROOFTRACE = shift ( 41 ),
 
 #ifdef MOBICAL_MEMORY
-    MAXALLOC        = shift ( 41 ),
-    LEAKALLOC       = shift ( 42 ),
+    MAXALLOC        = shift ( 42 ),
+    LEAKALLOC       = shift ( 43 ),
 #endif
 #ifdef MOBICAL_TERMINATE
-    TERMINATE       = shift ( 43 ),
+    TERMINATE       = shift ( 44 ),
 #endif
 
-    PROPAGATE_ASSUMPTIONS = shift ( 44 ),
-    IMPLIED_LITERALS = shift ( 45 ),
-    RESET_ASSUMPTIONS = shift ( 46 ),
+    PROPAGATE_ASSUMPTIONS = shift ( 45 ),
+    IMPLIED_LITERALS = shift ( 46 ),
+    RESET_ASSUMPTIONS = shift ( 47 ),
     RESET_OBSERVED = shift ( 48 ),
 
     RESERVE = shift ( 49 ),
@@ -1508,12 +1587,13 @@ struct Call {
     BEFORE = ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT |
              RESET_ASSUMPTIONS,
     PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE,
-    DURING = LEMMA | DECIDE,
+    DURING = LEMMA | DECIDE | FORCE,
     CONNECTING = CONNECT | DISCONNECT,
-    PROPAGATOR = OBSERVE | UNOBSERVE | RESET_OBSERVED | LEMMA | DECIDE,
+    PROPAGATOR =
+        OBSERVE | UNOBSERVE | RESET_OBSERVED | LEMMA | DECIDE | FORCE,
     LITTYPE = PHASE | UNPHASE | ADD | ASSUME | VAL | FLIP | FLIPPABLE |
               FAILED | FIXED | FREEZE | FROZEN | MELT | CONSTRAIN |
-              UNOBSERVE | OBSERVE | LEMMA | DECIDE,
+              UNOBSERVE | OBSERVE | LEMMA | DECIDE | FORCE,
     EXTENDMAP = PHASE | UNPHASE | ADD | ASSUME | FREEZE | CONSTRAIN,
     AFTER = VAL | FLIP | FLIPPABLE | FAILED | CONCLUDE | ALWAYS |
             FLUSHPROOFTRACE | CLOSEPROOFTRACE | PROPAGATE_ASSUMPTIONS,
@@ -1767,7 +1847,7 @@ struct UnPhaseCall : public Call {
   UnPhaseCall (int max_var) : Call (UNPHASE, max_var) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
     fflush (stdout);
-    s->unphase (map_arg (s, extendmap, 0));
+    s->unphase (map_arg (s, extendmap, false));
   }
   void print (ostream &o) { o << "unphase " << arg; }
   Call *copy () { return new UnPhaseCall (arg); }
@@ -1914,6 +1994,23 @@ struct ObserveCall : public Call {
   const char *keyword () { return "observe"; }
 };
 
+struct MockForceCall : public Call {
+  MockForceType forcetype;
+  MockForceCall (int l, MockForceType t, int v)
+      : Call (FORCE, l, 0, 0, v), forcetype (t) {}
+  void execute (Solver *&s, ExtendMap *&extendmap) {
+    MockPropagator *mp =
+        static_cast<MockPropagator *> (s->get_propagator ());
+    assert (mp);
+    mp->push_force (map_arg (s, extendmap, false), forcetype, val);
+  }
+  void print (ostream &o) {
+    o << "force " << arg << " " << forcetype << " " << val;
+  }
+  Call *copy () { return new MockForceCall (arg, forcetype, val); }
+  const char *keyword () { return "force"; }
+};
+
 struct LemmaCall : public Call {
   LemmaType lemmatype;
   LemmaCall (int l, LemmaType t, int v)
@@ -1922,7 +2019,7 @@ struct LemmaCall : public Call {
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
     assert (mp);
-    mp->push_lemma_lit (map_arg (s, extendmap), lemmatype, 0);
+    mp->push_lemma_lit (map_arg (s, extendmap, false), lemmatype, val);
   }
   void print (ostream &o) {
     if (arg)
@@ -1940,7 +2037,7 @@ struct DecideCall : public Call {
     MockPropagator *mp =
         static_cast<MockPropagator *> (s->get_propagator ());
     assert (mp);
-    mp->push_decide_lit (map_arg (s, extendmap), val);
+    mp->push_decide_lit (map_arg (s, extendmap, false), val);
   }
   void print (ostream &o) { o << "decide " << arg << " " << val; }
   Call *copy () { return new DecideCall (arg, val); }
@@ -2783,6 +2880,7 @@ private:
 
   void generate_propagator (Random &, int minvars, int maxvars);
   void generate_lemmas (Random &);
+  void generate_forces (Random &, int minvars, int maxvars);
 
   void generate_propagate (Random &);
   void generate_implied (Random &);
@@ -3226,7 +3324,6 @@ void Trace::generate_constraint (Random &random, int minvars, int maxvars,
 }
 
 /*------------------------------------------------------------------------*/
-
 void Trace::generate_propagator (Random &random, int minvars, int maxvars) {
   // No Propagator in 90% of cases.
   if (!in_connection && random.generate_double () < 0.9) {
@@ -3245,7 +3342,6 @@ void Trace::generate_propagator (Random &random, int minvars, int maxvars) {
     push_back (new DisconnectCall ());
     push_back (new ConnectCall ());
   } else if (random.generate_double () < 0.25) {
-    // TODO: what to unobserve?
     auto p = observed_vars.begin ();
     auto q = p;
     const auto end = observed_vars.end ();
@@ -3264,7 +3360,7 @@ void Trace::generate_propagator (Random &random, int minvars, int maxvars) {
   assert (in_connection);
   assert (minvars <= maxvars);
 
-  int diff = maxvars - minvars;
+  const int diff = maxvars - minvars;
 
   // Give a chance to add no observed variables at all
   if (random.generate_double () < 0.03)
@@ -3286,7 +3382,40 @@ void Trace::generate_propagator (Random &random, int minvars, int maxvars) {
   }
 }
 
+void Trace::generate_forces (Random &random, int minvars, int maxvars) {
+  if (!in_connection)
+    return;
+
+  assert (minvars <= maxvars);
+
+  const int diff = maxvars - minvars;
+
+  // Give a chance to add no forces.
+  if (random.generate_double () < 0.1)
+    return;
+
+  // TODO: MockForceType length.
+  for (int i = 0; i < LAST_MOCK_FORCE_TYPE; i++) {
+    // chance to not generate this type.
+    if (random.generate_double () < 0.1)
+      continue;
+    const MockForceType type = static_cast<MockForceType> (i);
+    for (int j = 0; j < diff; j++) {
+      if (random.generate_double () < 0.1)
+        break;
+      const int idx = random.pick_int (minvars, maxvars);
+      const int lit = random.generate_bool () ? -idx : idx;
+      const int delay = random.pick_int (0, 50);
+      push_back (new MockForceCall (lit, type, delay));
+    }
+  }
+}
+
 void Trace::generate_lemmas (Random &random) {
+  if (!in_connection)
+    return;
+
+  // TODO: also generate lemmas with unobserved variables
   if (!observed_vars.size ())
     return;
 
@@ -3537,8 +3666,6 @@ void Trace::generate_process (Random &random) {
 
   if (fraction < 0.6) {
     push_back (new SolveCall ());
-    if (in_connection && observed_vars.size ())
-      generate_lemmas (random);
   } else if (fraction > 0.99) {
     const int depth = random.pick_int (0, 10);
     push_back (new CubingCall (depth));
@@ -3688,6 +3815,8 @@ void Trace::generate (uint64_t i, uint64_t s) {
     generate_phase (random, maxvars);
 
     generate_process (random);
+    generate_lemmas (random);
+    generate_forces (random, minvars, maxvars);
 
     generate_values (random, maxvars);
     if (!in_connection)
@@ -4516,6 +4645,7 @@ static bool is_basic (Call *c) {
   case Call::UNOBSERVE:
   case Call::RESET_OBSERVED:
   case Call::DECIDE:
+  case Call::FORCE:
   case Call::RESET_ASSUMPTIONS:
 #ifdef MOBICAL_TERMINATE
   case Call::TERMINATE:
@@ -4807,6 +4937,8 @@ bool Trace::reduce_values (int expected) {
         lo = 0, hi = c->val;
       } else if (c->type == Call::LEMMA) {
         lo = 0, hi = c->val;
+      } else if (c->type == Call::FORCE) {
+        lo = 0, hi = c->val;
       } else
         continue;
 
@@ -4871,27 +5003,7 @@ bool Trace::reduce_values (int expected) {
   return res;
 }
 
-static bool has_lit_arg_type (Call *c) {
-  switch ((uint64_t) c->type) {
-  case Call::ADD:
-  case Call::CONSTRAIN:
-  case Call::ASSUME:
-  case Call::FREEZE:
-  case Call::MELT:
-  case Call::FROZEN:
-  case Call::FLIP:
-  case Call::FLIPPABLE:
-  case Call::FIXED:
-  case Call::FAILED:
-  case Call::RESIZE:
-  case Call::LEMMA:
-  case Call::OBSERVE:
-  case Call::UNOBSERVE:
-    return true;
-  default:
-    return false;
-  }
-}
+static bool has_lit_arg_type (Call *c) { return c->type & Call::LITTYPE; }
 
 // Try to map variables to a contiguous initial range.
 
@@ -5144,6 +5256,7 @@ void Reader::parse () {
            (('a' <= ch && ch <= 'z') || ch == '_'))
       ;
     const char *first = 0, *second = 0, *third = 0;
+    bool third_argument = 0;
     if ((ch = *p) == ' ') {
       *p++ = 0;
       first = p;
@@ -5167,6 +5280,7 @@ void Reader::parse () {
         if (ch == ' ') {
           *p++ = 0;
           third = p;
+          third_argument = 0;
           ch = *p;
           if (!ch)
             error ("third argument missing after trailing space");
@@ -5333,17 +5447,44 @@ void Reader::parse () {
       int tmp = 0;
       if (second) {
         if (!parse_int_str (second, tmp))
-          error ("invalid argument '%s' to 'lemma'", second);
+          error ("invalid argument '%s' to 'lemma %d'", lit, second);
         tmpt = static_cast<LemmaType> (tmp);
         if (enforce && static_cast<int> (tmpt) != tmp)
-          error ("invalid argument '%s' to 'lemma'", second);
+          error ("invalid argument '%s' to 'lemma %d'", second, lit);
+        if (enforce && tmp == LAST_LEMMA_TYPE)
+          error ("invalid argument '%s' to 'lemma %d'", second, lit);
       }
       val = 0;
       if (third) {
         if (!parse_int_str (third, val))
           error ("invalid argument '%s' to 'lemma'", third);
       }
+      third_argument = true;
       c = new LemmaCall (lit, tmpt, val);
+    } else if (!strcmp (keyword, "force")) {
+      if (!first)
+        error ("argument to 'force' missing");
+      if (!parse_int_str (first, lit))
+        error ("invalid argument '%s' to 'force'", first);
+      if (enforce && lit == INT_MIN)
+        error ("invalid literal '%d' as argument to 'force'", lit);
+      MockForceType tmpt;
+      int tmp = 0;
+      if (!second)
+        error ("second argument to 'force %d' missing", lit);
+      if (!parse_int_str (second, tmp))
+        error ("invalid second argument '%s' to 'force %d'", lit, second);
+      tmpt = static_cast<MockForceType> (tmp);
+      if (enforce && static_cast<int> (tmpt) != tmp)
+        error ("invalid argument '%s' to 'force %d'", second, lit);
+      if (enforce && tmp == LAST_MOCK_FORCE_TYPE)
+        error ("invalid argument '%s' to 'force %d'", second, lit);
+      if (!third)
+        error ("third argument to 'force %d %s' missing", lit, second);
+      if (!parse_int_str (third, val))
+        error ("invalid argument '%s' to 'force %d %d'", third, lit, tmp);
+      c = new MockForceCall (lit, tmpt, val);
+      third_argument = true;
     } else if (!strcmp (keyword, "decide")) {
       if (!first)
         error ("argument to 'decide' missing");
@@ -5352,7 +5493,7 @@ void Reader::parse () {
       if (enforce && lit == INT_MIN)
         error ("invalid literal '%d' as argument to 'decide'", lit);
       if (!second)
-        error ("missing argument '%s' to 'decide %d'", second, lit);
+        error ("second argument to 'decide %d' missing", lit);
       if (!parse_int_str (second, val))
         error ("invalid second argument '%s' to 'decide'", second);
       c = new DecideCall (lit, val);
@@ -5605,7 +5746,7 @@ void Reader::parse () {
       c = new DeclareOneMoreVariableCall ();
     } else
       error ("invalid keyword '%s'", keyword);
-    if (enforce && third && strcmp (keyword, "lemma")) {
+    if (enforce && third && !third_argument) {
       error ("invalid third argument '%s' to '%s'", third, keyword);
     }
 
@@ -5663,6 +5804,7 @@ void Reader::parse () {
         break;
 
       case Call::LEMMA:
+      case Call::FORCE:
       case Call::DECIDE:
         if (!connected)
           error ("'%s' can only be called after 'connect'", c->keyword ());

@@ -1601,7 +1601,7 @@ void Solver::force_backtrack (int new_level) {
            "not allowed to force backtrack in that state of the solver.");
   REQUIRE (new_level >= 0,
            "the target level of a forced backtrack must be non-negative.");
-  REQUIRE (internal->level > 0 && new_level < internal->level,
+  REQUIRE (new_level < internal->level,
            "the target level of a forced backtrack must be smaller than "
            "the current decision level.");
   external->force_backtrack (new_level);
@@ -1615,6 +1615,8 @@ bool Solver::force_unassign (int lit) {
   REQUIRE_VALID_LIT (lit);
   REQUIRE (external->observed (lit),
            "can only force unassign observed variables");
+  REQUIRE (!internal->force_no_backtrack,
+           "can not force unassign during conflict analysis");
   bool const res = external->force_unassign (lit);
   LOG_API_CALL_RETURNS ("force_unassign", lit, res);
   return res;

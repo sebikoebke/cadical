@@ -370,18 +370,17 @@ int Internal::decide () {
       // Forced backtrack below pseudo decision levels.
       // So one of the two branches above will handle it.
       STOP (decide);
-      res = decide (); // STARTS and STOPS profiling
-      START (decide);
-    } else {
-      stats.decisions++;
-      if (!decision) {
-        int idx = next_decision_variable ();
-        const bool target = (opts.target > 1 || (stable && opts.target));
-        decision = decide_phase (idx, target);
-      }
-      assert (!flags (decision).unused ());
-      search_assume_decision (decision);
+      return decide (); // STARTS and STOPS profiling
+      // START (decide);
     }
+    stats.decisions++;
+    if (!decision) {
+      int idx = next_decision_variable ();
+      const bool target = (opts.target > 1 || (stable && opts.target));
+      decision = decide_phase (idx, target);
+    }
+    assert (!flags (decision).unused ());
+    search_assume_decision (decision);
   }
   if (res)
     marked_failed = false;

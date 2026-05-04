@@ -79,9 +79,9 @@ void Internal::update_target_and_best () {
 
 /*------------------------------------------------------------------------*/
 
-// backtrack to the given level (by default 0), updating the target and the best
-// level if required. The function also handles out-of-order literals correcty
-// by reassigning them (but you do have to repropagate afterwards!)
+// backtrack to the given level (by default 0), updating the target and the
+// best level if required. The function also handles out-of-order literals
+// correcty by reassigning them (but you do have to repropagate afterwards!)
 //
 // For inprocessing use the version that does not update the phases.
 void Internal::backtrack (int new_level) {
@@ -93,12 +93,13 @@ void Internal::backtrack (int new_level) {
   backtrack_without_updating_phases (new_level);
 }
 
-// backtrack to the given level (by default 0), withour updating the target and
-// the best level if required. The function also handles out-of-order literals
-// correcty by reassigning them (but you do have to repropagate afterwards!) if
-// you did out-of-order.
+// backtrack to the given level (by default 0), withour updating the target
+// and the best level if required. The function also handles out-of-order
+// literals correcty by reassigning them (but you do have to repropagate
+// afterwards!) if you did out-of-order.
 //
-// Use `backtrack` to also save the phases. This one is mostly for inprocessing.
+// Use `backtrack` to also save the phases. This one is mostly for
+// inprocessing.
 
 void Internal::backtrack_without_updating_phases (int new_level) {
 
@@ -123,7 +124,6 @@ void Internal::backtrack_without_updating_phases (int new_level) {
 #endif
   int reassigned = 0;
 
-  notify_backtrack (new_level);
   if (external_prop && !external_prop_is_lazy && !private_steps &&
       notified > assigned) {
     LOG ("external propagator is notified about some unassignments (trail: "
@@ -148,9 +148,8 @@ void Internal::backtrack_without_updating_phases (int new_level) {
 #ifdef LOGGING
       if (!v.level) {
         LOG ("reassign %d @ 0 unit clause %d", lit, lit);
-        assert (!lrat || unit_id(lit));
-      }
-      else
+        assert (!lrat || unit_id (lit));
+      } else
         LOG (v.reason, "reassign %d @ %d", lit, v.level);
 #endif
       trail[j] = lit;
@@ -174,9 +173,6 @@ void Internal::backtrack_without_updating_phases (int new_level) {
   propergated = 0; // Always go back to root-level.
 
   assert (notified <= assigned + reassigned);
-  if (reassigned) {
-    notify_assignments ();
-  }
 
   control.resize (new_level + 1);
   level = new_level;
@@ -187,6 +183,10 @@ void Internal::backtrack_without_updating_phases (int new_level) {
     }
   }
   assert (num_assigned == trail.size ());
+  notify_backtrack (new_level);
+  if (reassigned) {
+    notify_assignments ();
+  }
 }
 
 } // namespace CaDiCaL

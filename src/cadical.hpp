@@ -1233,6 +1233,7 @@ private:
 
   friend struct LemmaCall;
   friend struct DecideCall;
+  friend struct MockForceCall;
   friend struct PropagateLemmaCall;
   friend struct DisconnectCall;
   friend class MockPropagator;

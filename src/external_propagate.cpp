@@ -25,7 +25,7 @@ void Internal::add_observed_var (int ilit) {
   // backtrack and re-play again every levels' notification to the
   // propagator
   if (val (ilit) && level && !fixed (ilit)) {
-    if (!unsat && conflict)
+    if (force_no_backtrack)
       FATAL ("can not observe fixed variable during conflict analysis");
     // The variable is already assigned, but we can not send a notification
     // about it because it happened on an earlier decision level.
@@ -34,7 +34,7 @@ void Internal::add_observed_var (int ilit) {
     const int assignment_level = var (ilit).level;
     backtrack_without_updating_phases (assignment_level - 1);
   } else if (level && fixed (ilit)) {
-    if (!unsat && conflict)
+    if (force_no_backtrack)
       FATAL ("can not observe fixed variable during conflict analysis");
     backtrack_without_updating_phases (0);
   }
@@ -1178,6 +1178,7 @@ void Internal::connect_propagator () {
 void Internal::notify_decision () {
   if (!external_prop || external_prop_is_lazy || private_steps)
     return;
+  notify_assignments ();
   external->propagator->notify_new_decision_level ();
 }
 
