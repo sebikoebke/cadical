@@ -740,11 +740,6 @@ Clause *Internal::learn_external_reason_clause (int ilit,
                                                 bool no_backtrack) {
   assert (external->propagator); // REQ is defined by not allowing
                                  // unobserving during conflict
-  // we cannot modify clause during analysis
-  auto clause_tmp = std::move (clause);
-
-  assert (clause.empty ());
-  assert (original.empty ());
 
   stats.up_cb_prop_explain++;
 
@@ -776,7 +771,6 @@ Clause *Internal::learn_external_reason_clause (int ilit,
   }
 #endif
 
-  clause = std::move (clause_tmp);
   return newest_clause;
 }
 
