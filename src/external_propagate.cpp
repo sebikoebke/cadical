@@ -168,8 +168,11 @@ bool Internal::external_propagate () {
     stats.up_cb_prop++;
     const int elit = external->propagator->cb_propagate ();
 
-    if (level != notified_level)
+    if (level != notified_level) {
+      LOG ("cb_propagate triggered a backtrack, ignoring return value %d",
+           elit);
       return true;
+    }
     if (!elit)
       break;
 
@@ -224,6 +227,7 @@ bool Internal::external_propagate () {
     if (notifying_assignments ())
       return true;
   }
+  LOG ("external_propagation ends without backtracking or conflict");
   // reached when user returns 0 on cb_propagate and levels did not change.
   return false;
 }

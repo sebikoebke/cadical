@@ -429,7 +429,7 @@ int Internal::propagate_assumptions () {
         if (unsat) // external clauses lead to unsat
           continue;
         else if (conflict) // external clauses lead to conflict
-          analyze_wrapper ();
+          analyze ();
         else // external clauses changed level
           continue;
       } else if (satisfied ()) { // found model
