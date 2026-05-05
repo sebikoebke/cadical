@@ -36,7 +36,7 @@ void Internal::assume_analyze_literal (int lit) {
   Var &v = var (lit);
   assert (val (lit) < 0);
   if (v.reason == external_reason) {
-    v.reason = learn_external_reason_clause (-lit, 0, true);
+    v.reason = learn_external_reason_clause (-lit);
     assert (v.reason || !v.level);
   }
   assert (v.reason != external_reason);
@@ -276,7 +276,7 @@ void Internal::failing () {
         if (!v.level)
           continue;
         if (v.reason == external_reason) {
-          v.reason = learn_external_reason_clause (lit, 0, true);
+          v.reason = learn_external_reason_clause (lit);
           if (!v.reason) {
             v.level = 0;
             continue;
@@ -311,7 +311,7 @@ void Internal::failing () {
       Var &v = var (lit);
       assert (v.reason);
       if (v.reason == external_reason) { // does this even happen?
-        v.reason = learn_external_reason_clause (lit, 0, true);
+        v.reason = learn_external_reason_clause (lit);
       }
       assert (v.reason != external_reason);
       if (v.reason)

@@ -19,11 +19,6 @@ void Internal::analyze_stable () {
   STOP (analyzestable);
 }
 
-int Internal::decide_stable () {
-  assert (stable);
-  return decide ();
-}
-
 }; // namespace CaDiCaL
 
 #else

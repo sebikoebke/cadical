@@ -1110,6 +1110,8 @@ void Solver::connect_external_propagator (ExternalPropagator *propagator) {
   internal->connect_propagator ();
   internal->external_prop = true;
   internal->external_prop_is_lazy = propagator->is_lazy;
+  internal->notified_trail = 0;
+  internal->notified_level = 0;
   LOG_API_CALL_END ("connect_external_propagator");
 }
 
@@ -1125,7 +1127,8 @@ void Solver::disconnect_external_propagator () {
   internal->set_changed_val ();
   internal->external_prop = false;
   internal->external_prop_is_lazy = true;
-  internal->notified = 0;
+  internal->notified_trail = 0;
+  internal->notified_level = 0;
   LOG_API_CALL_END ("disconnect_external_propagator");
 }
 
@@ -1135,6 +1138,8 @@ void Solver::add_observed_var (int idx) {
   REQUIRE_VALID_LIT (idx);
   REQUIRE (external->propagator,
            "can not observe variables without a connected propagator");
+  REQUIRE (!internal->force_no_backtrack,
+           "can not observe variables during 'cb_add_reason_clause_lit'.");
   external->add_observed_var (idx);
   LOG_API_CALL_END ("observe", idx);
 }
@@ -1597,8 +1602,8 @@ void Solver::force_backtrack (int new_level) {
   REQUIRE_VALID_OR_SOLVING_STATE ();
   REQUIRE (external->propagator,
            "can not force backtrack without a connected propagator");
-  REQUIRE (internal->forced_backt_allowed,
-           "not allowed to force backtrack in that state of the solver.");
+  REQUIRE (!internal->force_no_backtrack,
+           "can not force backtrack during 'cb_add_reason_clause_lit'.");
   REQUIRE (new_level >= 0,
            "the target level of a forced backtrack must be non-negative.");
   REQUIRE (new_level < internal->level,
@@ -1616,7 +1621,7 @@ bool Solver::force_unassign (int lit) {
   REQUIRE (external->observed (lit),
            "can only force unassign observed variables");
   REQUIRE (!internal->force_no_backtrack,
-           "can not force unassign during conflict analysis");
+           "can not force unassign during 'cb_add_reason_clause_lit'.");
   bool const res = external->force_unassign (lit);
   LOG_API_CALL_RETURNS ("force_unassign", lit, res);
   return res;

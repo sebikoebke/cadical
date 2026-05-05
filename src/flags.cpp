@@ -9,7 +9,9 @@ void Internal::mark_declared (int lit) {
   f.status = Flags::DECLARED;
   ++stats.vars_declared;
   --stats.vars_unused;
-  LOG ("declaring new %d (max_var: %d, unused: %" PRId64 ", active: %" PRId64 ")", lit, max_var, stats.vars_unused, stats.vars_active);
+  LOG ("declaring new %d (max_var: %d, unused: %" PRId64
+       ", active: %" PRId64 ")",
+       lit, max_var, stats.vars_unused, stats.vars_active);
 }
 
 void Internal::mark_fixed (int lit) {
@@ -33,14 +35,6 @@ void Internal::mark_fixed (int lit) {
   stats.vars_active--;
   assert (!active (lit));
   assert (f.fixed ());
-
-  if (external_prop && private_steps) {
-    // If pre/inprocessing found a fixed assignment, we want the propagator
-    // to know about it.
-    // But at that point it is not guaranteed to be already on the trail, so
-    // notification will happen only later.
-    assert (!level || in_mode (BACKBONE));
-  }
 }
 
 void Internal::mark_eliminated (int lit) {

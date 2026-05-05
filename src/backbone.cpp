@@ -342,7 +342,6 @@ void Internal::backbone_decision (int lit) {
   require_mode (BACKBONE);
   assert (propagated2 == trail.size ());
   new_trail_level (lit);
-  notify_decision ();
   LOG ("search decide %d", lit);
   backbone_assign (lit, decision_reason);
 }
@@ -623,13 +622,11 @@ void Internal::binary_clauses_backbone () {
                            [] (Watch w) { return w.binary (); });
   }
   assert (propagated2 <= trail.size ());
-  private_steps = true;
 
   assert (watching ());
   START_SIMPLIFIER (backbone, BACKBONE);
   int failed = compute_backbone ();
   assert (!level);
-  private_steps = false;
 
   report ('k', !failed);
   STOP_SIMPLIFIER (backbone, BACKBONE);

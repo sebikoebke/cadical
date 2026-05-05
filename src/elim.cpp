@@ -1034,11 +1034,6 @@ void Internal::elim (bool update_limits) {
   PHASE ("elim-phase", stats.eliminate_phases,
          "starting at most %d elimination rounds", opts.elimrounds);
 
-  if (external_prop) {
-    assert (!level);
-    private_steps = true;
-  }
-
 #ifndef QUIET
   int old_active_variables = active ();
   int old_eliminated = stats.vars_all_elim;
@@ -1168,11 +1163,6 @@ void Internal::elim (bool update_limits) {
          "eliminated %d variables %.2f%%", eliminated,
          percent (eliminated, old_active_variables));
 #endif
-
-  if (external_prop) {
-    assert (!level);
-    private_steps = false;
-  }
 
   if (!update_limits)
     return;

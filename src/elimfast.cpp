@@ -289,7 +289,8 @@ int Internal::elimfast_round (bool &completed,
 
     resolution_limit = stats.eliminate_resolved + delta;
   } else {
-    PHASE ("fastelim-round", stats.eliminate_fast_rounds, "resolutions unlimited");
+    PHASE ("fastelim-round", stats.eliminate_fast_rounds,
+           "resolutions unlimited");
     resolution_limit = LONG_MAX;
   }
 
@@ -375,7 +376,8 @@ int Internal::elimfast_round (bool &completed,
   // Limit on garbage literals during variable elimination. If the limit is
   // hit a garbage collection is performed.
   //
-  const int64_t garbage_limit = (2 * stats.irredundant_literals / 3) + (1 << 20);
+  const int64_t garbage_limit =
+      (2 * stats.irredundant_literals / 3) + (1 << 20);
 
   // Main loops tries to eliminate variables according to the schedule. The
   // schedule is updated dynamically and variables are potentially
@@ -385,7 +387,8 @@ int Internal::elimfast_round (bool &completed,
   int64_t tried = 0;
 #endif
   while (!unsat && !terminated_asynchronously () &&
-         stats.eliminate_resolved <= resolution_limit && !schedule.empty ()) {
+         stats.eliminate_resolved <= resolution_limit &&
+         !schedule.empty ()) {
     int idx = schedule.front ();
     schedule.pop_front ();
     flags (idx).elim = false;
@@ -454,11 +457,6 @@ void Internal::elimfast () {
   PHASE ("fastelim-phase", stats.eliminate_fast_phases,
          "starting at most %d elimination rounds", opts.fastelimrounds);
 
-  if (external_prop) {
-    assert (!level);
-    private_steps = true;
-  }
-
 #ifndef QUIET
   int old_active_variables = active ();
   int old_eliminated = stats.vars_all_elim;
@@ -500,8 +498,8 @@ void Internal::elimfast () {
     }
 
     if (round++ >= opts.fastelimrounds) {
-      PHASE ("fastelim-phase", stats.eliminate_phases, "round limit %d hit (%s)",
-             round - 1,
+      PHASE ("fastelim-phase", stats.eliminate_phases,
+             "round limit %d hit (%s)", round - 1,
              eliminated ? "though last round successful"
                         : "last round unsuccessful anyhow");
       assert (!phase_complete);
@@ -564,11 +562,6 @@ void Internal::elimfast () {
          "eliminated %d variables %.2f%%", eliminated,
          percent (eliminated, old_active_variables));
 #endif
-
-  if (external_prop) {
-    assert (!level);
-    private_steps = false;
-  }
 }
 
 } // namespace CaDiCaL

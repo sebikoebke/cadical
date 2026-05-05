@@ -78,7 +78,7 @@ int inline Internal::shrink_literal (int lit, int blevel,
 
   if (v.reason == external_reason) {
     assert (!opts.exteagerreasons);
-    v.reason = learn_external_reason_clause (-lit, 0, true);
+    v.reason = learn_external_reason_clause (-lit);
     if (!v.reason) {
       assert (!v.level);
       return 0;

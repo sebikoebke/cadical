@@ -311,7 +311,7 @@ bool Internal::external_propagate () {
       LOG ("External propgation of %d is falsified under current trail",
            ilit);
       stats.up_cb_prop_clash++;
-      Clause *res = learn_external_reason_clause (ilit, elit, true);
+      Clause *res = learn_external_reason_clause (ilit, elit);
       LOG (res, "reason clause of external propagation of %d:", elit);
       (void) res;
 
@@ -327,7 +327,7 @@ bool Internal::external_propagate () {
     search_assign_external (ilit);
     if (!level) {
       stats.up_cb_prop_unit++;
-      Clause *res = learn_external_reason_clause (ilit, elit, true);
+      Clause *res = learn_external_reason_clause (ilit, elit);
       LOG (res, "reason clause of external propagation of %d:", elit);
       (void) res;
     }
@@ -490,10 +490,9 @@ void Internal::move_literals_to_watch () {
 // In every other cases a new clause is constructed and the pointer is in
 // newest_clause
 //
-void Internal::add_external_clause (int prop_elit, bool no_backtrack) {
+void Internal::add_external_clause (int prop_elit) {
   assert (!force_no_backtrack);
   assert (!from_propagator);
-  force_no_backtrack = no_backtrack;
   from_propagator = true;
 
   int elit = 0;
@@ -582,7 +581,7 @@ void Internal::explain_reason (int ilit, Clause *reason, int &open) {
     assert (val (other) < 0);
     assert (v.level <= level);
     if (v.reason == external_reason) {
-      v.reason = learn_external_reason_clause (-other, 0, true);
+      v.reason = learn_external_reason_clause (-other);
     }
     if (v.level && v.reason) {
       f.seen = true;
@@ -701,8 +700,7 @@ void Internal::explain_external_propagations () {
 // argument.
 //
 Clause *Internal::learn_external_reason_clause (int ilit,
-                                                int falsified_elit,
-                                                bool no_backtrack) {
+                                                int falsified_elit) {
   assert (external->propagator); // REQ is defined by not allowing
                                  // unobserving during conflict
 
@@ -721,7 +719,9 @@ Clause *Internal::learn_external_reason_clause (int ilit,
   // clause or set 'are_reasons_forgettable' to false.
   ext_clause_forgettable = external->propagator->are_reasons_forgettable;
   LOG ("ilit: %d, elit: %d", ilit, elit);
-  add_external_clause (elit, no_backtrack);
+  force_no_backtrack = true;
+  add_external_clause (elit);
+  force_no_backtrack = false;
 
 #ifndef NDEBUG
   if (!falsified_elit && newest_clause) {
@@ -940,27 +940,15 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
 // Asks the external propagator if the current solution is OK
 // by calling 'cb_check_found_model (model)'.
 //
-// The checked model is built up after everything is restored
-// from the reconstruction stack and every variable is reactivated
-// and so it is not just simply the trail (i.e. it can be expensive).
-//
 // If the external propagator approves the model, the function
-// returns true.
+// returns false.
 //
 // If the propagator does not approve the model, the solver asks
-// the propagator to add an external clause.
-// This external clause, however, does NOT have to be falsified by
-// the current model. The possible cases and reactions are described
-// below in the function. The possible states after that function:
-// - A solution was found and accepted by the external propagator
-// - A conflicting clause was learned from the external propagator
-// - The empty clause was learned due to something new learned from
-// the external propagator.
+// the propagator to add external clauses.
 //
-// In case only new variables were introduced, but no new clauses were
-// added, the function will return without a conflict to the outer CDCL
-// loop, where the new (not yet satisfied) variables are recognized and
-// the search continues.
+// If the user does not add clauses or force a backtrack then
+// the search will terminate with the found model, even if
+// the user was initially unhappy.
 bool Internal::external_check_solution () {
   if (!external_prop)
     return true;
@@ -968,106 +956,44 @@ bool Internal::external_check_solution () {
   assert (notified_level == level);
   assert (notified_trail == trail.size ());
 
-  while (true) {
-    LOG ("Final check by external propagator is invoked.");
-    stats.up_cb_check_model++;
-    external->reset_extended ();
-    external->extend ();
+  LOG ("Final check by external propagator is invoked.");
+  stats.up_cb_check_model++;
 
-    assert (notify_model_trail.empty ());
+  // no need to extend because it cannot flip non-witness literals.
+  // external->reset_extended ();
+  // external->extend ();
 
-    for (int idx = 1; idx <= external->max_var; idx++) {
-      if (idx >= external->is_observed.size ())
-        break;
-      if (!external->is_observed[idx])
-        continue;
-      const int lit = external->ival (idx);
-      notify_model_trail.push_back (lit);
-      LOG ("evals[%d]: %d ival(%d): %d", idx, external->vals[idx], idx,
-           lit);
-    }
-    forced_backt_allowed = true;
-    size_t assigned = num_assigned;
-    int level_before = level;
-    bool is_consistent =
-        external->propagator->cb_check_found_model (notify_model_trail);
-    notify_model_trail.clear ();
-    stats.up_cb++;
-    forced_backt_allowed = false;
+  assert (notify_model_trail.empty ());
 
-    if (num_assigned != assigned || level != level_before ||
-        propagated < trail.size ()) {
-      // In case an external forced backtracking was performed, the
-      // CDCL loop needs to continue withouth further checks of the
-      // model.
-      trail_changed = true;
-      return !conflict;
-    }
-
-    if (is_consistent) {
-      LOG ("Found solution is approved by external propagator.");
-      return true;
-    }
-
-    bool has_external_clause = ask_external_clause ();
-
-    stats.up_cb++;
-    stats.up_cb_add++;
-
-    if (has_external_clause)
-      LOG ("Found solution triggered new clauses from external "
-           "propagator.");
-
-    while (has_external_clause) {
-      level_before = level;
-      assigned = num_assigned;
-      add_external_clause (0);
-      bool trail_changed =
-          (num_assigned != assigned || level != level_before ||
-           propagated < trail.size ());
-      added_new_clauses = true;
-      // printf ("trail changed %b\n", trail_changed);
-
-      //
-      // There are many possible scenarios here:
-      // - Learned conflicting clause: return to CDCL loop (conflict
-      // true)
-      // - Learned conflicting unit clause that after backtrack+BCP
-      // leads to
-      //   a new complete solution: force the outer loop to check the
-      //   new model (trail_changed is true, but (conflict & unsat) is
-      //   false)
-      // - Learned empty clause: return to CDCL loop (unsat true)
-      // - Learned a non-conflicting unit clause:
-      //   Though it does not invalidate the current solution, the
-      //   solver will backtrack to the root level and will repropagate
-      //   it. The search will start again (saved phases hopefully make
-      //   it quick), but it is needed in order to guarantee that every
-      //   fixed variable is properly handled+notified (important for
-      //   incremental use cases).
-      // - Otherwise: the solution is considered approved and the
-      // CDCL-loop
-      //   can return with res = 10.
-      //
-      if (unsat || conflict || trail_changed)
-        break;
-      has_external_clause = ask_external_clause ();
-      stats.up_cb++;
-      stats.up_cb_add++;
-    }
-    LOG ("No more external clause to add.");
-    if (unsat || conflict)
+  for (int idx = 1; idx <= external->max_var; idx++) {
+    if (idx >= external->is_observed.size ())
       break;
+    if (!external->is_observed[idx])
+      continue;
+    assert (!external->marked (external->witness, idx));
+    const signed char tmp = external->current_val (idx);
+    assert (tmp);
+    const int lit = idx * tmp;
+    notify_model_trail.push_back (lit);
+    LOG ("evals[%d]: %d ival(%d): %d", idx, external->vals[idx], idx, lit);
   }
 
-  if (!unsat && conflict) {
-    const int conflict_level = var (conflict->literals[0]).level;
-    if (conflict_level != level) {
-      backtrack_without_updating_phases (conflict_level);
-    }
+  stats.up_cb++;
+  stats.up_cb_check_model++;
+  bool is_consistent =
+      external->propagator->cb_check_found_model (notify_model_trail);
+  notify_model_trail.clear ();
+
+  if (level < notified_level)
+    return true;
+  if (is_consistent) {
+    LOG ("Found solution is approved by external propagator.");
+    return false;
   }
 
-  return !conflict;
+  // we still have a complete model but the user is unhappy
+  // so they can add clauses
+  return external_adding_clauses ();
 }
 
 // Notify the external propagator that an observed variable got assigned.

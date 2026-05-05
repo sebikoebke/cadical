@@ -18,11 +18,6 @@ void Internal::analyze_unstable () {
   STOP (analyzeunstable);
 }
 
-int Internal::decide_unstable () {
-  assert (!stable);
-  return decide ();
-}
-
 }; // namespace CaDiCaL
 #else
 int unstable_if_no_profile_mode;

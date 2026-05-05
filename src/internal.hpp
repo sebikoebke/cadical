@@ -191,8 +191,6 @@ struct Internal {
   bool external_prop;         // true if an external propagator is connected
   bool did_external_prop;     // true if ext. propagation happened
   bool external_prop_is_lazy; // true if the external propagator is lazy
-  bool forced_backt_allowed;  // external propagator can force backtracking
-  bool private_steps; // no notification of ext. prop during these steps
   vector<int> notification_trail; // vector used for notifying assignments
   vector<int> notify_model_trail; // vector used for check model
   vector<int> tmp_elits;          // vector used for adding external clauses
@@ -777,13 +775,9 @@ struct Internal {
   void analyze_wrapper ();
   void analyze_unstable ();
   void analyze_stable ();
-  int decide_wrapper ();
-  int decide_stable ();
-  int decide_unstable ();
 #else
 #define propagate_wrapper propagate
 #define analyze_wrapper analyze
-#define decide_wrapper decide
 #endif
 
   void propergate (); // Repropagate without blocking literals.
@@ -844,8 +838,7 @@ struct Internal {
   bool external_check_solution ();
   void add_external_clause (int propagated_lit = 0,
                             bool no_backtrack = false);
-  Clause *learn_external_reason_clause (int lit, int falsified_elit = 0,
-                                        bool no_backtrack = false);
+  Clause *learn_external_reason_clause (int lit, int falsified_elit = 0);
   void explain_external_propagations ();
   void explain_reason (int lit, Clause *, int &open);
   void move_literals_to_watch ();
@@ -1562,6 +1555,7 @@ struct Internal {
   bool better_decision (int lit, int other);
   void decide ();
   int decide_assumption (); // 0=decision, 20=failed
+  int decide_both ();
   bool pseudo_level ();
 
   // Internal functions to enable explicit search limits.

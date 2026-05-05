@@ -12,8 +12,7 @@ Internal::Internal ()
       protected_reasons (false), force_saved_phase (false),
       searching_lucky_phases (false), stable (false), reported (false),
       external_prop (false), did_external_prop (false),
-      external_prop_is_lazy (true), forced_backt_allowed (false),
-      private_steps (false), out_of_order_level (-1),
+      external_prop_is_lazy (true), out_of_order_level (-1),
       out_of_order_trail (-1), rephased (0), vsize (0), max_var (0),
       clause_id (0), original_id (0), reserved_ids (0), conflict_id (0),
       saved_decisions (0), concluded (false), lrat (false), frat (false),
@@ -281,13 +280,6 @@ void Internal::analyze_wrapper () {
     analyze_unstable ();
 }
 
-int Internal::decide_wrapper () {
-  if (stable)
-    return decide_stable ();
-  else
-    return decide_unstable ();
-}
-
 #endif
 
 /*------------------------------------------------------------------------*/
@@ -442,7 +434,7 @@ int Internal::propagate_assumptions () {
       else {
         if (level >= last_assumption_level)
           break;
-        res = decide ();
+        res = decide_both ();
       }
     }
   }
@@ -879,17 +871,12 @@ int Internal::try_to_satisfy_formula_by_saved_phases () {
   assert (!force_saved_phase);
   assert (propagated == trail.size ());
   force_saved_phase = true;
-  if (external_prop) {
-    assert (!level);
-    LOG ("external notifications are turned off during preprocessing.");
-    private_steps = true;
-  }
   int res = 0;
   while (!res) {
     if (satisfied ()) {
       LOG ("formula indeed satisfied by saved phases");
       res = 10;
-    } else if (decide ()) {
+    } else if (decide_both ()) {
       LOG ("inconsistent assumptions with redundant clauses and phases");
       res = 20;
     } else if (!propagate ()) {
@@ -924,7 +911,7 @@ void Internal::produce_failed_assumptions () {
   while (!unsat) {
     assert (!satisfied ());
     notify_assignments ();
-    if (decide ())
+    if (decide_both ())
       break;
     while (!unsat && !propagate ())
       analyze ();

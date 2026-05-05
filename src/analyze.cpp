@@ -287,7 +287,7 @@ inline void Internal::analyze_literal (int lit, int &open,
   assert (v.level <= level);
   if (v.reason == external_reason) {
     assert (!opts.exteagerreasons);
-    v.reason = learn_external_reason_clause (-lit, 0, true);
+    v.reason = learn_external_reason_clause (-lit);
     if (!v.reason) { // actually a unit
       --antecedent_size;
       LOG ("%d unit after explanation", -lit);
@@ -1258,7 +1258,7 @@ void Internal::analyze () {
     reason = var (uip).reason;
     if (reason == external_reason) {
       assert (!opts.exteagerreasons);
-      reason = learn_external_reason_clause (-uip, 0, true);
+      reason = learn_external_reason_clause (-uip);
       var (uip).reason = reason;
     }
     assert (reason != external_reason);

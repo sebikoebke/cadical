@@ -38,7 +38,7 @@ bool Internal::minimize_literal (int lit, int depth) {
   }
   if (v.reason == external_reason) {
     assert (!opts.exteagerreasons);
-    v.reason = learn_external_reason_clause (lit, 0, true);
+    v.reason = learn_external_reason_clause (lit);
     if (!v.reason) {
       assert (!v.level);
       return true;

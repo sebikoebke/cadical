@@ -360,6 +360,15 @@ int Internal::decide_assumption () {
   return res;
 }
 
+int Internal::decide_both () {
+  int res = 0;
+  if (pseudo_level ())
+    res = decide_assumption ();
+  else
+    decide ();
+  return res;
+}
+
 // Search for the next decision and assign it to the saved phase. Requires
 // that not all variables are assigned.
 
