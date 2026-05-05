@@ -3385,7 +3385,6 @@ void Trace::generate_propagator (Random &random, int minvars, int maxvars) {
 void Trace::generate_forces (Random &random, int minvars, int maxvars) {
   if (!in_connection)
     return;
-  return;
 
   assert (minvars <= maxvars);
 

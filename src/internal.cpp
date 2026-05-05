@@ -23,9 +23,9 @@ Internal::Internal ()
       force_no_backtrack (false), from_propagator (false),
       ext_clause_forgettable (false), unsat_constraint (false),
       marked_failed (true), sweep_incomplete (false),
-      earliest_changed_val (0), notified (0), probe_reason (0),
-      propagated (0), propagated2 (0), propergated (0), best_assigned (0),
-      target_assigned (0), no_conflict_until (0),
+      earliest_changed_val (0), notified (0), notified_level (0),
+      probe_reason (0), propagated (0), propagated2 (0), propergated (0),
+      best_assigned (0), target_assigned (0), no_conflict_until (0),
       randomized_deciding (false), citten (nullptr), num_assigned (0),
       proof (0), opts (this),
 #ifndef QUIET
@@ -316,12 +316,25 @@ int Internal::cdcl_loop_with_inprocessing () {
     else if (!propagate_wrapper ())
       analyze_wrapper (); // propagate and analyze
     else if (iterating)
-      iterate ();                               // report learned unit
-    else if (!external_propagate () || unsat) { // external propagation
-      if (unsat)
+      iterate (); // report learned unit
+    else if (notifying_backtrack ())
+      continue; // notify_backtrack changed level
+    else if (notifying_assignments ())
+      continue; // notify_assignments changed level
+    else if (external_propagate ()) {
+      if (unsat) // external propagation leads to unsat
         continue;
-      else
-        analyze ();
+      else if (conflict) // external propagation leads to conflict
+        analyze_wrapper ();
+      else // external propagation changed level
+        continue;
+    } else if (external_adding_clauses ()) {
+      if (unsat) // external clauses lead to unsat
+        continue;
+      else if (conflict) // external clauses lead to conflict
+        analyze_wrapper ();
+      else // external clauses changed level
+        continue;
     } else if (satisfied ()) { // found model
       if (!external_check_solution () || unsat) {
         if (unsat)

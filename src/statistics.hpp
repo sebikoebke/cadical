@@ -329,10 +329,12 @@
   STATISTIC (up_cb_decide,           1, percent, "%", up_cb) \
   STATISTIC (up_cb_decided,          1, percent, "%", up_cb_decide) \
   STATISTIC (up_cb_decide_force_bt,  1, percent, "%", up_cb_decide) \
+  STATISTIC (up_cb_has_clause,       1, relative, "%", up_cb) \
   STATISTIC (up_cb_prop,             1, percent, "%", up_cb) \
   STATISTIC (up_cb_prop_assign,      2, percent, "%", up_cb_prop) \
   STATISTIC (up_cb_prop_clash,       2, percent, "%", up_cb_prop) \
   STATISTIC (up_cb_prop_explain,     2, percent, "%", up_cb_prop) \
+  STATISTIC (up_cb_prop_unit,        2, percent, "%", up_cb_prop) \
   STATISTIC (up_learn,               1, percent, "%", clauses) \
   STATISTIC (up_learn_conflict,      2, percent, "%", up_learn) \
   STATISTIC (up_learn_elevating,     2, percent, "%", up_learn) \
@@ -342,6 +344,11 @@
   STATISTIC (up_learn_propagating,   2, percent, "%", up_learn) \
   STATISTIC (up_learn_satisfied,     2, percent, "%", up_learn) \
   STATISTIC (up_learn_unit,          2, percent, "%", up_learn) \
+  STATISTIC (up_notify,              2, relative, "per", searches) \
+  STATISTIC (up_notify_assignments,  1, percent, "%", up_notify) \
+  STATISTIC (up_notify_backtrack,    1, percent, "%", up_notify) \
+  STATISTIC (up_notify_forced,       1, percent, "%", up_notify) \
+  STATISTIC (up_notify_new_level,    1, percent, "%", up_notify) \
   STATISTIC (variables_extension,    2, percent, "%", vars) \
   STATISTIC (variables_original,     1, percent, "%", vars) \
   STATISTIC (vars,                   0, NOTHING, 0, 0) \

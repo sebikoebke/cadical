@@ -264,6 +264,7 @@ struct Internal {
                              // (otherwise, we backtrack, so no
                              // renotification is needed).
   size_t notified;           // next trail position to notify external prop
+  int notified_level;        // last notified external prop level
   Clause *probe_reason;      // set during probing
   size_t propagated;         // next trail position to propagate
   size_t propagated2;        // next binary trail position to propagate
@@ -839,6 +840,7 @@ struct Internal {
   // Learning from external propagator in 'external_propagate.cpp'
   //
   bool external_propagate ();
+  bool external_adding_clauses ();
   bool external_check_solution ();
   void add_external_clause (int propagated_lit = 0,
                             bool no_backtrack = false);
@@ -850,8 +852,10 @@ struct Internal {
   size_t best_literal_to_watch (int, bool);
   void handle_external_clause (Clause *, int64_t new_id = 0);
   void notify_assignments ();
+  bool notifying_assignments ();
   void notify_decision ();
   void notify_backtrack (size_t new_level);
+  bool notifying_backtrack ();
   void force_backtrack (int new_level);
   int ask_decision ();
   bool ask_external_clause ();
