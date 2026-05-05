@@ -325,6 +325,8 @@
   STATISTIC (transitive_units,       2, percent, "%", failed_literals) \
   STATISTIC (up_cb,                  2, relative, "per", searches) \
   STATISTIC (up_cb_add,              1, percent, "%", up_cb) \
+  STATISTIC (up_cb_add_external,     1, relative, "%", up_cb_add) \
+  STATISTIC (up_cb_add_reason,       1, relative, "%", up_cb_add) \
   STATISTIC (up_cb_check_model,      1, percent, "%", up_cb) \
   STATISTIC (up_cb_decide,           1, percent, "%", up_cb) \
   STATISTIC (up_cb_decided,          1, percent, "%", up_cb_decide) \
@@ -347,6 +349,7 @@
   STATISTIC (up_notify,              2, relative, "per", searches) \
   STATISTIC (up_notify_assignments,  1, percent, "%", up_notify) \
   STATISTIC (up_notify_backtrack,    1, percent, "%", up_notify) \
+  STATISTIC (up_notify_decision,    1, percent, "%", up_notify) \
   STATISTIC (up_notify_forced,       1, percent, "%", up_notify) \
   STATISTIC (up_notify_new_level,    1, percent, "%", up_notify) \
   STATISTIC (variables_extension,    2, percent, "%", vars) \

@@ -338,7 +338,8 @@ void Internal::warmup_decide () {
   STOP (decide);
 }
 
-int Internal::decide_and_propagate_all_assumptions (std::vector<int> &set_literals) {
+int Internal::decide_and_propagate_all_assumptions (
+    std::vector<int> &set_literals) {
   LOG ("decide and propagate all assumptions to fill the vectors");
   assert (!private_steps);
   int res = 0;
@@ -357,11 +358,12 @@ int Internal::decide_and_propagate_all_assumptions (std::vector<int> &set_litera
       if (!unsat)
         analyze ();
       else
-       break;
+        break;
     } else if (satisfied ()) {
       assert (!res);
       if (external) {
-        LOG ("found satisfied assignment ignoring the external propagator, so probably not valid");
+        LOG ("found satisfied assignment ignoring the external propagator, "
+             "so probably not valid");
       } else {
         res = 10;
       }
@@ -369,20 +371,19 @@ int Internal::decide_and_propagate_all_assumptions (std::vector<int> &set_litera
     } else {
       if (level >= last_assumption_level)
         break;
-      notify_assignments ();
-      res = decide ();
+      res = decide_assumption ();
     }
   }
 
   if (unsat || unsat_constraint)
     res = 20;
 
-
-  set_literals.reserve(trail.size ());
-  for (auto lit: trail)
-    set_literals.push_back(lit);
+  set_literals.reserve (trail.size ());
+  for (auto lit : trail)
+    set_literals.push_back (lit);
   if (!res) {
-    // we need to repropagate now due to out-of-order units and renotify them
+    // we need to repropagate now due to out-of-order units and renotify
+    // them
     backtrack ();
     if (propagated < trail.size () && !propagate ()) {
       LOG ("empty clause after root level propagation");
@@ -391,7 +392,6 @@ int Internal::decide_and_propagate_all_assumptions (std::vector<int> &set_litera
     }
   } else {
     assert (res == 20);
-    notify_assignments ();
   }
   return res;
 }

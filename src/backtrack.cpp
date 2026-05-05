@@ -112,6 +112,7 @@ void Internal::backtrack_without_updating_phases (int new_level) {
   assert (num_assigned == trail.size ());
 
   const size_t assigned = control[new_level + 1].trail;
+  notified = assigned;
 
   LOG ("backtracking to decision level %d with decision %d and trail %zd",
        new_level, control[new_level].decision, assigned);
@@ -123,14 +124,6 @@ void Internal::backtrack_without_updating_phases (int new_level) {
   int unassigned = 0;
 #endif
   int reassigned = 0;
-
-  if (external_prop && !external_prop_is_lazy && !private_steps &&
-      notified > assigned) {
-    LOG ("external propagator is notified about some unassignments (trail: "
-         "%zd, notified: %zd).",
-         trail.size (), notified);
-    notified = assigned;
-  }
 
   while (i < end_of_trail) {
     int lit = trail[i++];
@@ -172,8 +165,6 @@ void Internal::backtrack_without_updating_phases (int new_level) {
 
   propergated = 0; // Always go back to root-level.
 
-  assert (notified <= assigned + reassigned);
-
   control.resize (new_level + 1);
   level = new_level;
   if (earliest_changed_val) {
@@ -183,10 +174,6 @@ void Internal::backtrack_without_updating_phases (int new_level) {
     }
   }
   assert (num_assigned == trail.size ());
-  notify_backtrack (new_level);
-  if (reassigned) {
-    notify_assignments ();
-  }
 }
 
 } // namespace CaDiCaL

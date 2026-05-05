@@ -263,7 +263,7 @@ struct Internal {
                              // was not notified yet. Only relevant for ILB
                              // (otherwise, we backtrack, so no
                              // renotification is needed).
-  size_t notified;           // next trail position to notify external prop
+  size_t notified_trail;     // next trail position to notify external prop
   int notified_level;        // last notified external prop level
   Clause *probe_reason;      // set during probing
   size_t propagated;         // next trail position to propagate
@@ -851,13 +851,11 @@ struct Internal {
   void move_literals_to_watch ();
   size_t best_literal_to_watch (int, bool);
   void handle_external_clause (Clause *, int64_t new_id = 0);
-  void notify_assignments ();
   bool notifying_assignments ();
-  void notify_decision ();
-  void notify_backtrack (size_t new_level);
   bool notifying_backtrack ();
+  bool notifying_decision ();
   void force_backtrack (int new_level);
-  int ask_decision ();
+  bool ask_decision ();
   bool ask_external_clause ();
   void add_observed_var (int ilit);
   void remove_observed_var (int ilit);
@@ -1562,7 +1560,9 @@ struct Internal {
   int decide_phase (int idx, bool target);
   int likely_phase (int idx);
   bool better_decision (int lit, int other);
-  int decide (); // 0=decision, 20=failed
+  void decide ();
+  int decide_assumption (); // 0=decision, 20=failed
+  bool pseudo_level ();
 
   // Internal functions to enable explicit search limits.
   //

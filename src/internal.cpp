@@ -23,7 +23,7 @@ Internal::Internal ()
       force_no_backtrack (false), from_propagator (false),
       ext_clause_forgettable (false), unsat_constraint (false),
       marked_failed (true), sweep_incomplete (false),
-      earliest_changed_val (0), notified (0), notified_level (0),
+      earliest_changed_val (0), notified_trail (0), notified_level (0),
       probe_reason (0), propagated (0), propagated2 (0), propergated (0),
       best_assigned (0), target_assigned (0), no_conflict_until (0),
       randomized_deciding (false), citten (nullptr), num_assigned (0),
@@ -336,13 +336,17 @@ int Internal::cdcl_loop_with_inprocessing () {
       else // external clauses changed level
         continue;
     } else if (satisfied ()) { // found model
-      if (!external_check_solution () || unsat) {
-        if (unsat)
+      if (external_check_solution ()) {
+        if (unsat) // check solution lead to unsat
           continue;
-        else
+        else if (conflict) // check solution added a conflict
           analyze ();
-      } else if (satisfied ())
-        res = 10;
+        else // check solution changed level
+          continue;
+      }
+      assert (satisfied ());
+      res = 10;
+      break;
     } else if (search_limits_hit ())
       break;                               // decision or conflict limit
     else if (terminated_asynchronously ()) // externally terminated
@@ -361,8 +365,14 @@ int Internal::cdcl_loop_with_inprocessing () {
       compact (); // collect variables
     else if (conditioning ())
       condition (); // globally blocked clauses
+    else if (notifying_decision ())
+      continue; // notify new decision changed level
+    else if (pseudo_level ())
+      res = decide_assumption ();
+    else if (ask_decision ())
+      continue; // notify new decision changed level
     else
-      res = decide (); // next decision
+      decide (); // next decision
   }
 
   if (stable) {

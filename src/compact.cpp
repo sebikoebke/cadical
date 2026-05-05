@@ -519,7 +519,7 @@ void Internal::compact () {
   target_assigned = new_target_assigned;
   best_assigned = new_best_assigned;
   no_conflict_until = 0;
-  notified = 0;
+  notified_trail = 0;
 
   INIT_EMA (averages.current.trail.fast, opts.ematrailfast);
   INIT_EMA (averages.current.trail.slow, opts.ematrailslow);
@@ -530,7 +530,8 @@ void Internal::compact () {
 
   stats.vars_unused = 0;
   stats.vars_inactive = stats.vars_now_fixed = mapper.first_fixed ? 1 : 0;
-  stats.vars_now_substituted = stats.vars_now_eliminated = stats.vars_now_pure = 0;
+  stats.vars_now_substituted = stats.vars_now_eliminated =
+      stats.vars_now_pure = 0;
 
   check_var_stats ();
 

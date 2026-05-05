@@ -183,7 +183,6 @@ void Internal::search_assume_decision (int lit) {
   require_mode (SEARCH);
   assert (propagated == trail.size ());
   new_trail_level (lit);
-  notify_decision ();
   LOG ("search decide %d", lit);
   search_assign (lit, decision_reason);
 }
@@ -191,13 +190,11 @@ void Internal::search_assume_decision (int lit) {
 void Internal::search_assign_driving (int lit, Clause *c) {
   require_mode (SEARCH);
   search_assign (lit, c);
-  notify_assignments ();
 }
 
 void Internal::search_assign_external (int lit) {
   require_mode (SEARCH);
   search_assign (lit, external_reason);
-  notify_assignments ();
 }
 
 /*------------------------------------------------------------------------*/

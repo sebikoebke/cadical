@@ -248,18 +248,17 @@ bool Internal::better_decision (int lit, int other) {
   } while (0)
 #endif
 
-// Search for the next decision and assign it to the saved phase. Requires
-// that not all variables are assigned.
+bool Internal::pseudo_level () {
+  if ((size_t) level < assumptions.size ())
+    return true;
+  if ((size_t) level == assumptions.size () && !constraint.empty ())
+    return true;
+  return false;
+}
 
-int Internal::decide () {
+int Internal::decide_assumption () {
   assert (!satisfied ());
   START (decide);
-  // during interaction with the user propagator, new variables can be added
-  // (for example by observed).
-  if (!imports.empty ())
-    activating_all_new_imported_literals ();
-  check_queue ();
-  CHECK_MISSED ();
   int res = 0;
   if ((size_t) level < assumptions.size ()) {
     const int lit = assumptions[level];
@@ -269,15 +268,15 @@ int Internal::decide () {
       LOG ("assumption %d falsified", lit);
       res = 20;
     } else if (tmp > 0) {
-      LOG ("assumption %d already satisfied", lit);
+      LOG ("assumption %d already satisfied, adding pseudo decision level",
+           lit);
       new_trail_level (0);
-      LOG ("added pseudo decision level");
-      notify_decision ();
     } else {
       LOG ("deciding assumption %d", lit);
       search_assume_decision (lit);
     }
-  } else if ((size_t) level == assumptions.size () && constraint.size ()) {
+  } else {
+    assert ((size_t) level == assumptions.size () && !constraint.empty ());
 
     int satisfied_lit = 0;  // The literal satisfying the constrain.
     int unassigned_lit = 0; // Highest score unassigned literal.
@@ -324,68 +323,63 @@ int Internal::decide () {
       LOG ("literal %d satisfies constraint and "
            "is implied by assumptions",
            satisfied_lit);
-
+      LOG ("adding pseudo decision level for constraint");
       new_trail_level (0);
-      LOG ("added pseudo decision level for constraint");
-      notify_decision ();
+    }
+
+    // Just move all the literals back.  If we found an unsatisfied
+    // literal then it will be satisfied (most likely) at the next
+    // decision and moved then to the first position.
+
+    if (size_constraint) {
+
+      for (size_t i = 0; i + 1 != size_constraint; i++)
+        constraint[i] = constraint[i + 1];
+
+      constraint[size_constraint - 1] = previous_lit;
+    }
+
+    if (unassigned_lit) {
+
+      LOG ("deciding %d to satisfy constraint", unassigned_lit);
+      search_assume_decision (unassigned_lit);
 
     } else {
 
-      // Just move all the literals back.  If we found an unsatisfied
-      // literal then it will be satisfied (most likely) at the next
-      // decision and moved then to the first position.
-
-      if (size_constraint) {
-
-        for (size_t i = 0; i + 1 != size_constraint; i++)
-          constraint[i] = constraint[i + 1];
-
-        constraint[size_constraint - 1] = previous_lit;
-      }
-
-      if (unassigned_lit) {
-
-        LOG ("deciding %d to satisfy constraint", unassigned_lit);
-        search_assume_decision (unassigned_lit);
-
-      } else {
-
-        LOG ("failing constraint");
-        unsat_constraint = true;
-        res = 20;
-      }
+      LOG ("failing constraint");
+      unsat_constraint = true;
+      res = 20;
     }
-
 #ifndef NDEBUG
     for (auto lit : constraint)
       sum -= lit;
     assert (!sum); // Checksum of literal should not change!
 #endif
-
-  } else {
-    check_queue ();
-    int decision = ask_decision ();
-    if ((size_t) level < assumptions.size () ||
-        ((size_t) level == assumptions.size () && constraint.size ())) {
-      // Forced backtrack below pseudo decision levels.
-      // So one of the two branches above will handle it.
-      STOP (decide);
-      return decide (); // STARTS and STOPS profiling
-      // START (decide);
-    }
-    stats.decisions++;
-    if (!decision) {
-      int idx = next_decision_variable ();
-      const bool target = (opts.target > 1 || (stable && opts.target));
-      decision = decide_phase (idx, target);
-    }
-    assert (!flags (decision).unused ());
-    search_assume_decision (decision);
   }
-  if (res)
-    marked_failed = false;
+  STOP (decide);
+  return res;
+}
+
+// Search for the next decision and assign it to the saved phase. Requires
+// that not all variables are assigned.
+
+void Internal::decide () {
+  assert (!satisfied ());
+  START (decide);
+  // during interaction with the user propagator, new variables can be
+  // added (for example by observed).
+  if (!imports.empty ())
+    activating_all_new_imported_literals ();
+  check_queue ();
+  CHECK_MISSED ();
+  int decision = 0;
+  stats.decisions++;
+  int idx = next_decision_variable ();
+  const bool target = (opts.target > 1 || (stable && opts.target));
+  decision = decide_phase (idx, target);
+  assert (!flags (decision).unused ());
+  search_assume_decision (decision);
   STOP (decide);
   check_var_stats ();
-  return res;
 }
 } // namespace CaDiCaL

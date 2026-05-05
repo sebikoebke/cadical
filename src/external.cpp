@@ -485,10 +485,10 @@ void External::remove_observed_var (int elit) {
 
 void External::reset_observed_vars () {
   // Shouldn't be called if there is no connected propagator
-  assert (propagator); // REQ is in Solver::reset_observed_vars
+  assert (propagator);
   reset_extended ();
 
-  internal->notified = 0;
+  internal->notified_trail = 0;
   LOG ("reset notified counter to 0");
 
   if (!is_observed.size ())
@@ -553,7 +553,6 @@ bool External::force_unassign (int elit) {
     assert (!internal->conflict);
   }
   assert (!internal->val (iidx));
-  internal->notify_assignments ();
   return false;
 }
 
