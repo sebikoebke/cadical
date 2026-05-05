@@ -4673,10 +4673,14 @@ bool Trace::shrink_propagator (int expected) {
   size_t connected = 0;
   size_t disconnected = 0;
   for (auto c : calls) {
-    if (c->type == Call::CONNECT)
+    if (c->type == Call::CONNECT) {
       connected++;
-    if (c->type == Call::DISCONNECT)
+      continue;
+    }
+    if (c->type == Call::DISCONNECT) {
       disconnected++;
+      continue;
+    }
     if (propagator_type (c->type))
       continue;
     simplified.push_back (c->copy ());
