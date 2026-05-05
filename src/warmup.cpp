@@ -278,7 +278,6 @@ int Internal::warmup_decide_assumptions () {
 
       new_trail_level (0);
       LOG ("added pseudo decision level for constraint");
-      notify_decision ();
 
     } else {
 
@@ -341,7 +340,6 @@ void Internal::warmup_decide () {
 int Internal::decide_and_propagate_all_assumptions (
     std::vector<int> &set_literals) {
   LOG ("decide and propagate all assumptions to fill the vectors");
-  assert (!private_steps);
   int res = 0;
   int last_assumption_level = assumptions.size ();
   if (!last_assumption_level)
@@ -382,8 +380,6 @@ int Internal::decide_and_propagate_all_assumptions (
   for (auto lit : trail)
     set_literals.push_back (lit);
   if (!res) {
-    // we need to repropagate now due to out-of-order units and renotify
-    // them
     backtrack ();
     if (propagated < trail.size () && !propagate ()) {
       LOG ("empty clause after root level propagation");
@@ -434,12 +430,8 @@ int Internal::warmup () {
   if (conflict && !res)
     marked_failed = false, res = 20;
 
-  const bool no_backtrack_notification = (level == 0);
-
   // now we do not need any notification and can simply propagate
   assert (res || propagated == trail.size ());
-  assert (!private_steps);
-  private_steps = true;
 
   LOG ("propagating beyond conflicts to warm-up walk");
   while (!res && num_assigned < (size_t) max_var - stats.vars_unused) {
@@ -461,12 +453,8 @@ int Internal::warmup () {
            stats.walk_warmup_dummy - dummydecision);
 #endif
 
-  // now we backtrack, notifying only if there was something to
-  // notify.
-  private_steps = no_backtrack_notification;
   if (!res)
     backtrack_without_updating_phases ();
-  private_steps = false;
   STOP (warmup);
   require_mode (WALK);
   return res;

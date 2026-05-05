@@ -1762,8 +1762,6 @@ bool Internal::vivify () {
 
   SET_EFFORT_LIMIT (totallimit, vivify, true);
 
-  private_steps = true;
-
   START_SIMPLIFIER (vivify, VIVIFY);
   stats.vivifications++;
 
@@ -1904,7 +1902,6 @@ bool Internal::vivify () {
   reset_noccs ();
   STOP_SIMPLIFIER (vivify, VIVIFY);
 
-  private_steps = false;
   assert (!ignore);
 
   return true;

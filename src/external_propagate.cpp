@@ -105,126 +105,6 @@ void Internal::set_changed_val () {
   }
 }
 
-void Internal::renotify_trail_after_ilb () {
-  assert (opts.ilb);
-  if (!external_prop || external_prop_is_lazy || !trail.size () ||
-      !opts.ilb) {
-    return;
-  }
-  LOG ("notify external propagator about new assignments (after ilb)");
-#ifndef NDEBUG
-  LOG ("(decision level: %d, trail size: %zd, notified %zd)", level,
-       trail.size (), notified_trail);
-#endif
-  renotify_full_trail ();
-}
-
-void Internal::renotify_trail_after_local_search () {
-  if (!external_prop || external_prop_is_lazy || !trail.size ()) {
-    return;
-  }
-  LOG ("notify external propagator about new assignments (after local "
-       "search)");
-#ifndef NDEBUG
-  LOG ("(decision level: %d, trail size: %zd, notified %zd)", level,
-       trail.size (), notified_trail);
-#endif
-  renotify_full_trail ();
-}
-
-void Internal::renotify_full_trail_between_trail_pos (
-    int start_level, int end_level, int up_level,
-    std::vector<int> &assigned, bool start_new_level) {
-  assert (assigned.empty ());
-  int j = start_level;
-#ifdef LOGGING
-  LOG ("starting notification of level %d from trail %d .. %d", up_level,
-       start_level, end_level);
-#else
-  (void) up_level;
-#endif
-  if (start_new_level) {
-    if (assigned.size ())
-      external->propagator->notify_assignment (assigned);
-    assigned.clear ();
-    external->propagator->notify_new_decision_level ();
-  }
-  for (; j < end_level; ++j) {
-    int ilit = trail[j];
-    // In theory, 0 ilit can happen due to pseudo-decision levels
-    if (!ilit)
-      continue;
-
-    if (!observed (ilit))
-      continue;
-
-    int elit = externalize (ilit); // TODO: double-check tainting
-
-    LOG ("notifying elit %d @ %d aka %s", up_level, elit, LOGLIT (ilit));
-    assert (elit);
-    // Fixed variables might get mapped (during compact) to another
-    // non-observed but fixed variable.
-    // This happens on root level, so notification about their assignment
-    // is already done.
-    assert (external->observed (elit) || fixed (ilit));
-    if (external->observed (elit) && !external->ervars[abs (elit)])
-      assigned.push_back (elit);
-  }
-
-  if (assigned.size ())
-    external->propagator->notify_assignment (assigned);
-  assigned.clear ();
-}
-
-// It repeats ALL assignments of the trail, so the already notified
-// root-level assignments will be notified multiple times.
-//
-// As CaDiCaL is missing some '0' seperators, it is important to go
-// over slices from the control stack instead of going over the trail
-// directly.
-void Internal::renotify_full_trail () {
-  const size_t end_of_trail = trail.size ();
-  if (level) {
-    notified_trail = 0; // TODO: save the last notified root-level position
-                        // somewhere and use it here
-  }
-  std::vector<int> assigned;
-
-  int up_level = 0;
-
-  const int c_size = control.size ();
-  { // first all root-level literals
-    const int start_level = 0;
-    const int end_level =
-        (control.size () > 1 ? control[1].trail : end_of_trail);
-    renotify_full_trail_between_trail_pos (start_level, end_level, up_level,
-                                           assigned, false);
-  }
-
-  // notify all intermediate levels
-  for (int i = 2; i < c_size; ++i) {
-    const int start_level = control[i - 1].trail;
-    const int end_level = control[i].trail;
-    up_level++;
-    LOG ("notification of %d", up_level);
-
-    renotify_full_trail_between_trail_pos (start_level, end_level, up_level,
-                                           assigned, true);
-  }
-
-  // and the current level if there is non-root level one
-  if (level) {
-    const int start_level = control.back ().trail;
-    up_level++;
-    renotify_full_trail_between_trail_pos (start_level, end_of_trail,
-                                           up_level, assigned, true);
-  }
-  assert (up_level == level);
-  notified_trail = trail.size ();
-
-  return;
-}
-
 /*----------------------------------------------------------------------------*/
 //
 // Check if the variable is assigned by decision.
@@ -966,7 +846,7 @@ bool Internal::external_check_solution () {
   assert (notify_model_trail.empty ());
 
   for (int idx = 1; idx <= external->max_var; idx++) {
-    if (idx >= external->is_observed.size ())
+    if ((size_t) idx >= external->is_observed.size ())
       break;
     if (!external->is_observed[idx])
       continue;
@@ -975,7 +855,8 @@ bool Internal::external_check_solution () {
     assert (tmp);
     const int lit = idx * tmp;
     notify_model_trail.push_back (lit);
-    LOG ("evals[%d]: %d ival(%d): %d", idx, external->vals[idx], idx, lit);
+    LOG ("evals[%d]: %d ival(%d): %d", idx, (int) external->vals[idx], idx,
+         lit);
   }
 
   stats.up_cb++;
@@ -1101,7 +982,7 @@ bool Internal::ask_decision () {
   if (!external_prop || external_prop_is_lazy)
     return 0;
 
-  assert (notified_level = level + 1);
+  assert (notified_level == level + 1);
   assert (!unsat);
   assert (!conflict);
   stats.up_cb++;

@@ -932,10 +932,6 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
   }
 
   stats.inprobingphases++;
-  if (external_prop) {
-    assert (!level);
-    private_steps = true;
-  }
   const int before = active ();
   const int64_t before_extended = stats.variables_extension;
 
@@ -960,11 +956,6 @@ void CaDiCaL::Internal::inprobe (bool update_limits) {
     binary_clauses_backbone ();
     mark_duplicated_binary_clauses_as_garbage ();
     factor (); // resets watches, partial occurrence list
-  }
-
-  if (external_prop) {
-    assert (!level);
-    private_steps = false;
   }
 
   if (!update_limits)

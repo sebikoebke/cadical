@@ -890,15 +890,6 @@ int Internal::try_to_satisfy_formula_by_saved_phases () {
   }
   assert (force_saved_phase);
   force_saved_phase = false;
-  if (external_prop) {
-    private_steps = false;
-    LOG ("external notifications are turned back on.");
-    if (!level)
-      notify_assignments (); // In case fixed assignments were found.
-    else {
-      renotify_trail_after_local_search ();
-    }
-  }
   return res;
 }
 
@@ -910,13 +901,11 @@ void Internal::produce_failed_assumptions () {
   assert (!assumptions.empty ());
   while (!unsat) {
     assert (!satisfied ());
-    notify_assignments ();
     if (decide_both ())
       break;
     while (!unsat && !propagate ())
       analyze ();
   }
-  notify_assignments ();
   if (unsat)
     LOG ("formula is actually unsatisfiable unconditionally");
   else
@@ -1018,8 +1007,8 @@ int Internal::solve (bool preprocess_only) {
       assert (control.size () > 1);
       stats.ilb_reuse_literals += num_assigned - control[1].trail;
     }
-    if (external->propagator)
-      renotify_trail_after_ilb ();
+    // TODO:
+    // renotify_trail_after_ilb ();
   }
   if (preprocess_only)
     LOG ("internal solving in preprocessing only mode");
@@ -1133,15 +1122,6 @@ int Internal::lookahead () {
   assert (!lookingahead);
   lookingahead = true;
   activating_all_new_imported_literals ();
-  if (external_prop) {
-    if (level) {
-      // Combining lookahead with external propagator is limited
-      // Note that lookahead_probing (); would also force backtrack anyway
-      backtrack ();
-    }
-    LOG ("external notifications are turned off during preprocessing.");
-    private_steps = true;
-  }
   int tmp = already_solved ();
   if (!tmp)
     tmp = restore_clauses ();
@@ -1155,11 +1135,6 @@ int Internal::lookahead () {
   assert (lookingahead);
   lookingahead = false;
   STOP (lookahead);
-  if (external_prop) {
-    private_steps = false;
-    LOG ("external notifications are turned back on.");
-    notify_assignments (); // In case fixed assignments were found.
-  }
   return res;
 }
 

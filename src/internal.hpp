@@ -836,8 +836,7 @@ struct Internal {
   bool external_propagate ();
   bool external_adding_clauses ();
   bool external_check_solution ();
-  void add_external_clause (int propagated_lit = 0,
-                            bool no_backtrack = false);
+  void add_external_clause (int propagated_lit = 0);
   Clause *learn_external_reason_clause (int lit, int falsified_elit = 0);
   void explain_external_propagations ();
   void explain_reason (int lit, Clause *, int &open);
@@ -856,15 +855,6 @@ struct Internal {
   bool is_decision (int ilit);
   void check_watched_literal_invariants ();
   void set_changed_val ();
-  void renotify_trail_after_ilb ();
-  void renotify_trail_after_local_search ();
-  void renotify_full_trail ();
-
-  // adds the assigned literals to assigned
-  void renotify_full_trail_between_trail_pos (int start_level,
-                                              int end_level, int up_level,
-                                              std::vector<int> &assigned,
-                                              bool start_new_level);
   void connect_propagator ();
   void mark_garbage_external_forgettable (int64_t id);
   bool is_external_forgettable (int64_t id);
