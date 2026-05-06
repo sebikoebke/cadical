@@ -1150,9 +1150,10 @@ void Solver::remove_observed_var (int idx) {
   REQUIRE_VALID_LIT (idx);
   REQUIRE (external->propagator,
            "can not unobserve variables without a connected propagator");
-  REQUIRE (!internal->level || external->fixed (idx) ||
-               !external->current_val (idx) || !internal->conflict,
-           "can not unobserve assigned variable during conflict analysis");
+  REQUIRE (external->observed (idx), "try to remove unobserved variable.");
+  REQUIRE (
+      !internal->force_no_backtrack,
+      "can not unobserve variables during 'cb_add_reason_clause_lit'.");
   external->remove_observed_var (idx);
   LOG_API_CALL_END ("unobserve", idx);
 }
@@ -1163,6 +1164,9 @@ void Solver::reset_observed_vars () {
   REQUIRE (
       external->propagator,
       "can not reset observed variables without a connected propagator");
+  REQUIRE (!internal->force_no_backtrack,
+           "can not reset observed variables during "
+           "'cb_add_reason_clause_lit'.");
   external->reset_observed_vars ();
   LOG_API_CALL_END ("reset_observed");
 }

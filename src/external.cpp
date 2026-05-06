@@ -467,22 +467,19 @@ void External::remove_observed_var (int elit) {
 
   int eidx = abs (elit);
 
-  if (eidx > max_var) // Ignore call if variable does not exist
-    return;
+  assert (observed (elit));
+  // Follow opposite order of add_observed_var, first remove internal
+  // is_observed
+  int ilit = internalize (elit);
+  internal->remove_observed_var (ilit);
 
-  // Ignore call if variable is not observed
-  if ((size_t) eidx >= is_observed.size ())
-    return;
-  if (is_observed[eidx]) {
-    // Follow opposite order of add_observed_var, first remove internal
-    // is_observed
-    int ilit = e2i[eidx]; // internalize (elit);
-    internal->remove_observed_var (ilit);
-
-    is_observed[eidx] = false;
-    melt (elit);
-    LOG ("unmarking %d as externally watched", eidx);
-  }
+  is_observed[eidx] = false;
+  melt (elit);
+  LOG ("unmarking %d as externally watched", eidx);
+  if (marked (notified, eidx))
+    unmark (notified, eidx);
+  if (marked (notified, -eidx))
+    unmark (notified, -eidx);
 }
 
 void External::reset_observed_vars () {
@@ -507,6 +504,10 @@ void External::reset_observed_vars () {
       LOG ("unmarking %d as externally watched", eidx);
       is_observed[eidx] = false;
       melt (elit);
+      if (marked (notified, eidx))
+        unmark (notified, eidx);
+      if (marked (notified, -eidx))
+        unmark (notified, -eidx);
     }
   }
 }
@@ -555,7 +556,7 @@ bool External::force_unassign (int elit) {
     assert (!internal->conflict);
   }
   assert (!internal->val (iidx));
-  return false;
+  return true;
 }
 
 void External::force_backtrack (int new_level) {

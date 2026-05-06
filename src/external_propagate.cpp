@@ -127,11 +127,9 @@ bool Internal::is_decision (int ilit) {
 
 void Internal::force_backtrack (int new_level) {
 
-#ifndef NDEBUG
   LOG ("external propagator forces backtrack to decision level"
-       "%d (from level %d)",
+       " %d (from level %d)",
        new_level, level);
-#endif
   backtrack (new_level);
 }
 
@@ -255,17 +253,20 @@ bool Internal::external_adding_clauses () {
     // actually adding the clause
     add_external_clause ();
 
-    if (conflict || unsat)
+    if (conflict || unsat) {
+      LOG ("external clause addition lead to conflict");
       return true;
+    }
   }
-  if (level != notified_level)
+  if (level < notified_level) {
+    LOG ("external clause addition changed level");
     return true;
+  }
   assert (level == notified_level);
   if (!propagate ())
     return true;
-  if (notifying_assignments ())
-    return true;
-  return false;
+  assert (!conflict && !unsat);
+  return notifying_assignments ();
 }
 
 /*----------------------------------------------------------------------------*/
@@ -909,9 +910,13 @@ bool Internal::notifying_assignments () {
 
   assert (notified_trail <= end_of_trail);
   assert (level == notified_level);
+  if (!level)
+    notified_trail = 0;
 
-  if (notified_trail == end_of_trail)
+  if (notified_trail == end_of_trail) {
+    LOG ("no new assignments to notify");
     return false;
+  }
 
   LOG ("notify external propagator about new assignments");
   assert (notification_trail.empty ());
@@ -931,10 +936,12 @@ bool Internal::notifying_assignments () {
     if (!external->observed (elit))
       continue;
     // Make sure to only notify units once.
-    if (!level) {
-      assert (!external->marked (external->notified, elit));
-      external->mark (external->notified, elit);
+    if (external->marked (external->notified, elit)) {
+      assert (!level);
+      continue;
     }
+    if (!level)
+      external->mark (external->notified, elit);
     notification_trail.push_back (elit);
   }
   if (notification_trail.empty ())

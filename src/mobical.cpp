@@ -572,7 +572,6 @@ private:
   // MockPropagator parameters
   size_t lemma_per_cb = 2;
   bool logging = false;
-  size_t forced_bt = 0;
   size_t level;
 
   struct Decisions {
@@ -629,9 +628,8 @@ private:
   // The reasons of present external propagations
   std::map<int, size_t> reason_map;
   std::map<int, size_t> level_map;
-
-  // The external propagations that are currently unassigned
-  std::set<int> unassigned_reasons;
+  std::map<int, bool> observed_map;
+  std::map<int, signed char> value_map;
 
   // Next lemma to add
   size_t add_lemma_idx = 0;
@@ -640,8 +638,6 @@ private:
   // Forced lemme addition (falsified lemma in model)
   bool must_add_clause = false;
   size_t must_add_idx;
-  // Next decision to make
-  size_t decision_loc = 0;
 
   // Observed variables and their current assignments
   std::deque<std::vector<int>> observed_trail;
@@ -732,8 +728,6 @@ public:
     reason_map.clear ();
     level_map.clear ();
 
-    unassigned_reasons.clear ();
-
     observed_trail.clear ();
 
     observed_fixed.clear ();
@@ -776,9 +770,9 @@ public:
            : "LAST_MOCK_FORCE_TYPE"))))))))
           << " on " << lit << std::endl);
     // clang-format on
-    if (!s->observed (lit))
-      s->add_observed_var (lit);
-    if (s->current_value (lit))
+    if (!observed_map[abs (lit)])
+      add_observed (lit);
+    if (value_map[lit])
       s->force_unassign (lit);
     return true;
   }
@@ -802,6 +796,66 @@ public:
     }
   }
 
+  void add_observed (int lit) {
+    if (observed_map[abs (lit)])
+      return;
+    assert (!value_map[lit]);
+    assert (!s->observed (lit));
+    observed_map[abs (lit)] = true;
+    s->add_observed_var (lit);
+  }
+
+  void remove_observed (int lit) {
+    if (!observed_map[abs (lit)])
+      return;
+    observed_map.erase (abs (lit));
+    assert (s->observed (lit));
+    auto it =
+        std::find (observed_fixed.begin (), observed_fixed.end (), lit);
+    if (it != observed_fixed.end ())
+      observed_fixed.erase (it);
+    if (value_map[lit]) {
+      assert (s->current_value (lit));
+      auto level = level_map[lit];
+      assert (observed_trail.size () > level);
+      auto it = std::find (observed_trail[level].begin (),
+                           observed_trail[level].end (), lit);
+      assert (it != observed_trail[level].end ());
+      observed_trail[level].erase (it);
+    }
+    s->remove_observed_var (lit);
+  }
+
+  void reset_observed () {
+    for (auto &kvp : observed_map) {
+      if (!kvp.second)
+        continue;
+      const int lit = kvp.first;
+      assert (s->observed (lit));
+      value_map[lit] = value_map[-lit] = 0;
+    }
+    observed_map.clear ();
+    for (auto &t : observed_trail) {
+      t.clear ();
+    }
+    observed_fixed.clear ();
+    s->reset_observed_vars ();
+  }
+
+  void check_trail () {
+    MLOG ("check consistency of mobical and solver assignments"
+          << std::endl);
+#ifndef NDEBUG
+    for (auto &kvp : observed_map) {
+      if (!kvp.second)
+        continue;
+      const int lit = kvp.first;
+      assert (value_map[lit] == s->current_value (lit));
+      assert (value_map[-lit] == s->current_value (-lit));
+    }
+#endif
+  }
+
   /*-----------------functions for mobical ends ------------------------*/
 
   /*------------ FixedAssignmentListener functions ---------------------*/
@@ -814,7 +868,7 @@ public:
     assert (std::find (observed_fixed.begin (), observed_fixed.end (),
                        lit) == observed_fixed.end ());
     observed_fixed.push_back (lit);
-    level_map[abs (lit)] = 0;
+    // level_map[abs (lit)] = 0;
   };
 
   void add_prev_fixed (const std::vector<int> &fixed_assignments) {
@@ -842,13 +896,14 @@ public:
 
   bool cb_check_found_model (const std::vector<int> &model) override {
     MLOG ("cb_check_found_model (" << model.size () << ") started" << endl);
+    check_trail ();
 #ifndef NDEBUG
-    // size_t assigned = model.size ();
+    size_t assigned = model.size ();
     for (auto &level : observed_trail) {
       for (auto &lit : level) {
         // TODO: known bug that level 0 assigned literals can be
         // notified multiple times
-        // assert (assigned--);
+        assert (assigned--);
         // unobserve calls can lead to unobserved variables in
         // observed_trail
         if (!s->observed (lit)) {
@@ -887,7 +942,7 @@ public:
       }
       if (unobserved && lemma->type == OBSERVING) {
         // this might trigger a bt
-        s->add_observed_var (unobserved);
+        add_observed (unobserved);
         return false;
       }
 
@@ -1009,7 +1064,7 @@ public:
     int lit = lemma->next_lit ();
 
     if (lemma->type == OBSERVING && lit && !s->observed (lit))
-      s->add_observed_var (lit);
+      add_observed (lit);
     while (lit && !s->observed (lit)) {
       MLOG ("cb_add_external_clause_lit "
             << lit << " (lemma " << add_lemma_idx << "/"
@@ -1029,28 +1084,9 @@ public:
 
   int cb_decide () override {
     MLOG ("cb_decide starts." << std::endl);
+    check_trail ();
     // Calls to solver that might force it to backtrack.
     get_force (CB_DECIDE);
-
-    if (!unassigned_reasons.empty ()) {
-#ifdef LOGGING
-      MLOG ("clean up backtracked external propagation reasons: ");
-      size_t del_count = 0;
-#endif
-      for (const auto &lit : unassigned_reasons) {
-        size_t reason_id = reason_map[lit];
-        assert (reason_id < external_lemmas.size ());
-        external_lemmas[reason_id]->propagation_reason = false;
-        external_lemmas[reason_id]->forgettable = true;
-        reason_map.erase (lit);
-#ifdef LOGGING
-        MLOGC (lit << " ");
-        del_count++;
-#endif
-      }
-      MLOGC ("(" << del_count << " clauses)" << std::endl);
-      unassigned_reasons.clear ();
-    }
 
     if (external_decide.empty ()) {
       MLOG ("cb_decide returns 0" << std::endl);
@@ -1072,7 +1108,7 @@ public:
 
     if (!s->observed (lit)) {
       // do we want to observe?
-      s->add_observed_var (lit);
+      add_observed (lit);
       MLOG ("cb_decide returns 0" << std::endl);
       return lit;
     }
@@ -1099,6 +1135,7 @@ public:
 
   int cb_propagate () override {
     MLOG ("cb_propagate starts" << std::endl);
+    check_trail ();
     // Calls to solver that might force it to backtrack.
     get_force (CB_PROPAGATE);
 
@@ -1158,7 +1195,7 @@ public:
 
     // At that point there is no need to assume that the trails are in
     // synchron.
-    assert (reason_map.find (plit) != reason_map.end ());
+    assert (!reason_map[plit]);
 
     size_t reason_id = reason_map[plit];
 
@@ -1181,9 +1218,11 @@ public:
     for (const auto &lit : lits) {
       observed_trail.back ().push_back (lit);
       level_map[abs (lit)] = level;
+      value_map[lit] = 1;
+      value_map[-lit] = -1;
       assert (s->current_value (lit) > 0);
-      unassigned_reasons.erase (lit);
     }
+    check_trail ();
     // Calls to solver that might force it to backtrack.
     get_force (NOTIFY_ASSIGNMENT);
   }
@@ -1195,6 +1234,7 @@ public:
     level++;
     observed_trail.push_back (std::vector<int> ());
     assert (level == observed_trail.size () - 1);
+    check_trail ();
     // Calls to solver that might force it to backtrack.
     get_force (NOTIFY_NEW_DECISION_LEVEL);
   }
@@ -1206,24 +1246,21 @@ public:
     assert (observed_trail.size () == 1 ||
             observed_trail.size () >= new_level + 1);
     while (observed_trail.size () > new_level + 1) {
-      // We can not remove reason clauses of backtracked assignments
+      // TODO: We can not remove reason clauses of backtracked assignments
       // because ILB might re-introduces them to the trail. Here we only
       // save the potential candidates to delete, and upon next cb_decide
       // we delete those ones that did not get re-assigned.
       for (auto lit : observed_trail.back ()) {
-        if (reason_map.find (lit) != reason_map.end ()) {
-          unassigned_reasons.insert (lit);
+        assert (!reason_map[lit] || !s->current_value (lit));
+        if (reason_map[lit]) {
+          size_t reason_id = reason_map[lit];
+          assert (reason_id < external_lemmas.size ());
+          external_lemmas[reason_id]->propagation_reason = false;
+          external_lemmas[reason_id]->forgettable = true;
+          reason_map.erase (lit);
         }
+        value_map[lit] = value_map[-lit] = 0;
       }
-#ifndef NDEBUG
-      MLOG ("unassign during backtrack from level "
-            << observed_trail.size () - 1 << ": ");
-      for (auto lit : observed_trail.back ()) {
-        (void) lit;
-        MLOGC (lit << " ");
-      }
-      MLOGC (std::endl);
-#endif
       observed_trail.pop_back ();
     }
     level = new_level;
@@ -1571,6 +1608,7 @@ struct Call {
 
     // clang-format on
 
+    // These are used for contracts during parsing
     ALWAYS = VARS | ACTIVE | REDUNDANT | IRREDUNDANT | FREEZE | FROZEN |
              MELT | LIMIT | OPTIMIZE | DUMP | STATS | RESIZE | FIXED |
              PHASE | UNPHASE | RESERVE | OBSERVE | UNOBSERVE |
@@ -1585,17 +1623,22 @@ struct Call {
     CONFIG = INIT | SET | CONFIGURE | ALWAYS | TRACEPROOF,
     BEFORE = ADD | CONSTRAIN | ASSUME | ALWAYS | DISCONNECT | CONNECT |
              RESET_ASSUMPTIONS,
+    AFTER = VAL | FLIP | FLIPPABLE | FAILED | CONCLUDE | ALWAYS |
+            FLUSHPROOFTRACE | CLOSEPROOFTRACE | PROPAGATE_ASSUMPTIONS,
     PROCESS = SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE,
     DURING = LEMMA | DECIDE | FORCE,
-    CONNECTING = CONNECT | DISCONNECT,
+
+    // This is used for executing traces
+    EXTENDMAP = PHASE | UNPHASE | ADD | ASSUME | FREEZE | CONSTRAIN,
+
+    // These are used for shrinking traces
+    CLAUSAL = LEMMA | CONSTRAIN | ADD,
+    MATCHING = CONNECT | DISCONNECT,
     PROPAGATOR =
         OBSERVE | UNOBSERVE | RESET_OBSERVED | LEMMA | DECIDE | FORCE,
     LITTYPE = PHASE | UNPHASE | ADD | ASSUME | VAL | FLIP | FLIPPABLE |
               FAILED | FIXED | FREEZE | FROZEN | MELT | CONSTRAIN |
               UNOBSERVE | OBSERVE | LEMMA | DECIDE | FORCE,
-    EXTENDMAP = PHASE | UNPHASE | ADD | ASSUME | FREEZE | CONSTRAIN,
-    AFTER = VAL | FLIP | FLIPPABLE | FAILED | CONCLUDE | ALWAYS |
-            FLUSHPROOFTRACE | CLOSEPROOFTRACE | PROPAGATE_ASSUMPTIONS,
     BASIC =
 #ifdef MOBICAL_TERMINATE
         TERMINATE |
@@ -1606,9 +1649,8 @@ struct Call {
         ASSUME | SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE | VARS |
         ACTIVE | REDUNDANT | IRREDUNDANT | RESIZE | RESERVE | VAL | FLIP |
         FLIPPABLE | FIXED | FAILED | FROZEN | CONCLUDE | FREEZE | MELT |
-        PHASE | UNPHASE | LIMIT | OPTIMIZE | OBSERVE | UNOBSERVE |
-        RESET_OBSERVED | DECIDE | FORCE | RESET_ASSUMPTIONS,
-    CLAUSAL = LEMMA | CONSTRAIN | ADD,
+        PHASE | UNPHASE | LIMIT | OPTIMIZE | RESET_OBSERVED | DECIDE |
+        FORCE | RESET_ASSUMPTIONS | OBSERVE | UNOBSERVE,
   };
 
   Type type; // Explicit typing.
@@ -1679,8 +1721,8 @@ static bool propagator_type (Call::Type t) {
   return (((uint64_t) t & (uint64_t) Call::PROPAGATOR)) != 0;
 }
 
-static bool connecting_type (Call::Type t) {
-  return (((uint64_t) t & (uint64_t) Call::CONNECTING)) != 0;
+static bool matching_type (Call::Type t) {
+  return (((uint64_t) t & (uint64_t) Call::MATCHING)) != 0;
 }
 
 static bool before_type (Call::Type t) {
@@ -1995,7 +2037,10 @@ struct ConnectCall : public Call {
 struct UnObserveCall : public Call {
   UnObserveCall (int l) : Call (OBSERVE, l) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
-    s->remove_observed_var (map_arg (s, extendmap));
+    MockPropagator *mp =
+        static_cast<MockPropagator *> (s->get_propagator ());
+    assert (mp);
+    mp->remove_observed (map_arg (s, extendmap));
   }
   void print (ostream &o) { o << "unobserve " << arg; }
   Call *copy () { return new UnObserveCall (arg); }
@@ -2005,7 +2050,10 @@ struct UnObserveCall : public Call {
 struct ObserveCall : public Call {
   ObserveCall (int l) : Call (OBSERVE, l) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
-    s->add_observed_var (map_arg (s, extendmap));
+    MockPropagator *mp =
+        static_cast<MockPropagator *> (s->get_propagator ());
+    assert (mp);
+    mp->add_observed (map_arg (s, extendmap));
   }
   void print (ostream &o) { o << "observe " << arg; }
   Call *copy () { return new ObserveCall (arg); }
@@ -2154,7 +2202,10 @@ struct ResetAssumptionsCall : public Call {
 struct ResetObservedCall : public Call {
   ResetObservedCall () : Call (RESET_OBSERVED) {}
   void execute (Solver *&s, ExtendMap *&extendmap) {
-    s->reset_observed_vars ();
+    MockPropagator *mp =
+        static_cast<MockPropagator *> (s->get_propagator ());
+    assert (mp);
+    mp->reset_observed ();
     (void) (extendmap);
   }
   void print (ostream &o) { o << "reset_observed"; }
@@ -3386,12 +3437,18 @@ void Trace::generate_propagator (Random &random, int minvars, int maxvars) {
   for (int idx = minvars; idx <= maxvars; idx++) {
     if (random.generate_double () < 0.4)
       continue;
+    if (std::find (observed_vars.begin (), observed_vars.end (), idx) !=
+        observed_vars.end ())
+      continue;
     int lit = random.generate_bool () ? -idx : idx;
     push_back (new ObserveCall (lit));
     observed_vars.push_back (abs (lit));
   }
   for (int idx = maxvars + 1; idx <= maxvars + 2 * diff; idx++) {
     if (random.generate_double () < 0.8)
+      continue;
+    if (std::find (observed_vars.begin (), observed_vars.end (), idx) !=
+        observed_vars.end ())
       continue;
     int lit = random.generate_bool () ? -idx : idx;
     push_back (new ObserveCall (lit));
@@ -4391,7 +4448,7 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
           continue;
         Segment &s = segments[i];
         for (size_t j = s.lo; j < s.hi; j++)
-          if (!connecting_type (calls[j]->type))
+          if (!matching_type (calls[j]->type))
             ignore[j] = true;
       }
       Trace tmp;
@@ -4425,7 +4482,7 @@ bool Trace::shrink_segments (Trace::Segments &segments, int expected) {
         continue;
       Segment &s = segments[i];
       for (size_t j = s.lo; j < s.hi; j++)
-        if (!connecting_type (calls[j]->type))
+        if (!matching_type (calls[j]->type))
           ignore[j] = true;
     }
     size_t j = 0;
@@ -4555,7 +4612,7 @@ bool Trace::shrink_phases (int expected) {
     else {
       assert (l == r);
       if (!config_type (calls[r]->type) &&
-          !connecting_type (calls[r]->type)) {
+          !matching_type (calls[r]->type)) {
         segments.push_back (Segment (r, r + 1));
       }
       ++r;
@@ -4766,7 +4823,6 @@ void Trace::add_options (int expected) {
 // disable as many boolean options.
 
 bool Trace::shrink_disable (int expected) {
-
   if (mobical.donot.disable)
     return false;
   const int max_var = vars ();
@@ -4834,7 +4890,6 @@ bool Trace::shrink_disable (int expected) {
 // Try to shrink the option values.
 
 bool Trace::reduce_values (int expected) {
-
   if (mobical.donot.reduce)
     return false;
 
@@ -5017,7 +5072,6 @@ void Trace::map_variables (int expected) {
 // Finally remove option calls.
 
 void Trace::shrink_options (int expected) {
-
   if (mobical.donot.shrink.options)
     return;
 
@@ -5034,7 +5088,6 @@ void Trace::shrink_options (int expected) {
 }
 
 void Trace::shrink (int expected) {
-
   enum Shrinking {
     NONE = 0,
     PHASES,
@@ -5912,7 +5965,6 @@ void Mobical::catch_signal (int) {
 /*------------------------------------------------------------------------*/
 
 int Mobical::main (int argc, char **argv) {
-
   // First parse command line options and determine mode.
   //
   const char *seed_str = 0;

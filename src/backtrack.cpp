@@ -112,6 +112,9 @@ void Internal::backtrack_without_updating_phases (int new_level) {
   assert (num_assigned == trail.size ());
 
   const size_t assigned = control[new_level + 1].trail;
+  // Breaks during inprocessing, but we are guaranteed to be at level 0
+  // afterwards and can notify all new units.
+  // assert (assigned <= notified_trail);
   notified_trail = assigned;
 
   LOG ("backtracking to decision level %d with decision %d and trail %zd",

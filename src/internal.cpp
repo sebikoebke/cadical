@@ -329,12 +329,9 @@ int Internal::cdcl_loop_with_inprocessing () {
         continue;
     } else if (satisfied ()) { // found model
       if (external_check_solution ()) {
-        if (unsat) // check solution lead to unsat
-          continue;
-        else if (conflict) // check solution added a conflict
+        if (conflict && !unsat)
           analyze ();
-        else // check solution changed level
-          continue;
+        continue;
       }
       assert (satisfied ());
       res = 10;
@@ -1043,6 +1040,8 @@ int Internal::solve (bool preprocess_only) {
     if (!preprocess_only)
       init_search_limits ();
   }
+  notifying_backtrack ();
+  notifying_assignments ();
   if (!preprocess_only) {
     if (!res && !level)
       res = local_search ();
