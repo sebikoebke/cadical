@@ -25,8 +25,7 @@ void Internal::add_observed_var (int ilit) {
   // backtrack and re-play again every levels' notification to the
   // propagator
   if (val (ilit) && level && !fixed (ilit)) {
-    if (force_no_backtrack)
-      FATAL ("can not observe fixed variable during conflict analysis");
+    assert (!force_no_backtrack);
     // The variable is already assigned, but we can not send a notification
     // about it because it happened on an earlier decision level.
     // To not break the stack-like view of the trail, we simply backtrack to
@@ -34,8 +33,7 @@ void Internal::add_observed_var (int ilit) {
     const int assignment_level = var (ilit).level;
     backtrack_without_updating_phases (assignment_level - 1);
   } else if (level && fixed (ilit)) {
-    if (force_no_backtrack)
-      FATAL ("can not observe fixed variable during conflict analysis");
+    assert (!force_no_backtrack);
     backtrack_without_updating_phases (0);
   }
   activating_all_new_imported_literals ();
@@ -913,10 +911,14 @@ bool Internal::notifying_assignments () {
 
     assert (!external->ervars[abs (elit)]);
 
-    // TODO: see comment with compact above.
-    assert (external->observed (elit));
+    assert (external->observed (elit) || fixed (ilit));
     if (!external->observed (elit))
       continue;
+    // Make sure to only notify units once.
+    if (!level) {
+      assert (!external->marked (external->notified, elit));
+      external->mark (external->notified, elit);
+    }
     notification_trail.push_back (elit);
   }
   if (notification_trail.empty ())

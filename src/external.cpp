@@ -441,21 +441,23 @@ void External::add_observed_var (int elit) {
 
   // In case this variable was already assigned (e.g. via unit clause) and
   // got compacted to map to another (not observed) variable, it can not be
-  // unnasigned so it must be notified explicitly now. (-> Can lead to
-  // repeated fixed assignment notifications, in case it was unobserved and
-  // observed again. But a repeated notification is less error-prone than
-  // never notifying an assignment.)
+  // unnasigned so it must be notified explicitly now.
   const int tmp = fixed (elit);
   if (!tmp)
     return;
   int unit = tmp < 0 ? -elit : elit;
 
+  // internal add-observed-var had to backtrack to root-level already
+  assert (!internal->level);
+  if (!marked (notified, tmp))
+    return;
+
   LOG ("notify propagator about fixed assignment upon observe for %d",
        unit);
 
-  // internal add-observed-var had to backtrack to root-level already
-  assert (!internal->level);
-
+  // explicitly marking this literal as notified to avoid multiple
+  // notifications.
+  mark (notified, unit);
   std::vector<int> assigned = {unit};
   propagator->notify_assignment (assigned);
 }

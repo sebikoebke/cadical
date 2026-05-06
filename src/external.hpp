@@ -90,8 +90,9 @@ struct External {
   bool concluded;
   vector<int> extension; // Solution reconstruction extension stack.
 
-  vector<bool> witness; // Literal witness on extension stack.
-  vector<bool> tainted; // Literal tainted in adding literals.
+  vector<bool> witness;  // Literal witness on extension stack.
+  vector<bool> tainted;  // Literal tainted in adding literals.
+  vector<bool> notified; // Notified external units.
 
   vector<bool> ervars; // Variables added through Extended Resolution.
 
@@ -164,13 +165,6 @@ struct External {
     int res = abs (elit);
     assert (res <= max_var);
     return res;
-  }
-
-  inline int vlit (int elit) const {
-    assert (elit);
-    assert (elit != INT_MIN);
-    assert (abs (elit) <= max_var);
-    return elit;
   }
 
   inline bool is_valid_input (int elit) {
