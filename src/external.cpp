@@ -405,14 +405,14 @@ void External::add_observed_var (int elit) {
   else if (is_observed[eidx])
     return;
 
+  // Reset extended before importing the variable.
+  reset_extended (); // tainting!
+
   // internalize and in particular declares the variables
   int ilit = internalize (elit);
 
   // taint and restore of the newly observed variable.
   // Restore_clauses must be called before continue.
-
-  reset_extended (); // tainting!
-
   if (marked (witness, elit)) {
     mark (tainted, -elit);
   }

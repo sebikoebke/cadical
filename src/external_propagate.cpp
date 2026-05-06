@@ -165,6 +165,7 @@ bool Internal::external_propagate () {
     stats.up_cb++;
     stats.up_cb_prop++;
     const int elit = external->propagator->cb_propagate ();
+    LOG ("cb_propagate returns %d", elit);
 
     if (level != notified_level) {
       LOG ("cb_propagate triggered a backtrack, ignoring return value %d",
@@ -196,8 +197,7 @@ bool Internal::external_propagate () {
       LOG (res, "reason clause of external propagation of %d:", elit);
       (void) res;
 
-      assert (level == notified_level);
-      assert (unsat || conflict);
+      assert (unsat || conflict || level != notified_level);
       return true;
     }
 
@@ -219,7 +219,7 @@ bool Internal::external_propagate () {
 
     assert (level == notified_level);
     if (unsat || conflict)
-      break;
+      return true;
 
     // user can interact here again.
     if (notifying_assignments ())
@@ -599,7 +599,9 @@ Clause *Internal::learn_external_reason_clause (int ilit,
   // clause or set 'are_reasons_forgettable' to false.
   ext_clause_forgettable = external->propagator->are_reasons_forgettable;
   LOG ("ilit: %d, elit: %d", ilit, elit);
-  force_no_backtrack = true;
+  // we allow backtracking for conflicts
+  if (!falsified_elit)
+    force_no_backtrack = true;
   add_external_clause (elit);
   force_no_backtrack = false;
 
@@ -629,28 +631,48 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
     stats.up_learn++;
   if (from_propagator && !res)
     stats.up_learn_unit++;
-  // new unit clause. For now just backtrack.
-  if (!res && ((level && force_no_backtrack) ||
-               (val (clause[0]) > 0 && opts.elevate > 0 &&
-                (opts.elevate > 1 || var (clause[0]).reason)))) {
-    assert (level);
+
+  assert (res || clause.size () == 1);
+
+  if (!res && force_no_backtrack) {
+    const int lit = clause[0];
+    assert (val (lit) > 0);
     assert (new_id);
-    const int idx = vidx (clause[0]);
-    assert (val (clause[0]) >= 0);
-    assert (!flags (idx).eliminated ());
-    Var &v = var (idx);
+    assert (level);
+    assert (val (lit) >= 0);
+    assert (!flags (lit).eliminated ());
+    Var &v = var (lit);
     assert (val (clause[0]));
     v.level = 0;
     v.reason = 0;
-    LOG ("elevate %s to level 0", LOGLIT (idx));
-    const unsigned uidx = vlit (clause[0]);
+    LOG ("elevate %s to level 0", LOGLIT (lit));
+    const unsigned uidx = vlit (lit);
     if (lrat || frat)
       unit_clauses (uidx) = new_id;
-    mark_fixed (clause[0]);
+    mark_fixed (lit);
     return;
   }
 
-  if (!res) {
+  if (!res && ((val (clause[0]) > 0 && opts.elevate > 0 &&
+                (opts.elevate > 1 || var (clause[0]).reason)))) {
+    assert (level);
+    assert (new_id);
+    const int lit = clause[0];
+    assert (val (lit) >= 0);
+    assert (!flags (lit).eliminated ());
+    Var &v = var (lit);
+    assert (val (clause[0]));
+    v.level = 0;
+    v.reason = 0;
+    LOG ("elevate %s to level 0", LOGLIT (lit));
+    const unsigned uidx = vlit (lit);
+    if (lrat || frat)
+      unit_clauses (uidx) = new_id;
+    mark_fixed (lit);
+    return;
+  }
+
+  if (!res && val (clause[0]) <= 0) {
     if (from_propagator)
       stats.up_learn_propagating++;
     const int lit = clause[0];
@@ -853,8 +875,6 @@ bool Internal::external_check_solution () {
     assert (tmp);
     const int lit = idx * tmp;
     notify_model_trail.push_back (lit);
-    LOG ("evals[%d]: %d ival(%d): %d", idx, (int) external->vals[idx], idx,
-         lit);
   }
 
   stats.up_cb++;

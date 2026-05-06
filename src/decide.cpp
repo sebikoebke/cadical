@@ -283,6 +283,7 @@ int Internal::decide_assumption () {
     int previous_lit = 0;   // Move satisfied literals to the front.
 
     const size_t size_constraint = constraint.size ();
+    assert (size_constraint);
 
 #ifndef NDEBUG
     unsigned sum = 0;
@@ -315,37 +316,27 @@ int Internal::decide_assumption () {
       if (!unassigned_lit || better_decision (lit, unassigned_lit))
         unassigned_lit = lit;
     }
-
-    if (satisfied_lit) {
-
-      constraint[0] = satisfied_lit; // Move satisfied to the front.
-
-      LOG ("literal %d satisfies constraint and "
-           "is implied by assumptions",
-           satisfied_lit);
-      LOG ("adding pseudo decision level for constraint");
-      new_trail_level (0);
-    }
-
-    // Just move all the literals back.  If we found an unsatisfied
-    // literal then it will be satisfied (most likely) at the next
-    // decision and moved then to the first position.
-
-    if (size_constraint) {
-
+    if (!satisfied_lit) {
+      // Just move all the literals back.  If we found an unsatisfied
+      // literal then it will be satisfied (most likely) at the next
+      // decision and moved then to the first position.
       for (size_t i = 0; i + 1 != size_constraint; i++)
         constraint[i] = constraint[i + 1];
 
       constraint[size_constraint - 1] = previous_lit;
     }
 
-    if (unassigned_lit) {
-
+    if (satisfied_lit) {
+      constraint[0] = satisfied_lit; // Move satisfied to the front.
+      LOG ("literal %d satisfies constraint and "
+           "is implied by assumptions",
+           satisfied_lit);
+      LOG ("adding pseudo decision level for constraint");
+      new_trail_level (0);
+    } else if (unassigned_lit) {
       LOG ("deciding %d to satisfy constraint", unassigned_lit);
       search_assume_decision (unassigned_lit);
-
     } else {
-
       LOG ("failing constraint");
       unsat_constraint = true;
       res = 20;
