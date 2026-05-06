@@ -913,7 +913,7 @@ bool Internal::notifying_assignments () {
   if (!level)
     notified_trail = 0;
 
-  if (notified_trail == end_of_trail) {
+  if (notified_trail == end_of_trail && delay_notify_units.empty ()) {
     LOG ("no new assignments to notify");
     return false;
   }
@@ -921,13 +921,24 @@ bool Internal::notifying_assignments () {
   LOG ("notify external propagator about new assignments");
   assert (notification_trail.empty ());
 
+  for (auto &elit : delay_notify_units) {
+    assert (!level);
+    // already external.
+    if (!external->observed (elit))
+      continue;
+    if (external->marked (external->notified, elit))
+      continue;
+    external->mark (external->notified, elit);
+    notification_trail.push_back (elit);
+  }
+  delay_notify_units.clear ();
   while (notified_trail < end_of_trail) {
-    int ilit = trail[notified_trail++];
+    const int ilit = trail[notified_trail++];
     if (!observed (ilit))
       continue;
 
     // TODO: double-check side-effects of externalize, e.g. tainting
-    int elit = externalize (ilit);
+    const int elit = externalize (ilit);
     assert (elit);
 
     assert (!external->ervars[abs (elit)]);

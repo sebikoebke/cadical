@@ -452,14 +452,9 @@ void External::add_observed_var (int elit) {
   if (!marked (notified, tmp))
     return;
 
-  LOG ("notify propagator about fixed assignment upon observe for %d",
+  internal->delay_notify_units.push_back (unit);
+  LOG ("delay notify propagator about fixed assignment upon observe for %d",
        unit);
-
-  // explicitly marking this literal as notified to avoid multiple
-  // notifications.
-  mark (notified, unit);
-  std::vector<int> assigned = {unit};
-  propagator->notify_assignment (assigned);
 }
 
 void External::remove_observed_var (int elit) {

@@ -196,6 +196,7 @@ struct Internal {
   vector<int> tmp_eclause;        // vector used for adding external clauses
   vector<int> tmp_clause;         // vector used for adding external clauses
   vector<int> tmp_original;       // vector used for adding external clauses
+  vector<int> delay_notify_units; // vector used for adding external clauses
   vector<int64_t> tmp_lrat_chain; // vector used for adding external clauses
   int out_of_order_level;         // lowest out-of-order level to fix
   int out_of_order_trail;     // highest out-of-order literal on the trail

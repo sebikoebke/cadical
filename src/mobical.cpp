@@ -1195,7 +1195,7 @@ public:
 
     // At that point there is no need to assume that the trails are in
     // synchron.
-    assert (!reason_map[plit]);
+    assert (reason_map[plit]);
 
     size_t reason_id = reason_map[plit];
 
