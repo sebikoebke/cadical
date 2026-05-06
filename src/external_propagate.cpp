@@ -835,7 +835,7 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
 // the user was initially unhappy.
 bool Internal::external_check_solution () {
   if (!external_prop)
-    return true;
+    return false;
 
   assert (notified_level == level);
   assert (notified_trail == trail.size ());
