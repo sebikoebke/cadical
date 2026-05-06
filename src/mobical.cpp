@@ -548,7 +548,6 @@ enum MockForceType {
   NOTIFY_NEW_DECISION_LEVEL,
   NOTIFY_BACKTRACK,
   CB_DECIDE,
-  CB_ADD_REASON_CLAUSE_LIT,
   CB_PROPAGATE,
   CB_CHECK_FOUND_MODEL,
   CB_HAS_EXTERNAL_CLAUSE,
@@ -770,12 +769,11 @@ public:
            : (type == NOTIFY_NEW_DECISION_LEVEL ? "NOTIFY_NEW_DECISION_LEVEL"
            : (type == NOTIFY_BACKTRACK ? "NOTIFY_BACKTRACK"
            : (type == CB_DECIDE ? "CB_DECIDE"
-           : (type == CB_ADD_REASON_CLAUSE_LIT ? "CB_ADD_REASON_CLAUSE_LIT"
            : (type == CB_PROPAGATE ? "CB_PROPAGATE"
            : (type == CB_CHECK_FOUND_MODEL ? "CB_CHECK_FOUND_MODEL"
            : (type == CB_HAS_EXTERNAL_CLAUSE ? "CB_HAS_EXTERNAL_CLAUSE"
            : (type == CB_ADD_EXTERNAL_CLAUSE_LIT ? "CB_ADD_EXTERNAL_CLAUSE_LIT"
-           : "LAST_MOCK_FORCE_TYPE")))))))))
+           : "LAST_MOCK_FORCE_TYPE"))))))))
           << " on " << lit << std::endl);
     // clang-format on
     if (!s->observed (lit))
@@ -1155,7 +1153,8 @@ public:
   int cb_add_reason_clause_lit (int plit) override {
 
     // Calls to solver that might force it to backtrack.
-    get_force (CB_ADD_REASON_CLAUSE_LIT);
+    // Not allowed here!
+    // get_force (CB_ADD_REASON_CLAUSE_LIT);
 
     // At that point there is no need to assume that the trails are in
     // synchron.
@@ -1597,6 +1596,19 @@ struct Call {
     EXTENDMAP = PHASE | UNPHASE | ADD | ASSUME | FREEZE | CONSTRAIN,
     AFTER = VAL | FLIP | FLIPPABLE | FAILED | CONCLUDE | ALWAYS |
             FLUSHPROOFTRACE | CLOSEPROOFTRACE | PROPAGATE_ASSUMPTIONS,
+    BASIC =
+#ifdef MOBICAL_TERMINATE
+        TERMINATE |
+#endif
+#ifdef MOBICAL_MEMORY
+        LEAKALLOC | MAXALLOC |
+#endif
+        ASSUME | SOLVE | SIMPLIFY | LOOKAHEAD | CUBING | PROPAGATE | VARS |
+        ACTIVE | REDUNDANT | IRREDUNDANT | RESIZE | RESERVE | VAL | FLIP |
+        FLIPPABLE | FIXED | FAILED | FROZEN | CONCLUDE | FREEZE | MELT |
+        PHASE | UNPHASE | LIMIT | OPTIMIZE | OBSERVE | UNOBSERVE |
+        RESET_OBSERVED | DECIDE | FORCE | RESET_ASSUMPTIONS,
+    CLAUSAL = LEMMA | CONSTRAIN | ADD,
   };
 
   Type type; // Explicit typing.
@@ -1619,6 +1631,12 @@ struct Call {
   }
   virtual bool extendmap_type () {
     return (((int) type & (int) Call::EXTENDMAP)) != 0;
+  }
+  virtual bool is_basic () {
+    return (((uint64_t) type & (uint64_t) Call::BASIC)) != 0;
+  }
+  virtual bool is_clause_type () {
+    return (((uint64_t) type & (uint64_t) Call::CLAUSAL)) != 0;
   }
 
   // extend the size of `extendmap` by `arg` new variables.
@@ -2845,7 +2863,6 @@ private:
   bool shrink_phases (int expected);
   bool shrink_propagator (int expected);
   bool shrink_clauses (int expected);
-  bool shrink_lemmas (int expected);
   bool shrink_literals (int expected);
   bool shrink_basic (int expected);
   bool shrink_disable (int expected);
@@ -4556,26 +4573,7 @@ bool Trace::shrink_clauses (int expected) {
   Segments segments;
   for (size_t r = size (), l; r > 1; r = l) {
     Call *c = calls[l = r - 1];
-    while (l > 0 && (c->type != Call::ADD || c->arg))
-      c = calls[--l];
-    if (!l)
-      break;
-    r = l + 1;
-    while ((c = calls[--l])->type == Call::ADD && c->arg)
-      ;
-    segments.push_back (Segment (++l, r));
-  }
-  return shrink_segments (segments, expected);
-}
-
-bool Trace::shrink_lemmas (int expected) {
-  if (mobical.donot.shrink.lemmas)
-    return false;
-  notify ('u');
-  Segments segments;
-  for (size_t r = size (), l; r > 1; r = l) {
-    Call *c = calls[l = r - 1];
-    while (l > 0 && (c->type != Call::LEMMA || c->arg))
+    while (l > 0 && (!c->is_clause_type () || c->arg))
       c = calls[--l];
     if (!l)
       break;
@@ -4588,17 +4586,6 @@ bool Trace::shrink_lemmas (int expected) {
   return shrink_segments (segments, expected);
 }
 
-static bool is_lit_type (Call *c) {
-  switch ((uint64_t) c->type) {
-  case Call::ADD:
-  case Call::CONSTRAIN:
-  case Call::LEMMA:
-    return true;
-  default:
-    return false;
-  }
-}
-
 // The third level tries to remove individual literals.
 //
 bool Trace::shrink_literals (int expected) {
@@ -4608,56 +4595,10 @@ bool Trace::shrink_literals (int expected) {
   Segments segments;
   for (size_t l = size () - 1; l > 0; l--) {
     Call *c = calls[l];
-    if (is_lit_type (c) && c->arg)
+    if (c->is_clause_type () && c->arg)
       segments.push_back (Segment (l, l + 1));
   }
   return shrink_segments (segments, expected);
-}
-
-static bool is_basic (Call *c) {
-  switch ((uint64_t) c->type) {
-  case Call::ASSUME:
-  case Call::SOLVE:
-  case Call::SIMPLIFY:
-  case Call::LOOKAHEAD:
-  case Call::CUBING:
-  case Call::PROPAGATE:
-  case Call::VARS:
-  case Call::ACTIVE:
-  case Call::REDUNDANT:
-  case Call::IRREDUNDANT:
-  case Call::RESIZE:
-  case Call::RESERVE:
-  case Call::VAL:
-  case Call::FLIP:
-  case Call::FLIPPABLE:
-  case Call::FIXED:
-  case Call::FAILED:
-  case Call::FROZEN:
-  case Call::CONCLUDE:
-  case Call::FREEZE:
-  case Call::MELT:
-  case Call::PHASE:
-  case Call::UNPHASE:
-  case Call::LIMIT:
-  case Call::OPTIMIZE:
-  case Call::OBSERVE:
-  case Call::UNOBSERVE:
-  case Call::RESET_OBSERVED:
-  case Call::DECIDE:
-  case Call::FORCE:
-  case Call::RESET_ASSUMPTIONS:
-#ifdef MOBICAL_TERMINATE
-  case Call::TERMINATE:
-#endif
-#ifdef MOBICAL_MEMORY
-  case Call::LEAKALLOC:
-  case Call::MAXALLOC:
-#endif
-    return true;
-  default:
-    return false;
-  }
 }
 
 // first remove all propagator_type calls.
@@ -4767,7 +4708,7 @@ bool Trace::shrink_basic (int expected) {
   Segments segments;
   for (size_t l = size () - 1; l > 0; l--) {
     Call *c = calls[l];
-    if (!is_basic (c))
+    if (!c->is_basic ())
       continue;
     segments.push_back (Segment (l, l + 1));
   }
@@ -5007,8 +4948,6 @@ bool Trace::reduce_values (int expected) {
   return res;
 }
 
-static bool has_lit_arg_type (Call *c) { return c->type & Call::LITTYPE; }
-
 // Try to map variables to a contiguous initial range.
 
 void Trace::map_variables (int expected) {
@@ -5019,7 +4958,7 @@ void Trace::map_variables (int expected) {
     vector<int> variables;
     for (size_t i = 0; i < size (); i++) {
       Call *c = calls[i];
-      if (!has_lit_arg_type (c))
+      if (!c->lit_type ())
         continue;
       if (!c->arg)
         continue;
@@ -5049,7 +4988,7 @@ void Trace::map_variables (int expected) {
     Trace mapped;
     for (size_t i = 0; i < size (); i++) {
       Call *c = calls[i];
-      if (!has_lit_arg_type (c))
+      if (!c->lit_type ())
         mapped.push_back (c->copy ());
       else if (!c->arg || c->arg == INT_MIN)
         mapped.push_back (c->copy ());
@@ -5100,8 +5039,6 @@ void Trace::shrink (int expected) {
     NONE = 0,
     PHASES,
     CLAUSES,
-    LEMMAS,
-    UPHASES, // How many times the propagator answers
     LITERALS,
     PROPAGATOR,
     BASIC,
@@ -5125,8 +5062,6 @@ void Trace::shrink (int expected) {
       s = true, l = PROPAGATOR;
     if (l != CLAUSES && shrink_clauses (expected))
       s = true, l = CLAUSES;
-    if (l != LEMMAS && shrink_lemmas (expected))
-      s = true, l = LEMMAS;
     if (l != LITERALS && shrink_literals (expected))
       s = true, l = LITERALS;
     if (l != BASIC && shrink_basic (expected))
