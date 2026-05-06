@@ -189,7 +189,6 @@ struct Internal {
   bool stable;                 // true during stabilization phase
   bool reported;               // reported in this solving call
   bool external_prop;         // true if an external propagator is connected
-  bool did_external_prop;     // true if ext. propagation happened
   bool external_prop_is_lazy; // true if the external propagator is lazy
   vector<int> notification_trail; // vector used for notifying assignments
   vector<int> notify_model_trail; // vector used for check model

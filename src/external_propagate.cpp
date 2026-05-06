@@ -205,13 +205,13 @@ bool Internal::external_propagate () {
     assert (observed (ilit));
 
     stats.up_cb_prop_assign++;
-    search_assign_external (ilit);
     if (!level) {
       stats.up_cb_prop_unit++;
       Clause *res = learn_external_reason_clause (ilit, elit);
       LOG (res, "reason clause of external propagation of %d:", elit);
       (void) res;
-    }
+    } else
+      search_assign_external (ilit);
     assert (level == notified_level);
     assert (!unsat && !conflict);
 
@@ -373,7 +373,6 @@ void Internal::move_literals_to_watch () {
 // newest_clause
 //
 void Internal::add_external_clause (int prop_elit) {
-  assert (!force_no_backtrack);
   assert (!from_propagator);
   from_propagator = true;
 
@@ -434,7 +433,6 @@ void Internal::add_external_clause (int prop_elit) {
   original = std::move (tmp_original);
   external->eclause = std::move (tmp_eclause);
 
-  force_no_backtrack = false;
   from_propagator = false;
 }
 
@@ -632,11 +630,9 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
   if (from_propagator && !res)
     stats.up_learn_unit++;
   // new unit clause. For now just backtrack.
-  if (!res && (force_no_backtrack ||
+  if (!res && ((level && force_no_backtrack) ||
                (val (clause[0]) > 0 && opts.elevate > 0 &&
                 (opts.elevate > 1 || var (clause[0]).reason)))) {
-    if (force_no_backtrack)
-      did_external_prop = true;
     assert (level);
     assert (new_id);
     const int idx = vidx (clause[0]);

@@ -1079,8 +1079,6 @@ void Internal::analyze () {
     search_assign_driving (forced, conflict);
 
     conflict = 0;
-    if (!opts.chrono)
-      did_external_prop = true;
     STOP (analyze);
     return;
   }
