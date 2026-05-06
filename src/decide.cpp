@@ -357,6 +357,9 @@ int Internal::decide_assumption () {
 #endif
   }
   STOP (decide);
+  // enable failed assumptions/constraint analysis
+  if (res)
+    marked_failed = false;
   return res;
 }
 

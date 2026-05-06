@@ -589,9 +589,17 @@ void LratChecker::conclude_unsat (ConclusionType conclusion,
     }
     return;
   } else if (conclusion == ASSUMPTIONS) {
+    if (ids.size () != assumption_clauses.size ()) {
+      fatal_message_start ();
+      fputs ("assumption clauses and conclusion missmatch (", stderr);
+      fprintf (stderr, "%zd vs %zd)\n", assumption_clauses.size (),
+               ids.size ());
+      fatal_message_end ();
+    }
     if (ids.size () != 1 || assumption_clauses.size () != 1) {
       fatal_message_start ();
-      fputs ("expected exactly one assumption clause\n", stderr);
+      fputs ("expected exactly one assumption clause (not ", stderr);
+      fprintf (stderr, "%zd)\n", assumption_clauses.size ());
       fatal_message_end ();
     }
     if (ids.back () != assumption_clauses.back ()) {
