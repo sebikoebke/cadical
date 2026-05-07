@@ -284,7 +284,6 @@ void App::print_witness (FILE *file) {
         fputs ("\nv", file), c = 1;
       fputs (str, file);
       c += l;
-
     }
   } else {
     for (auto /*[elit, ilit] C++17*/ eilit : solver->external->e2i) {
@@ -308,7 +307,7 @@ void App::print_witness (FILE *file) {
     }
   }
   if (c)
-    fputc ('\n', file);
+    fputs (" 0\n", file);
 }
 
 /*------------------------------------------------------------------------*/
@@ -550,7 +549,8 @@ int App::main (int argc, char **argv) {
     else if (!strcmp (argv[i], "-f") || !strcmp (argv[i], "--force") ||
              !strcmp (argv[i], "--force=1") ||
              !strcmp (argv[i], "--force=true"))
-      force_strict_parsing = 0, force_writing = true, solver->set ("factorcheck", 0);
+      force_strict_parsing = 0, force_writing = true,
+      solver->set ("factorcheck", 0);
     else if (!strcmp (argv[i], "--strict") ||
              !strcmp (argv[i], "--strict=1") ||
              !strcmp (argv[i], "--strict=true"))
@@ -988,7 +988,10 @@ void App::init () {
 
 /*------------------------------------------------------------------------*/
 
-App::App () : solver (0), time_limit(-1), force_strict_parsing (false), force_writing(false), max_var (0), timesup (false) {} // Only partially initialize the app.
+App::App ()
+    : solver (0), time_limit (-1), force_strict_parsing (false),
+      force_writing (false), max_var (0), timesup (false) {
+} // Only partially initialize the app.
 
 App::~App () {
   if (!solver)
