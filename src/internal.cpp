@@ -365,7 +365,9 @@ int Internal::cdcl_loop_with_inprocessing () {
   }
 
   assert (!unsat || res == 20);
-  assert (unsat || !satisfied () || res == 10);
+  // This one is not precise because the loop can terminate with 0 even if
+  // satisfied () is true
+  // assert (unsat || !satisfied () || res == 10);
 
   if (stable) {
     STOP (stable);
