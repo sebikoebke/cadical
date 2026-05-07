@@ -253,6 +253,8 @@ bool Internal::external_adding_clauses () {
     // actually adding the clause
     add_external_clause ();
 
+    if (!unsat)
+      propagate ();
     if (conflict || unsat) {
       LOG ("external clause addition lead to conflict");
       return true;
@@ -1005,7 +1007,8 @@ bool Internal::notifying_decision () {
 void Internal::notify_loop () {
   if (!external_prop || external_prop_is_lazy)
     return;
-  notifying_backtrack ();
+  while (notifying_backtrack ())
+    continue;
   while (notifying_assignments ())
     continue;
 }
