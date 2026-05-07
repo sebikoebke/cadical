@@ -815,11 +815,12 @@ public:
     if (it != observed_fixed.end ())
       observed_fixed.erase (it);
     if (value_map[lit]) {
-      assert (s->current_value (lit));
+      const int unit = lit * value_map[lit];
+      assert (s->current_value (unit) > 0);
       auto level = level_map[lit];
       assert (observed_trail.size () > level);
       auto it = std::find (observed_trail[level].begin (),
-                           observed_trail[level].end (), lit);
+                           observed_trail[level].end (), unit);
       assert (it != observed_trail[level].end ());
       observed_trail[level].erase (it);
       value_map[lit] = value_map[-lit] = 0;
