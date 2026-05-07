@@ -973,7 +973,7 @@ bool Internal::notifying_assignments () {
   stats.up_notify_assignments++;
   external->propagator->notify_assignment (notification_trail);
   notification_trail.clear ();
-  if (notified_level == level && notified_trail)
+  if (notified_level == level && notified_trail == trail.size ())
     return false;
   // Only here we actually changed the level or observed an already
   // assigned variable.
@@ -1016,7 +1016,8 @@ void Internal::notify_loop () {
   while (notifying_backtrack ())
     continue;
   while (notifying_assignments ())
-    continue;
+    while (notifying_backtrack ())
+      continue;
 }
 
 bool Internal::notifying_backtrack () {
