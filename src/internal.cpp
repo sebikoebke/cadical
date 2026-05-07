@@ -1040,8 +1040,7 @@ int Internal::solve (bool preprocess_only) {
     if (!preprocess_only)
       init_search_limits ();
   }
-  notifying_backtrack ();
-  notifying_assignments ();
+  notify_loop ();
   if (!preprocess_only) {
     if (!res && !level)
       res = local_search ();

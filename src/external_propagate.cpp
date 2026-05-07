@@ -929,6 +929,7 @@ bool Internal::notifying_assignments () {
       continue;
     if (external->marked (external->notified, elit))
       continue;
+    LOG ("marking fixed %d as notified", elit);
     external->mark (external->notified, elit);
     notification_trail.push_back (elit);
   }
@@ -952,8 +953,10 @@ bool Internal::notifying_assignments () {
       assert (!level);
       continue;
     }
-    if (!level)
+    if (!level) {
       external->mark (external->notified, elit);
+      LOG ("marking fixed %d as notified", elit);
+    }
     notification_trail.push_back (elit);
   }
   if (notification_trail.empty ())
@@ -997,7 +1000,7 @@ bool Internal::notifying_decision () {
   return false;
 }
 
-void Internal::notify_root_level () {
+void Internal::notify_loop () {
   if (!external_prop || external_prop_is_lazy)
     return;
   notifying_backtrack ();

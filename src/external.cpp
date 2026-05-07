@@ -443,14 +443,14 @@ void External::add_observed_var (int elit) {
   // got compacted to map to another (not observed) variable, it can not be
   // unnasigned so it must be notified explicitly now.
   const int tmp = fixed (elit);
+  LOG ("checking newly observed %d fixed %d", elit, tmp);
   if (!tmp)
     return;
   int unit = tmp < 0 ? -elit : elit;
 
   // internal add-observed-var had to backtrack to root-level already.
   assert (!internal->level);
-  if (!marked (notified, tmp))
-    return;
+  assert (!marked (notified, unit));
   // make sure that the user is notified again.
   assert (internal->trail.size ());
   internal->notified_trail = 0;

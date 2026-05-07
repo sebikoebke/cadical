@@ -200,7 +200,7 @@ void Internal::compact () {
     reset_constraint ();
   }
 
-  notify_root_level (); // for user propagator
+  notify_loop (); // for user propagator
 
   /*======================================================================*/
   // In this first part we only map stuff without reallocation / shrinking.
