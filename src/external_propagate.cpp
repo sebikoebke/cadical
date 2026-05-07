@@ -673,7 +673,7 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
     return;
   }
 
-  if (!res && val (clause[0]) <= 0) {
+  if (!res) {
     if (from_propagator)
       stats.up_learn_propagating++;
     const int lit = clause[0];

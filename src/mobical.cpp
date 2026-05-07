@@ -1207,6 +1207,7 @@ public:
       lemma->add_count++;
       MLOG ("reason clause for " << plit << " (id: " << reason_id
                                  << ") is added." << std::endl);
+      reason_map.erase (plit);
     }
 
     return lit;
@@ -1251,7 +1252,7 @@ public:
       // save the potential candidates to delete, and upon next cb_decide
       // we delete those ones that did not get re-assigned.
       for (auto lit : observed_trail.back ()) {
-        assert (!reason_map[lit] || !s->current_value (lit));
+        assert (!reason_map[lit] || s->current_value (lit) <= 0);
         if (reason_map[lit]) {
           size_t reason_id = reason_map[lit];
           assert (reason_id < external_lemmas.size ());
