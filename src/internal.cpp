@@ -392,10 +392,6 @@ int Internal::propagate_assumptions () {
 
   int res = already_solved (); // root-level propagation is done here
 
-  int last_assumption_level = assumptions.size ();
-  if (constraint.size ())
-    last_assumption_level++;
-
   if (!res) {
     restore_clauses ();
     while (!res) {
@@ -432,7 +428,7 @@ int Internal::propagate_assumptions () {
         break;                               // decision or conflict limit
       else if (terminated_asynchronously ()) // externally terminated
         break;
-      else if (notifying_decision ())
+      else if (pseudo_level () && notifying_decision ())
         continue; // notify new decision changed level
       else if (pseudo_level ())
         res = decide_assumption ();

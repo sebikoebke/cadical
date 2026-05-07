@@ -856,8 +856,7 @@ public:
   }
 
   void check_trail () {
-    MLOG ("check consistency of mobical and solver assignments"
-          << std::endl);
+    ILOG ("check consistency of mobical and solver assignments");
 #ifndef NDEBUG
     for (auto &kvp : observed_map) {
       if (!kvp.second)
@@ -1144,7 +1143,7 @@ public:
     if (!s->observed (lit)) {
       // do we want to observe?
       add_observed (lit);
-      MLOG ("cb_decide returns 0" << std::endl);
+      MLOG ("cb_decide returns " << lit << std::endl);
       return lit;
     }
 
@@ -1313,7 +1312,6 @@ public:
     }
     level = new_level;
     for (auto &lit : unnotified_propagations) {
-      assert (reason_map[lit]);
       remove_reason (lit);
     }
     unnotified_propagations.clear ();
