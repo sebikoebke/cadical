@@ -630,6 +630,7 @@ private:
   std::map<int, size_t> level_map;
   std::map<int, bool> observed_map;
   std::map<int, signed char> value_map;
+  std::vector<int> unnotified_propagations;
 
   // Next lemma to add
   size_t add_lemma_idx = 1;
@@ -699,6 +700,11 @@ private:
     if (logging) \
       std::cout << str; \
   } while (false)
+#define ILOG(...) \
+  do { \
+    Internal *internal = s->internal; \
+    LOG (__VA_ARGS__); \
+  } while (0)
 #else
 #define MLOG(str) \
   do { \
@@ -706,10 +712,14 @@ private:
 #define MLOGC(str) \
   do { \
   } while (false)
+#define ILOG(...) \
+  do { \
+  } while (false)
 #endif
 
 public:
-  // It is public, so it can be shared easily between different propagators
+  // It is public, so it can be shared easily between different
+  // propagators
   std::vector<int> observed_fixed;
 
   MockPropagator (Solver *solver, ExtendMap *map,
@@ -857,6 +867,21 @@ public:
       assert (value_map[-lit] == s->current_value (-lit));
     }
 #endif
+  }
+  void add_reason (int lit, ExternalLemma *lemma) {
+    assert (!reason_map[lit]);
+    lemma->propagation_reason = true;
+    reason_map[lit] = lemma->id;
+    unnotified_propagations.push_back (lit);
+  }
+  void remove_reason (int lit) {
+    if (!reason_map[lit])
+      return;
+    size_t reason_id = reason_map[lit];
+    assert (reason_id < external_lemmas.size ());
+    external_lemmas[reason_id]->propagation_reason = false;
+    external_lemmas[reason_id]->forgettable = true;
+    reason_map.erase (lit);
   }
 
   /*-----------------functions for mobical ends ------------------------*/
@@ -1194,8 +1219,7 @@ public:
         continue;
       }
       lemma->propagation_reason = true;
-      assert (!reason_map[propagate]);
-      reason_map[propagate] = lemma->id;
+      add_reason (propagate, lemma);
       MLOG ("cb_propagate returns " << propagate << std::endl);
       return propagate;
     }
@@ -1216,6 +1240,7 @@ public:
 
     size_t reason_id = reason_map[plit];
 
+    assert (reason_id);
     auto lemma = external_lemmas[reason_id];
     assert (lemma != nullptr);
     assert (lemma->type == PROPAGATING);
@@ -1225,7 +1250,8 @@ public:
       lemma->add_count++;
       MLOG ("reason clause for " << plit << " (id: " << reason_id
                                  << ") is added." << std::endl);
-      reason_map.erase (plit);
+      assert (reason_map[plit]);
+      remove_reason (plit);
     }
 
     return lit;
@@ -1241,6 +1267,13 @@ public:
       value_map[-lit] = -1;
       assert (s->current_value (lit) > 0);
     }
+#ifndef NDEBUG
+    for (auto &lit : unnotified_propagations) {
+      assert (value_map[lit]);
+      assert (level_map[abs (lit)] == level);
+    }
+#endif
+    unnotified_propagations.clear ();
     check_trail ();
     // Calls to solver that might force it to backtrack.
     get_force (NOTIFY_ASSIGNMENT);
@@ -1271,24 +1304,25 @@ public:
       // we delete those ones that did not get re-assigned.
       for (auto lit : observed_trail.back ()) {
         // assert (!reason_map[lit] || s->current_value (lit) <= 0);
-        if (reason_map[lit]) {
-          size_t reason_id = reason_map[lit];
-          assert (reason_id < external_lemmas.size ());
-          external_lemmas[reason_id]->propagation_reason = false;
-          external_lemmas[reason_id]->forgettable = true;
-          reason_map.erase (lit);
-        }
+        ILOG ("unassign %d (reason %zd/%zd)", lit, reason_map[lit],
+              reason_map[-lit]);
+        remove_reason (lit);
         value_map[lit] = value_map[-lit] = 0;
       }
       observed_trail.pop_back ();
     }
     level = new_level;
+    for (auto &lit : unnotified_propagations) {
+      assert (reason_map[lit]);
+      remove_reason (lit);
+    }
+    unnotified_propagations.clear ();
     // Calls to solver that might force it to backtrack.
     get_force (NOTIFY_BACKTRACK);
   }
 
   /* ---------------- ExternalPropagator functions end -------------------*/
-};
+}; // namespace CaDiCaL
 
 // This is the class for the Mobical application.
 

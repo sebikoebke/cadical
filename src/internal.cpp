@@ -327,7 +327,7 @@ int Internal::cdcl_loop_with_inprocessing () {
       // We would like to assert (satisfied ())
       // but this breaks when the user observes a fresh
       // variable during external_check_solution
-      if (satisfied ()) {
+      if (!unsat && satisfied ()) {
         res = 10;
         break;
       }
@@ -424,7 +424,7 @@ int Internal::propagate_assumptions () {
         // We would like to assert (satisfied ())
         // but this breaks when the user observes a fresh
         // variable during external_check_solution
-        if (satisfied ()) {
+        if (!unsat && satisfied ()) {
           res = 10;
           break;
         }
