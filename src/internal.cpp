@@ -400,6 +400,15 @@ int Internal::propagate_assumptions () {
 
   int res = already_solved (); // root-level propagation is done here
 
+  // TODO: red-07601995738875282273.trace
+  // have a solution that does not require backtracking (i.e. notification
+  // for local search and lucky)
+  if (!unsat && external_prop && level) {
+    backtrack ();
+    notify_loop ();
+    res = 0;
+  }
+
   if (!res) {
     restore_clauses ();
     while (!res) {
