@@ -314,28 +314,23 @@ int Internal::cdcl_loop_with_inprocessing () {
     else if (notifying_assignments ())
       continue; // notify_assignments changed level
     else if (external_propagate ()) {
-      if (unsat) // external propagation leads to unsat
-        continue;
-      else if (conflict) // external propagation leads to conflict
+      if (conflict && !unsat) // external propagation leads to conflict
         analyze_wrapper ();
-      else // external propagation changed level
-        continue;
     } else if (external_adding_clauses ()) {
-      if (unsat) // external clauses lead to unsat
-        continue;
-      else if (conflict) // external clauses lead to conflict
+      if (conflict && !unsat) // external clauses lead to conflict
         analyze_wrapper ();
-      else // external clauses changed level
-        continue;
     } else if (satisfied ()) { // found model
       if (external_check_solution ()) {
         if (conflict && !unsat)
           analyze ();
-        continue;
       }
-      assert (satisfied ());
-      res = 10;
-      break;
+      // We would like to assert (satisfied ())
+      // but this breaks when the user observes a fresh
+      // variable during external_check_solution
+      if (satisfied ()) {
+        res = 10;
+        break;
+      }
     } else if (search_limits_hit ())
       break;                               // decision or conflict limit
     else if (terminated_asynchronously ()) // externally terminated
@@ -416,31 +411,23 @@ int Internal::propagate_assumptions () {
       else if (notifying_assignments ())
         continue;                       // notify_assignments changed level
       else if (external_propagate ()) { // external propagation
-        if (unsat)
-          continue;
-        else if (conflict)
+        if (conflict && !unsat)
           analyze ();
-        else
-          continue;
       } else if (external_adding_clauses ()) {
-        if (unsat) // external clauses lead to unsat
-          continue;
-        else if (conflict) // external clauses lead to conflict
+        if (conflict && !unsat) // external clauses lead to conflict
           analyze ();
-        else // external clauses changed level
-          continue;
       } else if (satisfied ()) { // found model
         if (external_check_solution ()) {
-          if (unsat) // check solution lead to unsat
-            continue;
-          else if (conflict) // check solution added a conflict
+          if (conflict && !unsat) // check solution added a conflict
             analyze ();
-          else // check solution changed level
-            continue;
         }
-        assert (satisfied ());
-        res = 10;
-        break;
+        // We would like to assert (satisfied ())
+        // but this breaks when the user observes a fresh
+        // variable during external_check_solution
+        if (satisfied ()) {
+          res = 10;
+          break;
+        }
       } else if (search_limits_hit ())
         break;                               // decision or conflict limit
       else if (terminated_asynchronously ()) // externally terminated

@@ -632,7 +632,7 @@ private:
   std::map<int, signed char> value_map;
 
   // Next lemma to add
-  size_t add_lemma_idx = 0;
+  size_t add_lemma_idx = 1;
   size_t propagate_idx = 0;
 
   // Forced lemme addition (falsified lemma in model)
@@ -719,18 +719,13 @@ public:
     s = solver;
     extendmap = map;
     logging = logging || with_logging;
+    external_lemmas.push_back (nullptr);
   }
 
   ~MockPropagator () {
     for (auto l : external_lemmas)
-      delete[] l->literals, delete l;
-
-    reason_map.clear ();
-    level_map.clear ();
-
-    observed_trail.clear ();
-
-    observed_fixed.clear ();
+      if (l)
+        delete[] l->literals, delete l;
   }
 
   /*-----------------functions for mobical -----------------------------*/
@@ -770,11 +765,16 @@ public:
            : "LAST_MOCK_FORCE_TYPE"))))))))
           << " on " << lit << std::endl);
     // clang-format on
-    if (!observed_map[abs (lit)])
+    bool res = 0;
+    if (!observed_map[abs (lit)]) {
+      res = true;
       add_observed (lit);
-    if (value_map[lit])
+    }
+    if (value_map[lit]) {
+      res = true;
       s->force_unassign (lit);
-    return true;
+    }
+    return res;
   }
 
   void push_lemma_lit (int lit, LemmaType type, int delay) {
@@ -816,7 +816,8 @@ public:
       observed_fixed.erase (it);
     if (value_map[lit]) {
       const int unit = lit * value_map[lit];
-      assert (s->current_value (unit) > 0);
+      // We are not necessarily at a synchonized point
+      // assert (s->current_value (unit) > 0);
       auto level = level_map[lit];
       assert (observed_trail.size () > level);
       auto it = std::find (observed_trail[level].begin (),
@@ -919,9 +920,12 @@ public:
     (void) model;
 
     // Calls to solver that might force it to backtrack.
-    get_force (CB_CHECK_FOUND_MODEL);
+    if (get_force (CB_CHECK_FOUND_MODEL))
+      return false;
 
     for (const auto lemma : external_lemmas) {
+      if (lemma == nullptr)
+        continue;
       bool satisfied = false;
       int unobserved = 0;
       size_t level = 0;
@@ -998,10 +1002,11 @@ public:
 
     forgettable = false;
 
-    if (external_lemmas.empty ()) {
+    if (external_lemmas.size () == 1) {
       MLOGC ("false (there are no external lemmas)." << std::endl);
       return false;
     }
+    assert (external_lemmas.size () > 1);
 
     if (must_add_clause) {
       must_add_clause = false;
@@ -1026,11 +1031,12 @@ public:
     // Final model check will force to jump over some lemmas without
     // adding them. But if any of them is unsatisfied, it will force also
     // to set back the add_lemma_idx to them. So we do not need to start
-    // the search here from 0.
+    // the search here from 1.
 
     while (add_lemma_idx < external_lemmas.size ()) {
 
       auto lemma = external_lemmas[add_lemma_idx];
+      assert (lemma != nullptr);
       if (!lemma->add_count && !lemma->propagation_reason &&
           lemma->type != PROPAGATING && lemma->type != LAZY &&
           !lemma->delay--) {
@@ -1052,7 +1058,7 @@ public:
       add_lemma_idx++;
     }
     if (add_lemma_idx >= external_lemmas.size ())
-      add_lemma_idx = 0;
+      add_lemma_idx = 1;
     MLOGC ("false." << std::endl);
 
     return false;
@@ -1063,6 +1069,7 @@ public:
     get_force (CB_ADD_EXTERNAL_CLAUSE_LIT);
 
     auto lemma = external_lemmas[add_lemma_idx];
+    assert (lemma != nullptr);
     int lit = lemma->next_lit ();
 
     if (lemma->type == OBSERVING && lit && !s->observed (lit))
@@ -1088,7 +1095,8 @@ public:
     MLOG ("cb_decide starts." << std::endl);
     check_trail ();
     // Calls to solver that might force it to backtrack.
-    get_force (CB_DECIDE);
+    if (get_force (CB_DECIDE))
+      return 0;
 
     if (external_decide.empty ()) {
       MLOG ("cb_decide returns 0" << std::endl);
@@ -1139,12 +1147,16 @@ public:
     MLOG ("cb_propagate starts" << std::endl);
     check_trail ();
     // Calls to solver that might force it to backtrack.
-    get_force (CB_PROPAGATE);
+    if (get_force (CB_PROPAGATE))
+      return 0;
 
-    if (external_lemmas.empty ())
+    if (external_lemmas.size () <= 1)
       return 0;
 
     for (auto &lemma : external_lemmas) {
+      // first lemma is 0 to have positive ids/indizes
+      if (lemma == nullptr)
+        continue;
       if (lemma->type != PROPAGATING)
         continue;
       if (lemma->propagation_reason)
@@ -1175,11 +1187,14 @@ public:
         continue;
       if (!propagate)
         propagate = max;
+      if (!propagate)
+        continue;
       if (lemma->delay) {
         lemma->delay--;
         continue;
       }
       lemma->propagation_reason = true;
+      assert (!reason_map[propagate]);
       reason_map[propagate] = lemma->id;
       MLOG ("cb_propagate returns " << propagate << std::endl);
       return propagate;
@@ -1202,6 +1217,7 @@ public:
     size_t reason_id = reason_map[plit];
 
     auto lemma = external_lemmas[reason_id];
+    assert (lemma != nullptr);
     assert (lemma->type == PROPAGATING);
     int lit = lemma->next_lit ();
 
@@ -1254,7 +1270,7 @@ public:
       // save the potential candidates to delete, and upon next cb_decide
       // we delete those ones that did not get re-assigned.
       for (auto lit : observed_trail.back ()) {
-        assert (!reason_map[lit] || s->current_value (lit) <= 0);
+        // assert (!reason_map[lit] || s->current_value (lit) <= 0);
         if (reason_map[lit]) {
           size_t reason_id = reason_map[lit];
           assert (reason_id < external_lemmas.size ());
