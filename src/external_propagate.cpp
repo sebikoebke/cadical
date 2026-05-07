@@ -268,9 +268,12 @@ bool Internal::external_adding_clauses () {
     return true;
   }
   assert (level == notified_level);
-  if (!propagate ())
+  if (!propagate ()) {
+    LOG ("external clause addition lead to conflict");
     return true;
+  }
   assert (!conflict && !unsat);
+  LOG ("external clause addition did not change solver state");
   return notifying_assignments ();
 }
 
