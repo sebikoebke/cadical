@@ -325,10 +325,13 @@ int Internal::cdcl_loop_with_inprocessing () {
           analyze ();
         continue;
       }
-      assert (!unsat);
-      assert (satisfied ());
-      res = 10;
-      break;
+      // We would like to assert (satisfied ())
+      // but this breaks when the user observes a fresh
+      // variable during external_check_solution
+      if (!unsat && satisfied ()) {
+        res = 10;
+        break;
+      }
     } else if (search_limits_hit ()) // decision or conflict limit
       break;
     else if (terminated_asynchronously ()) {
@@ -423,10 +426,13 @@ int Internal::propagate_assumptions () {
             analyze ();
           continue;
         }
-        assert (!unsat);
-        assert (satisfied ());
-        res = 10;
-        break;
+        // We would like to assert (satisfied ())
+        // but this breaks when the user observes a fresh
+        // variable during external_check_solution
+        if (!unsat && satisfied ()) {
+          res = 10;
+          break;
+        }
       } else if (search_limits_hit ())
         break;                               // decision or conflict limit
       else if (terminated_asynchronously ()) // externally terminated
