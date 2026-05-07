@@ -331,11 +331,15 @@ int Internal::cdcl_loop_with_inprocessing () {
         res = 10;
         break;
       }
-    } else if (search_limits_hit ())
-      break;                               // decision or conflict limit
-    else if (terminated_asynchronously ()) // externally terminated
+    } else if (search_limits_hit ()) // decision or conflict limit
       break;
-    else if (restarting ())
+    else if (terminated_asynchronously ()) {
+      /* TODO: put this higher
+     if (!unsat && satisfied ())
+       res = 10;
+       */
+      break;
+    } else if (restarting ())
       restart (); // restart by backtracking
     else if (rephasing ())
       rephase (); // reset variable phases
@@ -358,6 +362,9 @@ int Internal::cdcl_loop_with_inprocessing () {
     else
       decide (); // next decision
   }
+
+  assert (!unsat || res == 20);
+  assert (unsat || !satisfied () || res == 10);
 
   if (stable) {
     STOP (stable);
@@ -1046,8 +1053,6 @@ int Internal::solve (bool preprocess_only) {
       res = cdcl_loop_with_inprocessing ();
     }
   }
-  assert (!unsat || res == 20);
-  assert (!satisfied () || res == 10);
   finalize (res);
   reset_solving ();
   report_solving (res);
