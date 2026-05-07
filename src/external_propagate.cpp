@@ -165,7 +165,7 @@ bool Internal::external_propagate () {
     const int elit = external->propagator->cb_propagate ();
     LOG ("cb_propagate returns %d", elit);
 
-    if (level != notified_level) {
+    if (level < notified_level || notified_trail < trail.size ()) {
       LOG ("cb_propagate triggered a backtrack, ignoring return value %d",
            elit);
       return true;
@@ -195,7 +195,7 @@ bool Internal::external_propagate () {
       LOG (res, "reason clause of external propagation of %d:", elit);
       (void) res;
 
-      assert (unsat || conflict || level != notified_level);
+      assert (unsat || conflict || level < notified_level);
       return true;
     }
 
@@ -884,7 +884,7 @@ bool Internal::external_check_solution () {
       external->propagator->cb_check_found_model (notify_model_trail);
   notify_model_trail.clear ();
 
-  if (level < notified_level)
+  if (level < notified_level || notified_trail < trail.size ())
     return true;
   if (is_consistent) {
     LOG ("Found solution is approved by external propagator.");
@@ -967,8 +967,8 @@ bool Internal::notifying_assignments () {
   notification_trail.clear ();
   if (notified_level == level && notified_trail)
     return false;
-  // Only here we actually changed the level or observed an already assigned
-  // variable.
+  // Only here we actually changed the level or observed an already
+  // assigned variable.
   stats.up_notify_forced++;
   return true;
 }
@@ -992,7 +992,7 @@ bool Internal::notifying_decision () {
   stats.up_notify++;
   stats.up_notify_decision++;
   external->propagator->notify_new_decision_level ();
-  if (level < notified_level) {
+  if (level < notified_level || notified_trail < trail.size ()) {
     stats.up_notify_forced++;
     return true;
   }
