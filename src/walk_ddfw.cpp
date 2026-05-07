@@ -73,6 +73,11 @@ struct DDFWCompactBinary {
 // This is the main structure containing all informations about any
 // clause: its weight, the critical variable (if any), the number of
 // true literals, and the position in the array of broken clauses.
+//
+// Unlike Tassat we put all informations together, because most of the
+// time all the information are touched (it is only during weight transfer,
+// which is only a minor part of walk).
+//
 struct DDFW_Counter {
   union {
     Clause *clause; // pointer to the clause itself
