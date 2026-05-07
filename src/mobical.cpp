@@ -822,6 +822,7 @@ public:
                            observed_trail[level].end (), lit);
       assert (it != observed_trail[level].end ());
       observed_trail[level].erase (it);
+      value_map[lit] = value_map[-lit] = 0;
     }
     s->remove_observed_var (lit);
   }
