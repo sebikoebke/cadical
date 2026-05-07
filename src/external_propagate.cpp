@@ -913,7 +913,8 @@ bool Internal::notifying_assignments () {
   if (!level)
     notified_trail = 0;
 
-  if (notified_trail == end_of_trail && delay_notify_units.empty ()) {
+  if (notified_trail == end_of_trail) {
+    assert (delay_notify_units.empty ());
     LOG ("no new assignments to notify");
     return false;
   }
@@ -961,9 +962,10 @@ bool Internal::notifying_assignments () {
   stats.up_notify_assignments++;
   external->propagator->notify_assignment (notification_trail);
   notification_trail.clear ();
-  if (notified_level == level)
+  if (notified_level == level && notified_trail)
     return false;
-  // Only here we actually changed the level.
+  // Only here we actually changed the level or observed an already assigned
+  // variable.
   stats.up_notify_forced++;
   return true;
 }
@@ -993,6 +995,14 @@ bool Internal::notifying_decision () {
   }
   notified_level++;
   return false;
+}
+
+void Internal::notify_root_level () {
+  if (!external_prop || external_prop_is_lazy)
+    return;
+  notifying_backtrack ();
+  while (notifying_assignments ())
+    continue;
 }
 
 bool Internal::notifying_backtrack () {

@@ -447,10 +447,13 @@ void External::add_observed_var (int elit) {
     return;
   int unit = tmp < 0 ? -elit : elit;
 
-  // internal add-observed-var had to backtrack to root-level already
+  // internal add-observed-var had to backtrack to root-level already.
   assert (!internal->level);
   if (!marked (notified, tmp))
     return;
+  // make sure that the user is notified again.
+  assert (internal->trail.size ());
+  internal->notified_trail = 0;
 
   internal->delay_notify_units.push_back (unit);
   LOG ("delay notify propagator about fixed assignment upon observe for %d",

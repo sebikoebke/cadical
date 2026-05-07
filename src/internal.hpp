@@ -843,6 +843,7 @@ struct Internal {
   void move_literals_to_watch ();
   size_t best_literal_to_watch (int, bool);
   void handle_external_clause (Clause *, int64_t new_id = 0);
+  void notify_root_level ();
   bool notifying_assignments ();
   bool notifying_backtrack ();
   bool notifying_decision ();
