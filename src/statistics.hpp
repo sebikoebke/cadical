@@ -327,11 +327,11 @@
   STATISTIC (up_cb_add,              1, percent, "%", up_cb) \
   STATISTIC (up_cb_add_external,     1, relative, "%", up_cb_add) \
   STATISTIC (up_cb_add_reason,       1, relative, "%", up_cb_add) \
+  STATISTIC (up_cb_asked,            1, relative, "%", up_cb) \
+  STATISTIC (up_cb_asked_added,      1, relative, "%", up_cb) \
   STATISTIC (up_cb_check_model,      1, percent, "%", up_cb) \
   STATISTIC (up_cb_decide,           1, percent, "%", up_cb) \
   STATISTIC (up_cb_decided,          1, percent, "%", up_cb_decide) \
-  STATISTIC (up_cb_decide_force_bt,  1, percent, "%", up_cb_decide) \
-  STATISTIC (up_cb_has_clause,       1, relative, "%", up_cb) \
   STATISTIC (up_cb_prop,             1, percent, "%", up_cb) \
   STATISTIC (up_cb_prop_assign,      2, percent, "%", up_cb_prop) \
   STATISTIC (up_cb_prop_clash,       2, percent, "%", up_cb_prop) \
@@ -351,7 +351,6 @@
   STATISTIC (up_notify_backtrack,    1, percent, "%", up_notify) \
   STATISTIC (up_notify_decision,    1, percent, "%", up_notify) \
   STATISTIC (up_notify_forced,       1, percent, "%", up_notify) \
-  STATISTIC (up_notify_new_level,    1, percent, "%", up_notify) \
   STATISTIC (variables_extension,    2, percent, "%", vars) \
   STATISTIC (variables_original,     1, percent, "%", vars) \
   STATISTIC (vars,                   0, NOTHING, 0, 0) \

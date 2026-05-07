@@ -243,12 +243,13 @@ bool Internal::external_adding_clauses () {
          level, trail.size (), notified_trail);
 
     stats.up_cb++;
-    stats.up_cb_has_clause++;
+    stats.up_cb_asked++;
     // do you want to add a clause
     const bool adding = ask_external_clause ();
 
     if (!adding)
       break;
+    stats.up_cb_asked_added++;
 
     // actually adding the clause
     add_external_clause ();

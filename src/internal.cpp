@@ -1046,6 +1046,8 @@ int Internal::solve (bool preprocess_only) {
       res = cdcl_loop_with_inprocessing ();
     }
   }
+  assert (!unsat || res == 20);
+  assert (!satisfied () || res == 10);
   finalize (res);
   reset_solving ();
   report_solving (res);
