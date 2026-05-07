@@ -835,6 +835,7 @@ public:
       assert (it != observed_trail[level].end ());
       observed_trail[level].erase (it);
       value_map[lit] = value_map[-lit] = 0;
+      remove_reason (lit);
     }
     s->remove_observed_var (lit);
   }
@@ -846,6 +847,7 @@ public:
       const int lit = kvp.first;
       assert (s->observed (lit));
       value_map[lit] = value_map[-lit] = 0;
+      remove_reason (lit);
     }
     observed_map.clear ();
     for (auto &t : observed_trail) {
@@ -1217,7 +1219,6 @@ public:
         lemma->delay--;
         continue;
       }
-      lemma->propagation_reason = true;
       add_reason (propagate, lemma);
       MLOG ("cb_propagate returns " << propagate << std::endl);
       return propagate;
