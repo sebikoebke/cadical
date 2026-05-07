@@ -183,9 +183,11 @@ bool Internal::external_propagate () {
     int tmp = val (ilit);
     LOG ("External propagation of e%d (i%d val: %d)", elit, ilit, tmp);
 
-    if (tmp > 0)
-      FATAL (
-          "external propagations are disallowed for satisfied variables.");
+    if (tmp > 0) {
+      // FATAL (
+      LOG ("external propagations are disallowed for satisfied variables.");
+      continue;
+    }
     if (tmp < 0) {
       assert (fixed (ilit) || observed (ilit));
       LOG ("External propgation of %d is falsified under current trail",
