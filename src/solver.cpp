@@ -1139,7 +1139,8 @@ void Solver::add_observed_var (int idx) {
   REQUIRE (external->propagator,
            "can not observe variables without a connected propagator");
   REQUIRE (!internal->force_no_backtrack,
-           "can not observe variables during 'cb_add_reason_clause_lit'.");
+           "can not observe variables during 'cb_add_reason_clause_lit' or "
+           "'notify_backtrack'.");
   external->add_observed_var (idx);
   LOG_API_CALL_END ("observe", idx);
 }
@@ -1151,9 +1152,9 @@ void Solver::remove_observed_var (int idx) {
   REQUIRE (external->propagator,
            "can not unobserve variables without a connected propagator");
   REQUIRE (external->observed (idx), "try to remove unobserved variable.");
-  REQUIRE (
-      !internal->force_no_backtrack,
-      "can not unobserve variables during 'cb_add_reason_clause_lit'.");
+  REQUIRE (!internal->force_no_backtrack,
+           "can not unobserve variables during 'cb_add_reason_clause_lit' "
+           "or 'notify_backtrack'.");
   external->remove_observed_var (idx);
   LOG_API_CALL_END ("unobserve", idx);
 }
@@ -1166,7 +1167,7 @@ void Solver::reset_observed_vars () {
       "can not reset observed variables without a connected propagator");
   REQUIRE (!internal->force_no_backtrack,
            "can not reset observed variables during "
-           "'cb_add_reason_clause_lit'.");
+           "'cb_add_reason_clause_lit' or 'notify_backtrack'.");
   external->reset_observed_vars ();
   LOG_API_CALL_END ("reset_observed");
 }
@@ -1607,7 +1608,8 @@ void Solver::force_backtrack (int new_level) {
   REQUIRE (external->propagator,
            "can not force backtrack without a connected propagator");
   REQUIRE (!internal->force_no_backtrack,
-           "can not force backtrack during 'cb_add_reason_clause_lit'.");
+           "can not force backtrack during 'cb_add_reason_clause_lit' or "
+           "'notify_backtrack'.");
   REQUIRE (new_level >= 0,
            "the target level of a forced backtrack must be non-negative.");
   REQUIRE (new_level < internal->level,
@@ -1625,7 +1627,8 @@ bool Solver::force_unassign (int lit) {
   REQUIRE (external->observed (lit),
            "can only force unassign observed variables");
   REQUIRE (!internal->force_no_backtrack,
-           "can not force unassign during 'cb_add_reason_clause_lit'.");
+           "can not force unassign during 'cb_add_reason_clause_lit' or "
+           "'notify_backtrack'.");
   bool const res = external->force_unassign (lit);
   LOG_API_CALL_RETURNS ("force_unassign", lit, res);
   return res;

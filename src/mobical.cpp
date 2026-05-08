@@ -1317,7 +1317,8 @@ public:
     }
     unnotified_propagations.clear ();
     // Calls to solver that might force it to backtrack.
-    get_force (NOTIFY_BACKTRACK);
+    // TODO: not allowed
+    // get_force (NOTIFY_BACKTRACK);
   }
 
   /* ---------------- ExternalPropagator functions end -------------------*/
