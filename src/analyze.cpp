@@ -1311,6 +1311,7 @@ void Internal::analyze () {
   // or we haven't actually learned a clause in new_driving_clause
   // then lrat_chain is still valid and we will learn a unit or empty clause
   //
+  conflict = 0;
   if (uip) {
     search_assign_driving (-uip, driving_clause);
   } else
@@ -1325,7 +1326,6 @@ void Internal::analyze () {
   clear_unit_analyzed_literals ();
   clear_analyzed_levels ();
   clause.clear ();
-  conflict = 0;
 
   lrat_chain.clear ();
   STOP (analyze);

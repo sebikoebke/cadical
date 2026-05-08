@@ -15,13 +15,6 @@ void Internal::mark_declared (int lit) {
 }
 
 void Internal::mark_fixed (int lit) {
-  if (external->fixed_listener) {
-    int elit = externalize (lit);
-    assert (elit);
-    const int eidx = abs (elit);
-    if (!external->ervars[eidx])
-      external->fixed_listener->notify_fixed_assignment (elit);
-  }
   Flags &f = flags (lit);
   if (f.status == Flags::DECLARED)
     mark_active (lit);
@@ -35,6 +28,13 @@ void Internal::mark_fixed (int lit) {
   stats.vars_active--;
   assert (!active (lit));
   assert (f.fixed ());
+  if (external->fixed_listener) {
+    int elit = externalize (lit);
+    assert (elit);
+    const int eidx = abs (elit);
+    if (!external->ervars[eidx])
+      external->fixed_listener->notify_fixed_assignment (elit);
+  }
 }
 
 void Internal::mark_eliminated (int lit) {
