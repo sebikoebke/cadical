@@ -22,39 +22,6 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-void Internal::learn_empty_clause () {
-  assert (!unsat);
-  build_chain_for_empty ();
-  LOG ("learned empty clause");
-  external->check_learned_empty_clause ();
-  int64_t id = ++clause_id;
-  if (proof) {
-    proof->add_derived_empty_clause (id, lrat_chain);
-  }
-  unsat = true;
-  conflict_id = id;
-  marked_failed = true;
-  conclusion.push_back (id);
-  lrat_chain.clear ();
-}
-
-void Internal::learn_unit_clause (int lit) {
-  assert (!unsat);
-  LOG ("learned unit clause %d, stored at position %d", lit, vlit (lit));
-  external->check_learned_unit_clause (lit);
-  int64_t id = ++clause_id;
-  if (lrat || frat) {
-    const unsigned uidx = vlit (lit);
-    unit_clauses (uidx) = id;
-  }
-  if (proof) {
-    proof->add_derived_unit_clause (id, lit, lrat_chain);
-  }
-  mark_fixed (lit);
-}
-
-/*------------------------------------------------------------------------*/
-
 // Move bumped variables to the front of the (VMTF) decision queue.  The
 // 'bumped' time stamp is updated accordingly.  It is used to determine
 // whether the 'queue.assigned' pointer has to be moved in 'unassign'.

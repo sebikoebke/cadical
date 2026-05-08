@@ -381,8 +381,6 @@ void Internal::assign_original_unit (int64_t id, int lit) {
   LOG ("original unit assign %d", lit);
   assert (num_assigned == trail.size () || level);
   mark_fixed (lit);
-  if (level)
-    return;
 }
 
 // New clause added through the API, e.g., while parsing a DIMACS file.
@@ -523,6 +521,262 @@ void Internal::add_new_original_clause (int64_t id) {
   }
   clause.clear ();
   lrat_chain.clear ();
+}
+
+/*----------------------------------------------------------------------------*/
+//
+// Checks if the new clause forces backtracking, new assignments or
+// conflict analysis
+//
+void Internal::handle_external_clause (Clause *res, int64_t new_id) {
+  if (from_propagator)
+    stats.up_learn++;
+  if (from_propagator && !res)
+    stats.up_learn_unit++;
+
+  assert (res || clause.size () == 1);
+
+  if (!res && force_no_backtrack) {
+    const int lit = clause[0];
+    assert (val (lit) > 0);
+    assert (new_id);
+    assert (level);
+    assert (val (lit) >= 0);
+    assert (!flags (lit).eliminated ());
+    Var &v = var (lit);
+    assert (val (clause[0]));
+    v.level = 0;
+    v.reason = 0;
+    LOG ("elevate %s to level 0", LOGLIT (lit));
+    const unsigned uidx = vlit (lit);
+    if (lrat || frat)
+      unit_clauses (uidx) = new_id;
+    mark_fixed (lit);
+    return;
+  }
+
+  if (!res && ((val (clause[0]) > 0 && opts.elevate > 0 &&
+                (opts.elevate > 1 || var (clause[0]).reason)))) {
+    assert (level);
+    assert (new_id);
+    const int lit = clause[0];
+    assert (val (lit) >= 0);
+    assert (!flags (lit).eliminated ());
+    Var &v = var (lit);
+    assert (val (clause[0]));
+    v.level = 0;
+    v.reason = 0;
+    LOG ("elevate %s to level 0", LOGLIT (lit));
+    const unsigned uidx = vlit (lit);
+    if (lrat || frat)
+      unit_clauses (uidx) = new_id;
+    mark_fixed (lit);
+    return;
+  }
+
+  if (!res) {
+    if (from_propagator)
+      stats.up_learn_propagating++;
+    const int lit = clause[0];
+    assert (!val (lit) || var (lit).level);
+    if (val (lit))
+      backtrack_without_updating_phases (var (lit).level - 1);
+    if (opts.elevate == -1 && val (lit))
+      backtrack_without_updating_phases ();
+    // cvc5 fixed_assignment_listener breaks if lit is still assigned
+    // negatively, so we need to notify here.
+    notifying_backtrack ();
+    assert (!val (lit));
+    assign_original_unit (new_id, lit);
+    return;
+  }
+
+  // at level 0 we have to do nothing...
+  if (!level)
+    return;
+
+  assert (res);
+  assert (res->size >= 2);
+  const int pos0 = res->literals[0];
+  const int pos1 = res->literals[1];
+  const int l1 = var (pos1).level;
+  const int l0 = var (pos0).level;
+  if (force_no_backtrack) {
+    assert (from_propagator);
+    assert (val (pos1) < 0);
+    assert (val (pos0) >= 0);
+
+    Var &v = var (pos0);
+    if (v.level != l1) {
+      stats.up_learn_lazy_elevate++;
+      LOG (res,
+           "elevate assignment of %s from level %d to level %d with lazy "
+           "reason clause",
+           LOGLIT (pos0), l0, l1);
+      LOG ("elevate %s to level %d", LOGLIT (pos0), l1);
+    } else
+      LOG (res, "add assignment %s lazy reason clause", LOGLIT (pos0));
+    v.level = l1;
+    return;
+  }
+  assert (!force_no_backtrack);
+
+  if (val (pos1) >= 0) // do nothing
+    return;
+
+  if (val (pos0) < 0) { // conflicting
+    assert (val (pos1) < 0);
+    assert (0 < l1 && l1 <= var (pos0).level);
+    if (opts.elevate == -1)
+      backtrack_without_updating_phases (l1);
+    // its better to backtrack instead of analyze without propagator
+    // but analyze with propagaor
+    if (val (pos0) && !from_propagator)
+      backtrack_without_updating_phases (l0 - 1);
+    else if (val (pos0) && from_propagator) {
+      conflict = res;
+      stats.up_learn_conflict++;
+    }
+    if (val (pos1) < 0 && !val (pos0))
+      search_assign_driving (pos0, res);
+    return;
+  }
+
+  if (!val (pos0)) { // propagating
+    assert (val (pos1) < 0);
+    if (opts.elevate == -1)
+      backtrack_without_updating_phases (l1);
+    if (val (pos1) < 0 && !val (pos0))
+      search_assign_driving (pos0, res);
+    return;
+  }
+
+  if (l0 <= l1) // no alternative reason
+    return;
+
+  assert (val (pos0) > 0); // elevating
+  assert (val (pos1) < 0);
+
+  // It would have propagated pos0 on an earlier level than it is
+  // assigned
+
+  // Find the highest literal based on trail-position of the clause
+
+  size_t highest_idx = best_literal_to_watch (pos0, true);
+  assert (highest_idx != 0);
+  const int highest_literal = clause[highest_idx];
+
+  // highest trail level variable
+  const Var &m = var (highest_literal);
+  assert (l0 >= m.level);
+
+  // best watch variable
+  Var &v = var (pos0);
+
+  // out-of-order if best watch smaller highest.
+  if (v.trail < m.trail && opts.elevate > 0) {
+    assert (highest_idx);
+    int *lits = res->literals;
+    if (highest_idx != 1) {
+      lits[1] = highest_literal;
+      lits[highest_idx] = pos1;
+    }
+    if (from_propagator)
+      stats.up_learn_out_of_order++;
+    LOG (res,
+         "ignore out-of-order missed assignment of %s from level %d to "
+         "level %d with new "
+         "reason clause",
+         LOGLIT (pos0), var (pos0).level, var (pos1).level);
+    return;
+  }
+
+  // in order
+  if (v.trail > m.trail && opts.elevate > 0 &&
+      (opts.elevate > 1 || v.reason)) {
+    // If v.trail == m.trail, then the propagated literal is the
+    // maximum as well, so no need to backtrack we simply reassign the
+    // reason and level of the propagation
+    LOG (res,
+         "elevate assignment of %s from level %d to level %d with new "
+         "reason clause",
+         LOGLIT (pos0), var (pos0).level, var (pos1).level);
+
+    assert (l1 < l0);
+    assert (var (pos1).trail < var (pos0).trail);
+    assert (var (highest_literal).trail < var (pos0).trail);
+
+    v.level = l1;
+    v.reason = res;
+    LOG ("elevate %s to level %d", LOGLIT (pos0), l1);
+
+    if (from_propagator)
+      stats.up_learn_elevating++;
+
+    if (out_of_order_level == -1 || l1 < out_of_order_level)
+      out_of_order_level = l1;
+    if (v.trail > out_of_order_trail)
+      out_of_order_trail = v.trail;
+    return;
+  }
+
+  // backtrack instead
+  LOG (res,
+       "backtrack due to missed assignment of %d from level %d to "
+       "level %d with new reason clause",
+       pos0, l0, l1);
+  assert (!force_no_backtrack);
+
+  if (opts.elevate == -1)
+    backtrack_without_updating_phases (l1);
+  else
+    backtrack_without_updating_phases (l0 - 1);
+
+  assert (!val (pos0) && val (pos1) < 0);
+  search_assign_driving (pos0, res);
+
+  assert (v.trail >= m.trail);
+  assert (v.level == l1);
+  assert (val (pos0) > 0 && val (pos1) < 0);
+}
+
+/*------------------------------------------------------------------------*/
+//
+// below are all the various ways to learn clauses in the solver
+//
+
+void Internal::learn_empty_clause () {
+  assert (!unsat);
+  build_chain_for_empty ();
+  LOG ("learned empty clause");
+  external->check_learned_empty_clause ();
+  int64_t id = ++clause_id;
+  if (proof) {
+    proof->add_derived_empty_clause (id, lrat_chain);
+  }
+  unsat = true;
+  conflict_id = id;
+  marked_failed = true;
+  conclusion.push_back (id);
+  lrat_chain.clear ();
+}
+
+void Internal::learn_unit_clause (int lit) {
+  assert (!unsat);
+  LOG ("learned unit clause %d, stored at position %d", lit, vlit (lit));
+  external->check_learned_unit_clause (lit);
+  int64_t id = ++clause_id;
+  if (lrat || frat) {
+    const unsigned uidx = vlit (lit);
+    unit_clauses (uidx) = id;
+  }
+  if (proof) {
+    proof->add_derived_unit_clause (id, lit, lrat_chain);
+  }
+  // cvc5 fixed_assignment_listener breaks if lit is still assigned
+  // negatively, so we need to notify here (this might trigger bt).
+  notifying_backtrack ();
+  mark_fixed (lit);
 }
 
 // Add learned new clause during conflict analysis and watch it. Requires
