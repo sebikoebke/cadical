@@ -790,14 +790,16 @@ bool Internal::notifying_decision () {
   assert (notified_trail == trail.size ());
   stats.up_notify++;
   stats.up_notify_decision++;
+  notified_level++;
+  const int new_level = level + 1;
+  assert (new_level == notified_level);
   external->propagator->notify_new_decision_level ();
-  if (level < notified_level || notified_trail < trail.size ()) {
-    notified_level++;
+  if (level < new_level - 1 || notified_level < new_level ||
+      notified_trail < trail.size ()) {
     notify_loop ();
     stats.up_notify_forced++;
     return true;
   }
-  notified_level++;
   return false;
 }
 
@@ -846,7 +848,7 @@ bool Internal::ask_decision () {
 
   int elit = external->propagator->cb_decide ();
 
-  assert (level + 1 <= notified_level);
+  assert (!level || level + 1 <= notified_level);
   if (notified_level != level + 1)
     return true;
   if (notified_trail != trail.size ())

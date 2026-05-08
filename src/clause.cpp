@@ -775,7 +775,8 @@ void Internal::learn_unit_clause (int lit) {
   }
   // cvc5 fixed_assignment_listener breaks if lit is still assigned
   // negatively, so we need to notify here (this might trigger bt).
-  notifying_backtrack ();
+  if (notified_level)
+    notifying_backtrack ();
   mark_fixed (lit);
 }
 
