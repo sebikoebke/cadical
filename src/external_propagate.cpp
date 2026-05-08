@@ -383,7 +383,6 @@ void Internal::move_literals_to_watch () {
 //
 void Internal::add_external_clause (int prop_elit) {
   assert (!from_propagator);
-  from_propagator = true;
 
   int elit = 0;
   bool propagated_lit_found = false;
@@ -428,9 +427,11 @@ void Internal::add_external_clause (int prop_elit) {
   tmp_eclause = std::move (external->eclause);
   external->eclause.clear ();
 
+  from_propagator = true;
   for (auto &tmp : tmp_elits)
     external->add (tmp);
   tmp_elits.clear ();
+  from_propagator = false;
 
   // copy the old state back.
   assert (lrat_chain.empty ());
@@ -441,8 +442,6 @@ void Internal::add_external_clause (int prop_elit) {
   clause = std::move (tmp_clause);
   original = std::move (tmp_original);
   external->eclause = std::move (tmp_eclause);
-
-  from_propagator = false;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -900,8 +899,11 @@ bool Internal::external_check_solution () {
   }
 
   // we still have a complete model but the user is unhappy
-  // so they can add clauses
-  return external_adding_clauses ();
+  // so they can add clauses.
+  // cvc5 expects to continue so we can't do this:
+  // return external_adding_clauses ();
+  external_adding_clauses ();
+  return true;
 }
 
 // Notify the external propagator that an observed variable got assigned.
