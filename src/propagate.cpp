@@ -221,6 +221,8 @@ bool Internal::propagate () {
   if (level)
     require_mode (SEARCH);
   assert (!unsat);
+  if (conflict)
+    return conflict;
   LOG ("starting propagate");
 
   // IPASIR-UP make everything harder.
