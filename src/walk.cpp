@@ -360,7 +360,6 @@ int Internal::walk_pick_lit (Walker &walker, Clause *c) {
   const int64_t old = walker.ticks;
   walker.ticks += 1;
   double sum = 0;
-  int64_t propagations = 0;
   for (const auto lit : *c) {
     assert (active (lit));
     if (var (lit).level == 1) {
@@ -368,14 +367,12 @@ int Internal::walk_pick_lit (Walker &walker, Clause *c) {
       continue;
     }
     assert (active (lit));
-    propagations++;
     unsigned tmp = walk_break_value (-lit, walker.ticks);
     double score = walker.score (tmp);
     LOG ("literal %d break-count %u score %g", lit, tmp, score);
     walker.scores.push_back (score);
     sum += score;
   }
-  (void) propagations; // TODO actually unused?
   LOG ("scored %zd literals", walker.scores.size ());
   assert (!walker.scores.empty ());
   assert (walker.scores.size () <= (size_t) c->size);
