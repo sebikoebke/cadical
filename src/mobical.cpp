@@ -1075,7 +1075,11 @@ public:
     if (!s->observed (lit)) {
       // do we want to observe?
       s->add_observed_var (lit);
-      MLOG ("cb_decide returns 0" << std::endl);
+      if (s->current_value (lit)) {
+        MLOG ("cb_decide returns 0" << std::endl);
+        return 0;
+      }
+      MLOG ("cb_decide returns " << lit << std::endl);
       return lit;
     }
 
