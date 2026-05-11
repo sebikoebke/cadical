@@ -79,6 +79,9 @@ static const char *USAGE =
 "\n"
 "  --do-not-enforce-contracts\n"
 "\n"
+"When replaying a trace with user propagator, use the following\n"
+"  --no-mock         disable mock propagator (allows replay of propagators)\n"
+"\n"
 "To read from '<stdin>' use '-' as '<input>' and also '-' instead of\n"
 "'<output>' to write to '<stdout>'.\n"
 "\n"
@@ -249,6 +252,7 @@ struct DoNot {
   bool seeds = false;
   bool summary = false;
   bool ignore_resource_limits = false;
+  bool mock_propagator = false;
 };
 
 /*------------------------------------------------------------------------*/
@@ -561,6 +565,31 @@ enum LemmaType {
   OBSERVING,
   EAGER,
   LAST_LEMMA_TYPE,
+};
+
+class ReplayPropagator : public ExternalPropagator {
+private:
+  Solver *solver = 0;
+  ExtendMap *extendmap = 0;
+
+  // ReplayPropagator parameters
+  bool logging = false;
+
+  struct Action {
+    const char *name;
+    int lit;
+  };
+  std::vector<Action *> cb_actions;
+
+public:
+  ReplayPropagator (Solver *s, ExtendMap *e, bool l)
+      : solver (s), extendmap (e), logging (l) {}
+
+  ~ReplayPropagator () {
+    for (auto &action : cb_actions) {
+      delete action;
+    }
+  }
 };
 
 class MockPropagator : public ExternalPropagator,
@@ -1079,7 +1108,7 @@ public:
       }
 
       // Forgettable lemmas are added repeatedly to the solver only when
-      // the final model falsifies it (recognized in cb_check_final_model).
+      // the final model falsifies it (after cb_check_final_model).
 
       add_lemma_idx++;
     }
@@ -1321,7 +1350,7 @@ public:
     // get_force (NOTIFY_BACKTRACK);
   }
 
-  /* ---------------- ExternalPropagator functions end -------------------*/
+  /* ----------- FixedAssignmentListener functions end -----------------*/
 }; // namespace CaDiCaL
 
 // This is the class for the Mobical application.
@@ -1341,6 +1370,7 @@ class Mobical : public Handler {
   friend struct FlippableCall;
   friend struct MeltCall;
   friend class MockPropagator;
+  friend class ReplayPropagator;
   friend struct ResetCall;
   friend struct ConnectCall;
   friend struct DisconnectCall;
@@ -1458,6 +1488,7 @@ protected:
 
   MockPropagator
       *mock_pointer; // to be able to clean up withouth disconnect
+  ReplayPropagator *replay_pointer;
 
 public:
   Mobical ();
@@ -6072,6 +6103,8 @@ int Mobical::main (int argc, char **argv) {
       summary = 0;
     else if (!strcmp (argv[i], "--summary"))
       summary = 1;
+    else if (!strcmp (argv[i], "--no-mock"))
+      donot.mock_propagator = true;
     else if (!strcmp (argv[i], "--do-not-shrink") ||
              !strcmp (argv[i], "--do-not-shrink-at-all"))
       donot.shrink.atall = true;
