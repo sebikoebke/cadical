@@ -585,7 +585,9 @@ void Internal::handle_external_clause (Clause *res, int64_t new_id) {
       backtrack_without_updating_phases ();
     // cvc5 fixed_assignment_listener breaks if lit is still assigned
     // negatively, so we need to notify here.
+    /*
     notifying_backtrack ();
+    */
     assert (!val (lit));
     assign_original_unit (new_id, lit);
     return;
@@ -775,8 +777,10 @@ void Internal::learn_unit_clause (int lit) {
   }
   // cvc5 fixed_assignment_listener breaks if lit is still assigned
   // negatively, so we need to notify here (this might trigger bt).
-  if (notified_level)
+  /*
+  if (notified_level >= level)
     notifying_backtrack ();
+    */
   mark_fixed (lit);
 }
 

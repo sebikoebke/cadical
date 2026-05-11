@@ -178,8 +178,10 @@ void Internal::backtrack_without_updating_phases (int new_level) {
   }
   assert (num_assigned == trail.size ());
   // root-level backtrack is eagerly notified.
+  /*
   if (!level)
     notifying_backtrack ();
+    */
 }
 
 } // namespace CaDiCaL
