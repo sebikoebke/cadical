@@ -653,9 +653,6 @@ bool Internal::external_check_solution () {
   assert (notified_level == level);
   assert (notified_trail == trail.size ());
 
-  LOG ("Final check by external propagator is invoked.");
-  stats.up_cb_check_model++;
-
   // no need to extend because it cannot flip non-witness literals.
   // external->reset_extended ();
   // external->extend ();
@@ -674,14 +671,17 @@ bool Internal::external_check_solution () {
     notify_model_trail.push_back (lit);
   }
 
+  LOG ("Final check by external propagator is invoked.");
   stats.up_cb++;
   stats.up_cb_check_model++;
   bool is_consistent =
       external->propagator->cb_check_found_model (notify_model_trail);
   notify_model_trail.clear ();
 
-  if (level < notified_level || notified_trail < trail.size ())
+  if (level < notified_level || notified_trail < trail.size ()) {
+    stats.up_cb_forced++;
     return true;
+  }
   if (is_consistent) {
     LOG ("Found solution is approved by external propagator.");
     return false;

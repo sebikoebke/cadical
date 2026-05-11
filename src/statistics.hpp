@@ -332,6 +332,7 @@
   STATISTIC (up_cb_check_model,      1, percent, "%", up_cb) \
   STATISTIC (up_cb_decide,           1, percent, "%", up_cb) \
   STATISTIC (up_cb_decided,          1, percent, "%", up_cb_decide) \
+  STATISTIC (up_cb_forced,           1, percent, "%", up_cb) \
   STATISTIC (up_cb_prop,             1, percent, "%", up_cb) \
   STATISTIC (up_cb_prop_assign,      2, percent, "%", up_cb_prop) \
   STATISTIC (up_cb_prop_clash,       2, percent, "%", up_cb_prop) \
