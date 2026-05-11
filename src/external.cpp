@@ -413,7 +413,6 @@ void External::add_observed_var (int elit) {
   // taint and restore of the newly observed variable.
   // Restore_clauses must be called before continue.
 
-
   if (marked (witness, elit)) {
     mark (tainted, -elit);
   }
@@ -839,6 +838,10 @@ void External::check_assignment (int (External::*a) (int) const) {
       }
 
       if ((this->*a) (lit) == lit) {
+        satisfied = true;
+        break;
+      } else if (!observed (lit)) {
+        // unobserved variables do not need to be satisfied
         satisfied = true;
         break;
       }
