@@ -823,9 +823,9 @@ bool Internal::notifying_backtrack () {
   // this call can potentially trigger an additional backtrack.
   stats.up_notify++;
   stats.up_notify_backtrack++;
-  force_no_backtrack = true;
+  // force_no_backtrack = true;
   external->propagator->notify_backtrack (level);
-  force_no_backtrack = false;
+  // force_no_backtrack = false;
   assert (notified_level >= level);
   if (notified_level == level)
     return false;
