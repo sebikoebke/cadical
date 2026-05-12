@@ -4,6 +4,14 @@
 
 namespace CaDiCaL {
 
+#define LOG_INTERACTION_START(NAME) LOG (#NAME " on level %d START", level)
+#define LOG_INTERACTION_FOR(NAME, VAL) \
+  LOG (#NAME "(%d) on level %d START", VAL, level)
+
+#define LOG_INTERACTION_END(NAME) LOG (#NAME " on level %d END", level)
+#define LOG_INTERACTION_RETURN(NAME, VAL) \
+  LOG (#NAME "returns %d on level %d END", VAL, level)
+
 /*----------------------------------------------------------------------------*/
 //
 // Mark a variable as an observed one. It can be a new variable. It is
@@ -162,7 +170,9 @@ bool Internal::external_propagate () {
 
     stats.up_cb++;
     stats.up_cb_prop++;
+    LOG_INTERACTION_START (cb_propagate);
     const int elit = external->propagator->cb_propagate ();
+    LOG_INTERACTION_RETURN (cb_propagate, elit);
     LOG ("cb_propagate returns %d", elit);
 
     if (level < notified_level || notified_trail < trail.size ()) {
@@ -288,8 +298,10 @@ bool Internal::external_adding_clauses () {
 
 bool Internal::ask_external_clause () {
   ext_clause_forgettable = false;
+  LOG_INTERACTION_START (cb_has_external_clause);
   bool res =
       external->propagator->cb_has_external_clause (ext_clause_forgettable);
+  LOG_INTERACTION_RETURN (cb_has_external_clause, res);
 
   return res;
 }
@@ -396,10 +408,14 @@ void Internal::add_external_clause (int prop_elit) {
   while (true) {
     if (prop_elit) {
       stats.up_cb_add_reason++;
+      LOG_INTERACTION_FOR (cb_add_reason_clause_lit, prop_elit);
       elit = external->propagator->cb_add_reason_clause_lit (prop_elit);
+      LOG_INTERACTION_RETURN (cb_add_reason_clause_lit, elit);
     } else {
       stats.up_cb_add_external++;
+      LOG_INTERACTION_END (cb_add_external_clause_lit);
       elit = external->propagator->cb_add_external_clause_lit ();
+      LOG_INTERACTION_RETURN (cb_add_external_clause_lit, elit);
     }
     LOG ("cb_add %d", elit);
 
@@ -674,8 +690,10 @@ bool Internal::external_check_solution () {
   LOG ("Final check by external propagator is invoked.");
   stats.up_cb++;
   stats.up_cb_check_model++;
+  LOG_INTERACTION_START (cb_check_found_model);
   bool is_consistent =
       external->propagator->cb_check_found_model (notify_model_trail);
+  LOG_INTERACTION_RETURN (cb_check_found_model, is_consistent);
   notify_model_trail.clear ();
 
   if (level < notified_level || notified_trail < trail.size ()) {
@@ -762,7 +780,9 @@ bool Internal::notifying_assignments () {
     return false;
   stats.up_notify++;
   stats.up_notify_assignments++;
+  LOG_INTERACTION_START (notify_assignment);
   external->propagator->notify_assignment (notification_trail);
+  LOG_INTERACTION_END (notify_assignment);
   notification_trail.clear ();
   if (notified_level == level && notified_trail == trail.size ())
     return false;
@@ -793,7 +813,9 @@ bool Internal::notifying_decision () {
   notified_level++;
   const int new_level = level + 1;
   assert (new_level == notified_level);
+  LOG_INTERACTION_START (notify_new_decision_level);
   external->propagator->notify_new_decision_level ();
+  LOG_INTERACTION_START (notify_new_decision_level);
   if (level < new_level - 1 || notified_level < new_level ||
       notified_trail < trail.size ()) {
     notify_loop ();
@@ -824,7 +846,9 @@ bool Internal::notifying_backtrack () {
   stats.up_notify++;
   stats.up_notify_backtrack++;
   // force_no_backtrack = true;
+  LOG_INTERACTION_FOR (notify_backtrack, level);
   external->propagator->notify_backtrack (level);
+  LOG_INTERACTION_END (notify_backtrack);
   // force_no_backtrack = false;
   assert (notified_level >= level);
   if (notified_level == level)
@@ -849,7 +873,9 @@ bool Internal::ask_decision () {
   stats.up_cb++;
   stats.up_cb_decide++;
 
+  LOG_INTERACTION_START (cb_decide);
   int elit = external->propagator->cb_decide ();
+  LOG_INTERACTION_RETURN (cb_decide, elit);
 
   assert (!level || level + 1 <= notified_level);
   if (notified_level != level + 1)
