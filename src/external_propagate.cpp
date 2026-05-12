@@ -43,7 +43,7 @@ static void trace_api_call (FILE *trace_api_file, Internal *internal,
   } while (0)
 #define LOG_INTERACTION_RETURN(NAME, VAL) \
   do { \
-    LOG (#NAME "returns %d on level %d END", VAL, level); \
+    LOG (#NAME " returns %d on level %d END", VAL, level); \
     if (!external->trace_api_file) \
       break; \
     trace_api_call (external->trace_api_file, this, #NAME, VAL); \
