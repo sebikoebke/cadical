@@ -70,6 +70,10 @@ static void trace_api_call (FILE *trace_api_file, Internal *internal,
 #define LOG_INTERACTION_END(NAME) LOG (#NAME " on level %d END", level)
 #define LOG_INTERACTION_RETURN(NAME, VAL) \
   LOG (#NAME "returns %d on level %d END", VAL, level)
+#define LOG_INTERACTION_END_FOR(NAME) \
+  LOG (#NAME "(%d) on level %d END", VAL, level)
+#define LOG_INTERACTION_RETURN_FOR(NAME, VAL, RET) \
+  LOG (#NAME "(%d) returns %d on level %d END", VAL, RET, level)
 #endif
 
 /*----------------------------------------------------------------------------*/
