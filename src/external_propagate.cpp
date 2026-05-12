@@ -25,7 +25,29 @@ static void trace_api_call (FILE *trace_api_file, Internal *internal,
   fprintf (trace_api_file, "%s %d\n", s0, i1);
   fflush (trace_api_file);
 }
+static void trace_api_call (FILE *trace_api_file, Internal *internal,
+                            const char *s0, int i1, int i2) {
+  assert (trace_api_file);
+  LOG ("TRACE %s %d", s0, i1);
+  (void) internal;
+  fprintf (trace_api_file, "%s %d %d\n", s0, i1, i2);
+  fflush (trace_api_file);
+}
 
+#define LOG_INTERACTION_RETURN_FOR(NAME, VAL, RET) \
+  do { \
+    LOG (#NAME "(%d) returns %d on level %d END", VAL, RET, level); \
+    if (!external->trace_api_file) \
+      break; \
+    trace_api_call (external->trace_api_file, this, #NAME, VAL, RET); \
+  } while (0)
+#define LOG_INTERACTION_END_FOR(NAME, VAL) \
+  do { \
+    LOG (#NAME "(%d) on level %d END", VAL, level); \
+    if (!external->trace_api_file) \
+      break; \
+    trace_api_call (external->trace_api_file, this, #NAME, VAL); \
+  } while (0)
 #define LOG_INTERACTION_END(NAME) \
   do { \
     LOG (#NAME " on level %d END", level); \
@@ -48,6 +70,10 @@ static void trace_api_call (FILE *trace_api_file, Internal *internal,
 #define LOG_INTERACTION_END(NAME) LOG (#NAME " on level %d END", level)
 #define LOG_INTERACTION_RETURN(NAME, VAL) \
   LOG (#NAME "returns %d on level %d END", VAL, level)
+#define LOG_INTERACTION_END_FOR(NAME) \
+  LOG (#NAME "(%d) on level %d END", VAL, level)
+#define LOG_INTERACTION_RETURN_FOR(NAME, VAL, RET) \
+  LOG (#NAME "(%d) returns %d on level %d END", VAL, RET, level)
 #endif
 
 /*----------------------------------------------------------------------------*/
@@ -604,7 +630,8 @@ void Internal::add_external_clause (int propagated_elit,
       LOG_INTERACTION_FOR (cb_add_reason_clause_lit, propagated_elit);
       elit =
           external->propagator->cb_add_reason_clause_lit (propagated_elit);
-      LOG_INTERACTION_RETURN (cb_add_reason_clause_lit, elit);
+      LOG_INTERACTION_RETURN_FOR (cb_add_reason_clause_lit, propagated_elit,
+                                  elit);
     } else {
       LOG_INTERACTION_START (cb_add_external_clause_lit);
       elit = external->propagator->cb_add_external_clause_lit ();
@@ -1262,7 +1289,7 @@ void Internal::notify_backtrack (size_t new_level) {
     return;
   LOG_INTERACTION_FOR (notify_backtrack, (int) new_level);
   external->propagator->notify_backtrack (new_level);
-  LOG_INTERACTION_END (notify_backtrack);
+  LOG_INTERACTION_END_FOR (notify_backtrack, new_level);
 }
 
 /*----------------------------------------------------------------------------*/
