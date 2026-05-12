@@ -15,7 +15,7 @@ namespace CaDiCaL {
 // we simplified the code following the follow-up TaSSAT work [Chowdhury ,
 // Codel , and Heule, TACAS'24], which is a just some simplification of the
 // original version (fewer constants and removing sideflips). Whether
-// renaming their solver from Yal-lin to TaSSAT was worth it is left as
+// renaming their solver from Yal-lin to TaSSAT was worth it, is left as
 // decision to our reader.
 //
 // The implementation requires to give clauses a weight and store various
@@ -25,9 +25,6 @@ namespace CaDiCaL {
 // One difference to the original implementation is that we do not do
 // restarts and instead rely on CDCL to do that for us. Another difference
 // is that we cannot flip assumption literals, which are all set on level 1.
-//
-// Compared to `walk.cpp`, we do not optimize for binary clauses. At
-// least not yet, but it is not clear how to keep the weights.
 //
 // Compared to `walk_full_occs` which is the Kissat version, we use
 // `size_t` instead of unsigned because the only gain is the size of

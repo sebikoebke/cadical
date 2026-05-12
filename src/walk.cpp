@@ -416,7 +416,6 @@ int Internal::walk_pick_lit (Walker &walker, const TaggedBinary c) {
   assert (walker.scores.empty ());
   const int64_t old = walker.ticks;
   double sum = 0;
-  int64_t propagations = 0;
   const std::array<int, 2> clause = {c.lit, c.other};
   for (const auto lit : clause) {
     assert (active (lit));
@@ -426,14 +425,12 @@ int Internal::walk_pick_lit (Walker &walker, const TaggedBinary c) {
     }
     assert (active (lit));
     assert (val (lit) < 0);
-    propagations++;
     unsigned tmp = walk_break_value (-lit, walker.ticks);
     double score = walker.score (tmp);
     LOG ("literal %d break-count %u score %g", lit, tmp, score);
     walker.scores.push_back (score);
     sum += score;
   }
-  (void) propagations; // TODO unused?
   LOG ("scored %zd literals", walker.scores.size ());
   assert (!walker.scores.empty ());
   assert (walker.scores.size () <= (size_t) 2);
