@@ -1107,6 +1107,7 @@ void Solver::connect_external_propagator (ExternalPropagator *propagator) {
     disconnect_external_propagator ();
 
   external->propagator = propagator;
+  external->trace_api_file = trace_api_file;
   internal->connect_propagator ();
   internal->external_prop = true;
   internal->external_prop_is_lazy = propagator->is_lazy;
@@ -1124,6 +1125,7 @@ void Solver::disconnect_external_propagator () {
   external->reset_observed_vars ();
 
   external->propagator = 0;
+  external->trace_api_file = 0;
   internal->set_changed_val ();
   internal->external_prop = false;
   internal->external_prop_is_lazy = true;
