@@ -1201,9 +1201,9 @@ void Internal::connect_propagator () {
 void Internal::notify_decision () {
   if (!external_prop || external_prop_is_lazy || private_steps)
     return;
-  LOG_INTERACTION_FOR (notify_new_decision_level, level + 1);
+  LOG_INTERACTION_FOR (notify_new_decision_level, level);
   external->propagator->notify_new_decision_level ();
-  LOG_INTERACTION_END_FOR (notify_new_decision_level, level + 1);
+  LOG_INTERACTION_END_FOR (notify_new_decision_level, level);
 }
 
 /*----------------------------------------------------------------------------*/
