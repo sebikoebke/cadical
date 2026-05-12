@@ -1275,9 +1275,9 @@ void Internal::notify_decision () {
   if (!external_prop || external_prop_is_lazy || private_steps)
     return;
   notify_assignments ();
-  LOG_INTERACTION_START (notify_new_decision_level);
+  LOG_INTERACTION_FOR (notify_new_decision_level, level);
   external->propagator->notify_new_decision_level ();
-  LOG_INTERACTION_END (notify_new_decision_level);
+  LOG_INTERACTION_END_FOR (notify_new_decision_level, level);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1289,7 +1289,7 @@ void Internal::notify_backtrack (size_t new_level) {
     return;
   LOG_INTERACTION_FOR (notify_backtrack, (int) new_level);
   external->propagator->notify_backtrack (new_level);
-  LOG_INTERACTION_END_FOR (notify_backtrack, new_level);
+  LOG_INTERACTION_END_FOR (notify_backtrack, (int) new_level);
 }
 
 /*----------------------------------------------------------------------------*/
