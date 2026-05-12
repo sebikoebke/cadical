@@ -258,14 +258,13 @@ bool Internal::external_propagate () {
 
     if (tmp > 0) {
       // TODO: make this FATAL ?
-      LOG ("ignoring external propagation on satisfied %s.",
-           LOG_LIT (ilit));
+      LOG ("ignoring external propagation on satisfied %s.", LOGLIT (ilit));
       continue;
     }
     if (tmp < 0) {
       assert (fixed (ilit) || observed (ilit));
       LOG ("External propgation of %s is falsified under current trail",
-           LOG_LIT (ilit));
+           LOGLIT (ilit));
       stats.up_cb_prop_clash++;
       Clause *res = learn_external_reason_clause (ilit, elit);
       LOG (res, "reason clause of external propagation of %d:", elit);
