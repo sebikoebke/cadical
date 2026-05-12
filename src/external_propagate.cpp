@@ -4,6 +4,43 @@
 
 namespace CaDiCaL {
 
+#ifndef NTRACING
+#define LOG_INTERACTION_START(NAME) LOG (#NAME " on level %d START", level);
+#define LOG_INTERACTION_FOR(NAME, VAL) \
+  LOG (#NAME "(%d) on level %d START", VAL, level)
+
+static void trace_api_call (FILE *trace_api_file, Internal *internal,
+                            const char *s0) {
+  assert (trace_api_file);
+  LOG ("TRACE %s", s0);
+  (void) internal;
+  fprintf (trace_api_file, "%s\n", s0);
+  fflush (trace_api_file);
+}
+static void trace_api_call (FILE *trace_api_file, Internal *internal,
+                            const char *s0, int i1) {
+  assert (trace_api_file);
+  LOG ("TRACE %s %d", s0, i1);
+  (void) internal;
+  fprintf (trace_api_file, "%s %d\n", s0, i1);
+  fflush (trace_api_file);
+}
+
+#define LOG_INTERACTION_END(NAME) \
+  do { \
+    LOG (#NAME " on level %d END", level); \
+    if (!external->trace_api_file) \
+      break; \
+    trace_api_call (external->trace_api_file, this, #NAME); \
+  } while (0)
+#define LOG_INTERACTION_RETURN(NAME, VAL) \
+  do { \
+    LOG (#NAME "returns %d on level %d END", VAL, level); \
+    if (!external->trace_api_file) \
+      break; \
+    trace_api_call (external->trace_api_file, this, #NAME, VAL); \
+  } while (0)
+#else
 #define LOG_INTERACTION_START(NAME) LOG (#NAME " on level %d START", level)
 #define LOG_INTERACTION_FOR(NAME, VAL) \
   LOG (#NAME "(%d) on level %d START", VAL, level)
@@ -11,6 +48,7 @@ namespace CaDiCaL {
 #define LOG_INTERACTION_END(NAME) LOG (#NAME " on level %d END", level)
 #define LOG_INTERACTION_RETURN(NAME, VAL) \
   LOG (#NAME "returns %d on level %d END", VAL, level)
+#endif
 
 /*----------------------------------------------------------------------------*/
 //
