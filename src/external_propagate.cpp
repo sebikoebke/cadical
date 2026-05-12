@@ -853,7 +853,7 @@ bool Internal::notifying_decision () {
   assert (new_level == notified_level);
   LOG_INTERACTION_START (notify_new_decision_level);
   external->propagator->notify_new_decision_level ();
-  LOG_INTERACTION_START (notify_new_decision_level);
+  LOG_INTERACTION_END (notify_new_decision_level);
   if (level < new_level - 1 || notified_level < new_level ||
       notified_trail < trail.size ()) {
     notify_loop ();
