@@ -220,15 +220,15 @@ bool Internal::external_propagate () {
   }
   // if (level)
   require_mode (SEARCH);
+  LOG ("external propagation starts (decision level: %d, trail size: "
+       "%zd, notified %zd)",
+       level, trail.size (), notified_trail);
+
   while (true) {
     assert (notified_trail == trail.size ());
     assert (notified_level == level);
     assert (!unsat);
     assert (!conflict);
-
-    LOG ("external propagation starts (decision level: %d, trail size: "
-         "%zd, notified %zd)",
-         level, trail.size (), notified_trail);
 
     // external->reset_extended (); //TODO for inprocessing
 
