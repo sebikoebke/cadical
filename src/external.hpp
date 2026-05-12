@@ -4,6 +4,10 @@
 /*------------------------------------------------------------------------*/
 
 #include "range.hpp"
+#include <climits>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 #include <unordered_map>
 #include <vector>
 
@@ -105,6 +109,7 @@ struct External {
   // If there is an external propagator.
 
   ExternalPropagator *propagator;
+  FILE *trace_api_file; // Only for user propagator interaction tracing
 
   vector<bool> is_observed; // Quick flag for each external variable
 
