@@ -237,7 +237,6 @@ bool Internal::external_propagate () {
     LOG_INTERACTION_START (cb_propagate);
     const int elit = external->propagator->cb_propagate ();
     LOG_INTERACTION_RETURN (cb_propagate, elit);
-    LOG ("cb_propagate returns %d", elit);
 
     if (level < notified_level || notified_trail < trail.size ()) {
       LOG ("cb_propagate triggered a backtrack, ignoring return value %d",
@@ -258,14 +257,15 @@ bool Internal::external_propagate () {
     LOG ("External propagation of e%d (i%d val: %d)", elit, ilit, tmp);
 
     if (tmp > 0) {
-      // FATAL (
-      LOG ("external propagations are disallowed for satisfied variables.");
+      // TODO: make this FATAL ?
+      LOG ("ignoring external propagation on satisfied %s.",
+           LOG_LIT (ilit));
       continue;
     }
     if (tmp < 0) {
       assert (fixed (ilit) || observed (ilit));
-      LOG ("External propgation of %d is falsified under current trail",
-           ilit);
+      LOG ("External propgation of %s is falsified under current trail",
+           LOG_LIT (ilit));
       stats.up_cb_prop_clash++;
       Clause *res = learn_external_reason_clause (ilit, elit);
       LOG (res, "reason clause of external propagation of %d:", elit);
@@ -878,9 +878,9 @@ bool Internal::notifying_decision () {
   notified_level++;
   const int new_level = level + 1;
   assert (new_level == notified_level);
-  LOG_INTERACTION_START (notify_new_decision_level);
+  LOG_INTERACTION_FOR (notify_new_decision_level, new_level);
   external->propagator->notify_new_decision_level ();
-  LOG_INTERACTION_END (notify_new_decision_level);
+  LOG_INTERACTION_END_FOR (notify_new_decision_level, new_level);
   if (level < new_level - 1 || notified_level < new_level ||
       notified_trail < trail.size ()) {
     notify_loop ();
