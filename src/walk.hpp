@@ -43,7 +43,7 @@ struct ClauseOrBinary {
     // the fact that there are at the same position.
     struct ClausePtr {
       bool binary : 1;
-      uint64_t clause_ptr : 63;  // 63 bits for clause pointer
+      uintptr_t clause_ptr : 63;  // 63 bits for clause pointer
       ClausePtr (): binary (0), clause_ptr(0) {};
     } clause;
     struct TaggedBinary {
@@ -64,7 +64,6 @@ struct ClauseOrBinary {
         assert (false);
       };
       TaggedBinary (Internal *internal, CaDiCaL::Clause *c, unsigned clit, int cother);
-      TaggedBinary (Internal *internal, CaDiCaL::Clause *c);
 
       int lit (Internal *) const;
     } b;  // Must also occupy 63 bits

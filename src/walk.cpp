@@ -25,17 +25,6 @@ ClauseOrBinary::clause_or_binary::TaggedBinary::TaggedBinary (Internal *internal
 #endif
 }
 
-ClauseOrBinary::clause_or_binary::TaggedBinary::TaggedBinary (Internal *internal, CaDiCaL::Clause *c) {
-  assert (c->size == 2);
-  first_literal = internal->vlit(c->literals[0]);
-  other = internal->vlit(c->literals[1]);
-#if defined(LOGGING) || !defined(NDEBUG)
-  d = c;
-#else
-  (void) c;
-#endif
-}
-
 ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c) {
   // Check if literals fit in 31 bits each
   if (c->size == 2) {
@@ -43,7 +32,11 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c) {
     if (lit1 < (1u << 31)) {
       // If literals fit, store as TaggedBinary
       tagged.b.binary = true;
-      tagged.b = ClauseOrBinary::clause_or_binary::TaggedBinary(internal, c, lit1, c->literals[1]);
+#if defined(LOGGING) || !defined(NDEBUG)
+      tagged.b.d = c;
+#endif
+      tagged.b.first_literal = lit1;
+      tagged.b.other = c->literals[1];
       return;
     }
 
@@ -51,12 +44,16 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c) {
     if (lit2 < (1u << 31)) {
       // If literals fit, store as TaggedBinary
       tagged.b.binary = true;
-      tagged.b = ClauseOrBinary::clause_or_binary::TaggedBinary(internal, c, lit2, c->literals[0]);
+#if defined(LOGGING) || !defined(NDEBUG)
+      tagged.b.d = c;
+#endif
+      tagged.b.first_literal = lit2;
+      tagged.b.other = c->literals[0];
       return;
     }
   }
-  assert ((reinterpret_cast<uint64_t>(c) & ((uint64_t)1 << 63)) == 0);
-  tagged.clause.clause_ptr = reinterpret_cast<uint64_t>(c);
+  assert ((reinterpret_cast<uintptr_t>(c) & ((uintptr_t)1 << 63)) == 0);
+  tagged.clause.clause_ptr = reinterpret_cast<uintptr_t>(c);
   tagged.b.binary = false;
 #if !defined(LOGGING) && defined(NDEBUG)
   static_assert (sizeof (ClauseOrBinary) == 8);
@@ -64,9 +61,9 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c) {
 }
 
 ClauseOrBinary::ClauseOrBinary (Clause *c) {
-  assert ((reinterpret_cast<uint64_t>(c) & ((uint64_t)1 << 63)) == 0);
+  assert ((reinterpret_cast<uintptr_t>(c) & ((uintptr_t)1 << 63)) == 0);
   assert (c->size != 2);
-  tagged.clause.clause_ptr = reinterpret_cast<uint64_t>(c);
+  tagged.clause.clause_ptr = reinterpret_cast<uintptr_t>(c);
   tagged.b.binary = false;
 }
 
@@ -81,7 +78,11 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c, int lit, int othe
   if (lit1 < (1u << 31)) {
     // If literals fit, store as TaggedBinary
     tagged.b.binary = true;
-    tagged.b = ClauseOrBinary::clause_or_binary::TaggedBinary(internal, c, lit1, other);
+#if defined(LOGGING) || !defined(NDEBUG)
+    tagged.b.d = c;
+#endif
+    tagged.b.first_literal = lit1;
+    tagged.b.other = other;
     return;
   }
 
@@ -89,11 +90,15 @@ ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c, int lit, int othe
   if (lit2 < (1u << 31)) {
     // If literals fit, store as TaggedBinary
     tagged.b.binary = true;
-    tagged.b = ClauseOrBinary::clause_or_binary::TaggedBinary(internal, c, lit2, lit);
+#if defined(LOGGING) || !defined(NDEBUG)
+    tagged.b.d = c;
+#endif
+    tagged.b.first_literal = lit2;
+    tagged.b.other = lit;
     return;
   }
-  assert ((reinterpret_cast<uint64_t>(c) & ((uint64_t)1 << 63)) == 0);
-  tagged.clause.clause_ptr = reinterpret_cast<uint64_t>(c);
+  assert ((reinterpret_cast<uintptr_t>(c) & ((uintptr_t)1 << 63)) == 0);
+  tagged.clause.clause_ptr = reinterpret_cast<uintptr_t>(c);
 
 }
 
@@ -756,9 +761,10 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
       }
       if (replacement) {
         assert (-lit != replacement);
-        literals[1] = -lit;
+        const int neg_lit = -lit;
+        literals[1] = neg_lit;
         literals[0] = replacement;
-        watch_literal (replacement, -lit, d);
+        watch_literal (replacement, neg_lit, d);
         ++walker.ticks;
         LOG (d, "found replacement");
       } else {
