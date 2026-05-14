@@ -927,13 +927,16 @@ bool Internal::notifying_backtrack () {
   stats.up_notify_backtrack++;
   // force_no_backtrack = true;
   const int level_now = level;
-  while (notified_level-- > level_now) {
+  int notifying = notified_level;
+  while (notifying-- > level_now) {
     if (!opts.extnbacktrack)
-      notified_level = level_now;
-    LOG_INTERACTION_FOR (notify_backtrack, notified_level);
-    external->propagator->notify_backtrack (notified_level);
-    LOG_INTERACTION_END_FOR (notify_backtrack, notified_level);
+      notifying = level_now;
+    LOG_INTERACTION_FOR (notify_backtrack, notifying);
+    external->propagator->notify_backtrack (notifying);
+    LOG_INTERACTION_END_FOR (notify_backtrack, notifying);
   }
+  assert (notifying == level_now - 1);
+  notified_level = level_now;
   // force_no_backtrack = false;
   assert (notified_level >= level);
   if (notified_level == level)
