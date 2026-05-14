@@ -6,6 +6,98 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
+
+ClauseOrBinary::clause_or_binary::TaggedBinary::TaggedBinary (Internal *internal, CaDiCaL::Clause *c, unsigned clit, int cother)
+    : first_literal (clit), other (cother)
+#if defined(LOGGING) || !defined(NDEBUG)
+      ,
+      d (c)
+#endif
+{
+#ifdef LOGGING
+  assert (c->literals[0] == internal->u2i(clit) || c->literals[1] == internal->u2i(clit));
+  assert (c->literals[0] == cother || c->literals[1] == cother);
+#endif
+
+#ifndef LOGGING
+  (void) c;
+  (void) internal;
+#endif
+}
+
+ClauseOrBinary::clause_or_binary::TaggedBinary::TaggedBinary (Internal *internal, CaDiCaL::Clause *c) {
+  assert (c->size == 2);
+  first_literal = internal->vlit(c->literals[0]);
+  other = internal->vlit(c->literals[1]);
+#if defined(LOGGING) || !defined(NDEBUG)
+  d = c;
+#else
+  (void) c;
+#endif
+}
+
+ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c) {
+  // Check if literals fit in 31 bits each
+  if (c->size == 2) {
+    unsigned lit1 = internal->vlit(c->literals[0]);
+    if (lit1 < (1u << 31)) {
+      // If literals fit, store as TaggedBinary
+      tagged.b.binary = true;
+      tagged.b = ClauseOrBinary::clause_or_binary::TaggedBinary(internal, c, lit1, c->literals[1]);
+      return;
+    }
+
+    unsigned lit2 = internal->vlit(c->literals[1]);
+    if (lit2 < (1u << 31)) {
+      // If literals fit, store as TaggedBinary
+      tagged.b.binary = true;
+      tagged.b = ClauseOrBinary::clause_or_binary::TaggedBinary(internal, c, lit2, c->literals[0]);
+      return;
+    }
+  }
+  assert ((reinterpret_cast<uint64_t>(c) & ((uint64_t)1 << 63)) == 0);
+  tagged.clause.clause_ptr = reinterpret_cast<uint64_t>(c);
+  tagged.b.binary = false;
+#if !defined(LOGGING) && defined(NDEBUG)
+  static_assert (sizeof (ClauseOrBinary) == 8);
+#endif
+}
+
+ClauseOrBinary::ClauseOrBinary (Clause *c) {
+  assert ((reinterpret_cast<uint64_t>(c) & ((uint64_t)1 << 63)) == 0);
+  assert (c->size != 2);
+  tagged.clause.clause_ptr = reinterpret_cast<uint64_t>(c);
+  tagged.b.binary = false;
+}
+
+int ClauseOrBinary::clause_or_binary::TaggedBinary::lit (Internal *internal) const {
+  return internal->u2i(first_literal);
+}
+
+ClauseOrBinary::ClauseOrBinary (Internal *internal, Clause *c, int lit, int other) noexcept {
+  unsigned lit1 = internal->vlit(lit);
+  assert (lit != other);
+  assert (c->size == 2);
+  if (lit1 < (1u << 31)) {
+    // If literals fit, store as TaggedBinary
+    tagged.b.binary = true;
+    tagged.b = ClauseOrBinary::clause_or_binary::TaggedBinary(internal, c, lit1, other);
+    return;
+  }
+
+  unsigned lit2 = internal->vlit(other);
+  if (lit2 < (1u << 31)) {
+    // If literals fit, store as TaggedBinary
+    tagged.b.binary = true;
+    tagged.b = ClauseOrBinary::clause_or_binary::TaggedBinary(internal, c, lit2, lit);
+    return;
+  }
+  assert ((reinterpret_cast<uint64_t>(c) & ((uint64_t)1 << 63)) == 0);
+  tagged.clause.clause_ptr = reinterpret_cast<uint64_t>(c);
+
+}
+
+
 // Random walk local search based on 'ProbSAT' ideas.
 
 // We (based on the Master project from Leah Hohl) tried to ticks
@@ -410,13 +502,13 @@ int Internal::walk_pick_lit (Walker &walker, ClauseOrBinary c) {
   return walk_pick_lit (walker, c.clause ());
 }
 
-int Internal::walk_pick_lit (Walker &walker, const TaggedBinary c) {
+int Internal::walk_pick_lit (Walker &walker, const ClauseOrBinary::clause_or_binary::TaggedBinary c) {
   LOG ("picking literal by break-count on binary clause [%" PRIu64 "]%s %s",
-       c.d->id, LOGLIT (c.lit), LOGLIT (c.other));
+       c.d->id, LOGLIT (c.lit (internal)), LOGLIT (c.other));
   assert (walker.scores.empty ());
   const int64_t old = walker.ticks;
   double sum = 0;
-  const std::array<int, 2> clause = {c.lit, c.other};
+  const std::array<int, 2> clause = {c.lit (internal), c.other};
   for (const auto lit : clause) {
     assert (active (lit));
     if (var (lit).level == 1) {
@@ -508,8 +600,8 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
       ClauseOrBinary tagged = *j++ = *i++;
 
       if (tagged.is_binary ()) {
-        const TaggedBinary &b = tagged.tagged_binary ();
-        const int clit = b.lit;
+        const ClauseOrBinary::clause_or_binary::TaggedBinary &b = tagged.tagged_binary ();
+        const int clit = b.lit (internal);
         const int other = b.other;
         assert (val (clit) < 0 || val (other) < 0);
 #if defined(LOGGING)
@@ -586,8 +678,8 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
 #ifndef NDEBUG
     for (auto d : walker.broken) {
       if (d.is_binary ()) {
-        const TaggedBinary &b = d.tagged_binary ();
-        assert (val (b.lit) < 0 && val (b.other) < 0);
+        const ClauseOrBinary::clause_or_binary::TaggedBinary &b = d.tagged_binary ();
+        assert (val (b.lit (internal)) < 0 && val (b.other) < 0);
       } else {
         for (auto lit : *d.clause ())
           assert (val (lit) < 0);
@@ -631,7 +723,7 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
 #ifdef LOGGING
         assert (d != dummy_binary);
 #endif
-        walker.broken.push_back (TaggedBinary (d, -lit, other));
+        walker.broken.push_back (ClauseOrBinary (internal, d, -lit, other));
         ++walker.ticks;
 #ifdef LOGGING
         broken++;
@@ -678,7 +770,7 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
 
         assert (literals[0] == -lit);
         LOG (d, "broken");
-        walker.broken.push_back (d);
+        walker.broken.push_back (ClauseOrBinary(d));
         ++walker.ticks;
 #ifdef LOGGING
         broken++;
@@ -913,9 +1005,9 @@ int Internal::walk_round (int64_t limit, bool prev) {
         LOG (c, "broken");
         assert (c->size == size);
         if (size == 2)
-          walker.broken.push_back (TaggedBinary (c));
+          walker.broken.push_back (ClauseOrBinary(walker.internal, c));
         else
-          walker.broken.push_back (c);
+          walker.broken.push_back (ClauseOrBinary (c));
       }
     }
 
