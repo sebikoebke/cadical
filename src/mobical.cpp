@@ -1303,7 +1303,8 @@ public:
     }
 #endif
     unnotified_propagations.clear ();
-    check_trail ();
+    // TODO: not correct with opts.extnassign
+    // check_trail ();
     // Calls to solver that might force it to backtrack.
     get_force (NOTIFY_ASSIGNMENT);
   }
@@ -1347,7 +1348,7 @@ public:
     unnotified_propagations.clear ();
     // Calls to solver that might force it to backtrack.
     // TODO: not allowed
-    // get_force (NOTIFY_BACKTRACK);
+    get_force (NOTIFY_BACKTRACK);
   }
 
   /* ----------- FixedAssignmentListener functions end -----------------*/

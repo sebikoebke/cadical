@@ -929,7 +929,8 @@ bool Internal::notifying_backtrack () {
   const int level_now = level;
   if (!opts.extnbacktrack)
     notified_level = level_now + 1;
-  while (notified_level-- > level_now) {
+  while (notified_level > level_now) {
+    notified_level--;
     LOG_INTERACTION_FOR (notify_backtrack, notified_level);
     external->propagator->notify_backtrack (notified_level);
     LOG_INTERACTION_END_FOR (notify_backtrack, notified_level);
