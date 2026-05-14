@@ -121,7 +121,8 @@ OPTION( ematrailfast,    1e2,  1,2e9,0,0,1, "window fast trail") \
 OPTION( ematrailslow,    1e5,  1,2e9,0,0,1, "window slow trail") \
 OPTION( exteagerreasons,   0,  0,  1,0,0,1, "eagerly ask for all reasons (0: only when needed)") \
 OPTION( exteagerrecalc,    1,  0,  1,0,0,1, "after eagerly asking for reasons recalculate all levels (0: trust the external tool)") \
-OPTION( externallrat,      0,  0,  1,0,0,1, "external lrat") \
+OPTION( extnassign,        0,  0,  1,0,0,1, "notify assign literal by literal") \
+OPTION( extnbacktrack,     0,  0,  1,0,0,1, "notify backtrack level by level") \
 OPTION( factor,            1,  0,  1,0,1,1, "bounded variable addition") \
 OPTION( factorbound,       1,  0, 10,0,0,1, "required reduction of clauses") \
 OPTION( factorboundelim,   0,  0,  1,0,0,1, "add maximal elimbound to factorbound (instead of current)") \
@@ -388,7 +389,7 @@ public:
   //
 
 #ifdef NOPTIONS
-   static const int reportdefault = 0;
+  static const int reportdefault = 0;
 #else
   static int reportdefault;
 #endif

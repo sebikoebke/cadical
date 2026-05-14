@@ -1232,6 +1232,7 @@ void Internal::notify_assignments () {
   LOG ("notify external propagator about new assignments");
   assert (notification_trail.empty ());
 
+  const int level_now = level;
   while (notified < end_of_trail) {
     int ilit = trail[notified++];
     if (!observed (ilit))
@@ -1250,6 +1251,15 @@ void Internal::notify_assignments () {
     if (!external->observed (elit))
       continue;
     notification_trail.push_back (elit);
+    if (opts.extnassign) {
+      LOG_INTERACTION_START (notify_assignment);
+      external->propagator->notify_assignment (notification_trail);
+      LOG_INTERACTION_END (notify_assignment);
+      notification_trail.clear ();
+      // stop notifying
+      if (level_now != level)
+        return;
+    }
   }
   if (notification_trail.size ()) {
     LOG_INTERACTION_START (notify_assignment);
@@ -1287,9 +1297,15 @@ void Internal::notify_decision () {
 void Internal::notify_backtrack (size_t new_level) {
   if (!external_prop || external_prop_is_lazy || private_steps)
     return;
-  LOG_INTERACTION_FOR (notify_backtrack, (int) new_level);
-  external->propagator->notify_backtrack (new_level);
-  LOG_INTERACTION_END_FOR (notify_backtrack, (int) new_level);
+  size_t level_now = level;
+  while (level_now-- > new_level) {
+    if (!opts.extnbacktrack)
+      level_now = new_level;
+    LOG_INTERACTION_FOR (notify_backtrack, (int) level_now);
+    external->propagator->notify_backtrack (level_now);
+    LOG_INTERACTION_END_FOR (notify_backtrack, (int) level_now);
+  }
+  assert (level_now == new_level);
 }
 
 /*----------------------------------------------------------------------------*/
