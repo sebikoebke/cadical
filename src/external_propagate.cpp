@@ -813,7 +813,14 @@ bool Internal::notifying_assignments () {
     LOG ("marking fixed %d as notified", elit);
     external->mark (external->notified, elit);
     notification_trail.push_back (elit);
+    if (opts.extnassign) {
+      LOG_INTERACTION_START (notify_assignment);
+      external->propagator->notify_assignment (notification_trail);
+      LOG_INTERACTION_END (notify_assignment);
+      notification_trail.clear ();
+    }
   }
+  assert (level == notified_level);
   delay_notify_units.clear ();
   while (notified_trail < end_of_trail) {
     const int ilit = trail[notified_trail++];
@@ -839,6 +846,16 @@ bool Internal::notifying_assignments () {
       LOG ("marking fixed %d as notified", elit);
     }
     notification_trail.push_back (elit);
+    if (opts.extnassign) {
+      LOG_INTERACTION_START (notify_assignment);
+      external->propagator->notify_assignment (notification_trail);
+      LOG_INTERACTION_END (notify_assignment);
+      notification_trail.clear ();
+      if (notified_level != level) {
+        stats.up_notify_forced++;
+        return true;
+      }
+    }
   }
   if (notification_trail.empty ())
     return false;
@@ -905,14 +922,18 @@ bool Internal::notifying_backtrack () {
   assert (notified_level >= level);
   if (notified_level == level)
     return false;
-  notified_level = level;
   // this call can potentially trigger an additional backtrack.
   stats.up_notify++;
   stats.up_notify_backtrack++;
   // force_no_backtrack = true;
-  LOG_INTERACTION_FOR (notify_backtrack, level);
-  external->propagator->notify_backtrack (level);
-  LOG_INTERACTION_END_FOR (notify_backtrack, level);
+  const int level_now = level;
+  while (notified_level-- > level_now) {
+    if (!opts.extnbacktrack)
+      notified_level = level_now;
+    LOG_INTERACTION_FOR (notify_backtrack, notified_level);
+    external->propagator->notify_backtrack (notified_level);
+    LOG_INTERACTION_END_FOR (notify_backtrack, notified_level);
+  }
   // force_no_backtrack = false;
   assert (notified_level >= level);
   if (notified_level == level)
