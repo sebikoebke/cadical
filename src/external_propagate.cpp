@@ -1298,9 +1298,9 @@ void Internal::notify_backtrack (size_t new_level) {
   if (!external_prop || external_prop_is_lazy || private_steps)
     return;
   size_t level_now = level;
+  if (!opts.extnbacktrack)
+    level_now = new_level + 1;
   while (level_now-- > new_level) {
-    if (!opts.extnbacktrack)
-      level_now = new_level;
     LOG_INTERACTION_FOR (notify_backtrack, (int) level_now);
     external->propagator->notify_backtrack (level_now);
     LOG_INTERACTION_END_FOR (notify_backtrack, (int) level_now);
