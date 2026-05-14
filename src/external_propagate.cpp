@@ -814,9 +814,9 @@ bool Internal::notifying_assignments () {
     external->mark (external->notified, elit);
     notification_trail.push_back (elit);
     if (opts.extnassign) {
-      LOG_INTERACTION_START (notify_assignment);
+      LOG_INTERACTION_FOR (notify_assignment, notification_trail[0]);
       external->propagator->notify_assignment (notification_trail);
-      LOG_INTERACTION_END (notify_assignment);
+      LOG_INTERACTION_END_FOR (notify_assignment, notification_trail[0]);
       notification_trail.clear ();
     }
   }
@@ -847,9 +847,9 @@ bool Internal::notifying_assignments () {
     }
     notification_trail.push_back (elit);
     if (opts.extnassign) {
-      LOG_INTERACTION_START (notify_assignment);
+      LOG_INTERACTION_FOR (notify_assignment, notification_trail[0]);
       external->propagator->notify_assignment (notification_trail);
-      LOG_INTERACTION_END (notify_assignment);
+      LOG_INTERACTION_END_FOR (notify_assignment, notification_trail[0]);
       notification_trail.clear ();
       if (notified_level != level) {
         stats.up_notify_forced++;
@@ -861,9 +861,11 @@ bool Internal::notifying_assignments () {
     return false;
   stats.up_notify++;
   stats.up_notify_assignments++;
-  LOG_INTERACTION_START (notify_assignment);
+  LOG_INTERACTION_FOR (notify_assignment_batch,
+                       (int) notification_trail.size ());
   external->propagator->notify_assignment (notification_trail);
-  LOG_INTERACTION_END (notify_assignment);
+  LOG_INTERACTION_END_FOR (notify_assignment_batch,
+                           (int) notification_trail.size ());
   notification_trail.clear ();
   if (notified_level == level && notified_trail == trail.size ())
     return false;
