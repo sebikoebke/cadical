@@ -1252,9 +1252,9 @@ void Internal::notify_assignments () {
       continue;
     notification_trail.push_back (elit);
     if (opts.extnassign) {
-      LOG_INTERACTION_START (notify_assignment);
+      LOG_INTERACTION_FOR (notify_assignment, notification_trail[0]);
       external->propagator->notify_assignment (notification_trail);
-      LOG_INTERACTION_END (notify_assignment);
+      LOG_INTERACTION_END_FOR (notify_assignment, notification_trail[0]);
       notification_trail.clear ();
       // stop notifying
       if (level_now != level)
@@ -1262,9 +1262,11 @@ void Internal::notify_assignments () {
     }
   }
   if (notification_trail.size ()) {
-    LOG_INTERACTION_START (notify_assignment);
+    LOG_INTERACTION_FOR (notify_assignment_batch,
+                         (int) notification_trail.size ());
     external->propagator->notify_assignment (notification_trail);
-    LOG_INTERACTION_END (notify_assignment);
+    LOG_INTERACTION_END_FOR (notify_assignment_batch,
+                             (int) notification_trail.size ());
     notification_trail.clear ();
   }
   return;
