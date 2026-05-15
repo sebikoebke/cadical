@@ -345,6 +345,7 @@ void Internal::compact () {
   mapper.map_vector (phases.saved);
   mapper.map_vector (phases.forced);
   mapper.map_vector (phases.target);
+  mapper.map_vector (phases.conflicts);
   mapper.map_vector (phases.best);
   mapper.map_vector (phases.prev);
 
