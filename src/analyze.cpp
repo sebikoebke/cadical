@@ -1025,6 +1025,14 @@ void Internal::analyze () {
   assert (unit_analyzed.empty ());
   assert (clause.empty ());
 
+  // Save the phases of literals involved in the conflict.
+  for (const auto &lit : *conflict) {
+    const int idx = abs (lit);
+    if (idx >= (int) phases.conflicts.size ())
+      phases.conflicts.resize (idx + 1, 0);
+    phases.conflicts[idx] = sign (lit);
+  }
+
   // First update moving averages of trail height at conflict.
   //
   UPDATE_AVERAGE (averages.current.trail.fast, num_assigned);

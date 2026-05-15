@@ -110,6 +110,18 @@ char Internal::rephase_walk () {
   return 'W';
 }
 
+char Internal::rephase_conflicts () {
+  stats.rephased_conflicts++;
+  PHASE ("rephase", stats.rephased,
+         "importing phases from conflicts");
+  for (auto idx : vars) {
+    if (phases.conflicts[idx])
+      phases.saved[idx] = phases.conflicts[idx];
+    phases.conflicts[idx] = 0;
+  }
+  return 'C';
+}
+
 /*------------------------------------------------------------------------*/
 
 void Internal::rephase () {
@@ -171,11 +183,11 @@ void Internal::rephase () {
       break;
     }
   } else if (single && opts.walk) {
-    // (inverted,best,walk,
-    //  flipping,best,walk,
-    //    random,best,walk,
-    //  original,best,walk)^\omega
-    switch (count % 12) {
+    // (inverted,best,walk,conflicts,
+    //  flipping,best,walk,conflicts,
+    //    random,best,walk,conflicts,
+    //  original,best,walk,conflicts)^\omega
+    switch (count % 16) {
     case 0:
       type = rephase_inverted ();
       break;
@@ -186,31 +198,43 @@ void Internal::rephase () {
       type = rephase_walk ();
       break;
     case 3:
-      type = rephase_flipping ();
+      type = rephase_conflicts ();
       break;
     case 4:
-      type = rephase_best ();
+      type = rephase_flipping ();
       break;
     case 5:
-      type = rephase_walk ();
+      type = rephase_best ();
       break;
     case 6:
-      type = rephase_random ();
+      type = rephase_walk ();
       break;
     case 7:
-      type = rephase_best ();
+      type = rephase_conflicts ();
       break;
     case 8:
-      type = rephase_walk ();
+      type = rephase_random ();
       break;
     case 9:
-      type = rephase_original ();
-      break;
-    case 10:
       type = rephase_best ();
       break;
-    case 11:
+    case 10:
       type = rephase_walk ();
+      break;
+    case 11:
+      type = rephase_conflicts ();
+      break;
+    case 12:
+      type = rephase_original ();
+      break;
+    case 13:
+      type = rephase_best ();
+      break;
+    case 14:
+      type = rephase_walk ();
+      break;
+    case 15:
+      type = rephase_conflicts ();
       break;
     default:
       type = 0;
@@ -220,8 +244,9 @@ void Internal::rephase () {
     // (inverted,best,walk,
     //  flipping,best,walk,
     //    random,best,walk,
-    //  original,best,walk)^\omega
-    switch (count % 12) {
+    //  original,best,walk,
+    //  conflicts,best,walk)^\omega
+    switch (count % 15) {
     case 0:
       type = rephase_inverted ();
       break;
@@ -256,6 +281,15 @@ void Internal::rephase () {
       type = rephase_best ();
       break;
     case 11:
+      type = rephase_walk ();
+      break;
+    case 12:
+      type = rephase_conflicts ();
+      break;
+    case 13:
+      type = rephase_best ();
+      break;
+    case 14:
       type = rephase_walk ();
       break;
     default:
@@ -269,7 +303,7 @@ void Internal::rephase () {
     else if (count == 1)
       type = rephase_inverted ();
     else
-      switch ((count - 2) % 4) {
+      switch ((count - 2) % 6) {
       case 0:
         type = rephase_best ();
         break;
@@ -282,18 +316,24 @@ void Internal::rephase () {
       case 3:
         type = rephase_inverted ();
         break;
+      case 4:
+        type = rephase_best ();
+        break;
+      case 5:
+        type = rephase_conflicts ();
+        break;
       default:
         type = 0;
         break;
       }
   } else if (stable && opts.walk) {
-    // original,inverted,(best,walk,original,best,walk,inverted)^\omega
+    // original,inverted,(best,walk,conflicts,original,best,walk,conflicts,inverted)^\omega
     if (!count)
       type = rephase_original ();
     else if (count == 1)
       type = rephase_inverted ();
     else
-      switch ((count - 2) % 6) {
+      switch ((count - 2) % 8) {
       case 0:
         type = rephase_best ();
         break;
@@ -301,15 +341,21 @@ void Internal::rephase () {
         type = rephase_walk ();
         break;
       case 2:
-        type = rephase_original ();
+        type = rephase_conflicts ();
         break;
       case 3:
-        type = rephase_best ();
+        type = rephase_original ();
         break;
       case 4:
-        type = rephase_walk ();
+        type = rephase_best ();
         break;
       case 5:
+        type = rephase_walk ();
+        break;
+      case 6:
+        type = rephase_conflicts ();
+        break;
+      case 7:
         type = rephase_inverted ();
         break;
       default:
@@ -325,7 +371,7 @@ void Internal::rephase () {
         type = rephase_original ();
     }
     else
-      switch ((count - 1) % 4) {
+      switch ((count - 1) % 6) {
       case 0:
         type = rephase_random ();
         break;
@@ -336,6 +382,12 @@ void Internal::rephase () {
         type = rephase_flipping ();
         break;
       case 3:
+        type = rephase_best ();
+        break;
+      case 4:
+        type = rephase_conflicts ();
+        break;
+      case 5:
         type = rephase_best ();
         break;
       default:

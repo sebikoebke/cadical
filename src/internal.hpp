@@ -903,6 +903,7 @@ struct Internal {
   //
   bool rephasing ();
   char rephase_best ();
+  char rephase_conflicts ();
   char rephase_flipping ();
   char rephase_inverted ();
   char rephase_original ();

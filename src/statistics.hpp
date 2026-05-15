@@ -243,6 +243,7 @@
   STATISTIC (reductions,             1, INTERVAL, "", interval) \
   STATISTIC (rephased,               1, INTERVAL, "", interval) \
   STATISTIC (rephased_best,          2, percent, "%", rephased) \
+  STATISTIC (rephased_conflicts,     2, percent, "%", rephased) \
   STATISTIC (rephased_flipped,       2, percent, "%", rephased) \
   STATISTIC (rephased_inverted,      2, percent, "%", rephased) \
   STATISTIC (rephased_original,      2, percent, "%", rephased) \

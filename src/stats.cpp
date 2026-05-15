@@ -520,6 +520,9 @@ void Stats::print_old (Internal *internal) {
     PRT ("  rephasedwalk:  %15" PRId64 "   %10.2f %%  rephased walk",
          stats.rephased_walk,
          percent (stats.rephased_walk, stats.rephased));
+    PRT ("  rephasedconf:  %15" PRId64 "   %10.2f %%  rephased best",
+         stats.rephased_best,
+         percent (stats.rephased_conflicts, stats.rephased));
   }
   if (all)
     PRT ("rescored:        %15" PRId64 "   %10.2f    interval",
