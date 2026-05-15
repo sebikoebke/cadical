@@ -264,6 +264,7 @@ struct Internal {
                              // (otherwise, we backtrack, so no
                              // renotification is needed).
   size_t notified;           // next trail position to notify external prop
+  int notified_level;        // current level of external prop
   Clause *probe_reason;      // set during probing
   size_t propagated;         // next trail position to propagate
   size_t propagated2;        // next binary trail position to propagate
@@ -1445,7 +1446,8 @@ struct Internal {
   int walk_pick_lit (Walker &walker, ClauseOrBinary);
   int walk_pick_lit (Walker &, Clause *);
   bool walk_flip_lit (Walker &, int lit);
-  int walk_pick_lit (Walker &walker, ClauseOrBinary::clause_or_binary::TaggedBinary c);
+  int walk_pick_lit (Walker &walker,
+                     ClauseOrBinary::clause_or_binary::TaggedBinary c);
   int walk_round (int64_t limit, bool prev);
   void walk ();
 
