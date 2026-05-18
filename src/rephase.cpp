@@ -183,11 +183,12 @@ void Internal::rephase () {
       break;
     }
   } else if (single && opts.walk) {
-    // (inverted,best,walk,conflicts,
-    //  flipping,best,walk,conflicts,
-    //    random,best,walk,conflicts,
-    //  original,best,walk,conflicts)^\omega
-    switch (count % 16) {
+    // (inverted,best,walk,
+    //  flipping,best,walk,
+    //    random,best,walk,
+    //  original,best,walk,
+    //  conflicts,best,walk)^\omega
+    switch (count % 15) {
     case 0:
       type = rephase_inverted ();
       break;
@@ -198,42 +199,39 @@ void Internal::rephase () {
       type = rephase_walk ();
       break;
     case 3:
-      type = rephase_conflicts ();
-      break;
-    case 4:
       type = rephase_flipping ();
       break;
-    case 5:
+    case 4:
       type = rephase_best ();
+      break;
+    case 5:
+      type = rephase_walk ();
       break;
     case 6:
-      type = rephase_walk ();
-      break;
-    case 7:
-      type = rephase_conflicts ();
-      break;
-    case 8:
       type = rephase_random ();
       break;
-    case 9:
+    case 7:
       type = rephase_best ();
       break;
-    case 10:
+    case 8:
       type = rephase_walk ();
       break;
-    case 11:
-      type = rephase_conflicts ();
-      break;
-    case 12:
+    case 9:
       type = rephase_original ();
       break;
-    case 13:
+    case 10:
       type = rephase_best ();
       break;
-    case 14:
+    case 11:
       type = rephase_walk ();
       break;
-    case 15:
+    case 12:
+      type = rephase_conflicts ();
+      break;
+    case 13:
+      type = rephase_walk ();
+      break;
+    case 14:
       type = rephase_conflicts ();
       break;
     default:
@@ -327,13 +325,13 @@ void Internal::rephase () {
         break;
       }
   } else if (stable && opts.walk) {
-    // original,inverted,(best,walk,conflicts,original,best,walk,conflicts,inverted)^\omega
+    // original,inverted,(best,walk,conflicts,best,walk,original,best,walk,inverted)^\omega
     if (!count)
       type = rephase_original ();
     else if (count == 1)
       type = rephase_inverted ();
     else
-      switch ((count - 2) % 8) {
+      switch ((count - 2) % 9) {
       case 0:
         type = rephase_best ();
         break;
@@ -344,18 +342,21 @@ void Internal::rephase () {
         type = rephase_conflicts ();
         break;
       case 3:
-        type = rephase_original ();
-        break;
-      case 4:
         type = rephase_best ();
         break;
-      case 5:
+      case 4:
         type = rephase_walk ();
         break;
+      case 5:
+        type = rephase_original ();
+        break;
       case 6:
-        type = rephase_conflicts ();
+        type = rephase_best ();
         break;
       case 7:
+        type = rephase_walk ();
+        break;
+      case 8:
         type = rephase_inverted ();
         break;
       default:
