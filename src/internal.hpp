@@ -230,6 +230,7 @@ struct Internal {
   bool ext_clause_forgettable;  // Is new clause from propagator forgettable
   int tainted_literal;          // used for ILB
   size_t notified;           // next trail position to notify external prop
+  int notified_level;        // last notified level of external prop
   Clause *probe_reason;      // set during probing
   size_t propagated;         // next trail position to propagate
   size_t propagated2;        // next binary trail position to propagate
