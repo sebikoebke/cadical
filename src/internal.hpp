@@ -1407,8 +1407,11 @@ struct Internal {
   int walk_pick_lit (Walker &walker, TaggedBinary c);
   int walk_round (int64_t limit, bool prev);
   void walk ();
-  bool passat_propagate(int64_t ticks);
-  void probSAT_repair(int64_t ticks);
+  void Internal::passat_ordering(Walker &walker);
+  bool Internal::passat_assign(Walker &walker, int lit);
+  bool Internal::passat_up(Walker &walker, int64_t &ticks);
+  bool up_expansion(Walker &walker, int64_t &ticks);
+  void probSAT_repair(Walker &walker, int64_t &ticks);
   void walk_passat();
 
   int walk_full_occs_round (int64_t limit, bool prev);

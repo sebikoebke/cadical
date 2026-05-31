@@ -36,6 +36,11 @@ struct Walker {
   std::vector<int> flips; // remember the flips compared to the last best saved model
   int best_trail_pos;
   int64_t minimum = INT64_MAX;
+  vector<int> propagation_queue;  // replacement for the trail for walk_passat
+  vector<pair<double, double>> ls_score;      // polarity score for each variable <ls+, ls->
+  priority_queue<pair<double, int>> ordering_O;      // Ordering O as priority queue with <s(v),v>
+  vector<int> flip_count;         // LS Hotspots, indexed by variables
+  Clause *conflict_clause = nullptr;  // pointer to the conflict clause, to be able to communicate between up_expansion and probSAT_repair
   std::vector<signed char> best_values; // best model stored so far
   double score (unsigned);              // compute score from break count
 #ifndef NDEBUG
@@ -1082,18 +1087,58 @@ void Internal::walk () {
   assert (!unsat);
 }
 
-bool Internal::passat_propagate(int64_t ticks) {
+/*----------------------------------------------------------------------------*/
+
+void Internal::passat_ordering(Walker &walker) {
+
+}
+
+/*----------------------------------------------------------------------------*/
+
+bool Internal::passat_assign(Walker &walker, int lit) {
+
+}
+
+/*----------------------------------------------------------------------------*/
+
+bool Internal::passat_up(Walker &walker, int64_t &ticks){
+  //TODO: set the conflict pointer at the correct position
+
+}
+
+/*----------------------------------------------------------------------------*/
+
+// In the PASSAT-Paper "the UP-guided Expansion module is responsible for
+// enlarging the active variable set and construction the next subproblem."
+// First difference is that we already have a fully active variabel set. 
+// Each variable has either the value -1, 0, 1.
+// Therefore we use up_expansion to propagate as far as possible till we found 
+// a new subproblem which we can solve with probSAT_repair.
+// When UP cannot propagate further on, we use the guidance of the PASSAT-Paper:
+// We choose the next variable to assign from a global ordering O (derived from 
+// clause structure) and feedback from LS.
+// Because probSAT_repair() work on vals[], we cannot use a trail like propagate()
+// does. Therefore we build a new queue with all the logic of propagate() where 
+// both up_expansion() and probSAT_repair() can be used
+
+bool Internal::up_expansion(Walker &walker, int64_t &ticks) {
   //TODO
 }
 
-void Internal::probSAT_repair(int64_t ticks) {
+/*---------------------------------------------------------------------------*/
+
+void Internal::probSAT_repair(Walker &walker, int64_t &ticks) {
   //TODO
+  //TODO: conflict_pointer auslesen, repairen und anschließend auf nullptr setzen
 }
+
+/*---------------------------------------------------------------------------*/
 
 void Internal::walk_passat() {
   START_INNER_WALK ();
 
   backtrack ();
+  //brauche ich das hier überhaupt noch???
   //propagate() is called if unpropagated literals are still present in the trail after backtrack()
   if (propagated < trail.size () && !propagate ()) {
     LOG ("empty clause after root level propagation");
@@ -1102,37 +1147,57 @@ void Internal::walk_passat() {
     return;
   }
 
-   //calc limit, identically as in walk()
+  //calc limit, identically as in walk()
   const int64_t start_ticks = stats.ticks.search[0] + stats.ticks.search[1];
   int64_t limit = start_ticks - last.walk.ticks;
   last.walk.ticks = start_ticks;
   limit *= 1e-3 * opts.walkeffort;
   if (limit < opts.walkmineff) limit = opts.walkmineff;
 
+  Walker walker (internal, limit);
+
   //as starting partiall solution for PASSAT, we use the propagated literals or the assignment from phases.best (the best partiall solution sofar)
   for (int id = 1; id <= max_var; id++) {
     //variable is not propagated yet, but has a assignment from phases.best
     if (val(id) == 0 && phases.best[id] != 0) {
-      set_val(id, phases.best[id]);
+      passat_assign(walker, id * phases.best[id]);
     }
   }
 
   bool no_conflict = true;
   //local counter for ticks
   int64_t ticks = 0;
-  
+
   //PASSAT-Algorithm
   while (ticks < limit) {
     //propagate from the current best solution till a conflict is found
-    no_conflict = passat_propagate(ticks);
+    no_conflict = up_expansion(walker, ticks);
     //if no conflict is found, SAT
     if (no_conflict) break;
     //resolve the conflict from propagation with ProbSAT Local Search
-    probSAT_repair(ticks);
+    probSAT_repair(walker, ticks);
   }
 
   LOG("walk_passat: %s", no_conflict ? "SAT" : "limit reached");
-    // save_final_minimum(...); // TODO
+
+  // Save the result: the whole point of walk_passat is to leave a better
+  // polarity assignment in phases.saved, which the following CDCL search uses
+  // as decision phases
+  for (int id = 1; id <= max_var; id++)
+    if (val (id))
+      phases.saved[id] = val (id);
+
+  // vals[] is the solver's single global assignment
+  // table with the invariant "vals[v] != 0 <=> v is on the trail" 
+  // We broke that invariant by assigning via passat_assign() without pushing to the trail
+  // Restore it by clearing vals[] for all active variables and reset
+  // the decision level to the root, otherwise the next CDCL search runs on a
+  // corrupted state (like in walk_round)
+  for (int id = 1; id <= max_var; id++)
+    if (active (id))
+      set_val (id, 0);
+  level = 0;
+
   STOP_INNER_WALK();
 }
 
