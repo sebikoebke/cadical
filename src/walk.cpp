@@ -33,8 +33,7 @@ struct Walker {
   double epsilon;                // smallest considered score
   vector<double> table;          // break value to score table
   vector<double> scores;         // scores of candidate literals
-  std::vector<int>
-      flips; // remember the flips compared to the last best saved model
+  std::vector<int> flips; // remember the flips compared to the last best saved model
   int best_trail_pos;
   int64_t minimum = INT64_MAX;
   std::vector<signed char> best_values; // best model stored so far
@@ -469,7 +468,6 @@ bool Internal::walk_flip_lit (Walker &walker, int lit) {
   assert (val (lit) < 0);
 
   // First flip the literal value.
-  //
   const int tmp = sign (lit);
   const int idx = abs (lit);
   set_val (idx, tmp);
@@ -777,7 +775,6 @@ int Internal::walk_round (int64_t limit, bool prev) {
          limit);
 
   // Instantiate data structures for this local search round.
-  //
   Walker walker (internal, limit);
 #ifndef QUIET
   int old_global_minimum = stats.walk.minimum;
@@ -1083,6 +1080,60 @@ void Internal::walk () {
   (void) walk_round (limit, false);
   STOP_INNER_WALK ();
   assert (!unsat);
+}
+
+bool Internal::passat_propagate(int64_t ticks) {
+  //TODO
+}
+
+void Internal::probSAT_repair(int64_t ticks) {
+  //TODO
+}
+
+void Internal::walk_passat() {
+  START_INNER_WALK ();
+
+  backtrack ();
+  //propagate() is called if unpropagated literals are still present in the trail after backtrack()
+  if (propagated < trail.size () && !propagate ()) {
+    LOG ("empty clause after root level propagation");
+    learn_empty_clause ();
+    STOP_INNER_WALK ();
+    return;
+  }
+
+   //calc limit, identically as in walk()
+  const int64_t start_ticks = stats.ticks.search[0] + stats.ticks.search[1];
+  int64_t limit = start_ticks - last.walk.ticks;
+  last.walk.ticks = start_ticks;
+  limit *= 1e-3 * opts.walkeffort;
+  if (limit < opts.walkmineff) limit = opts.walkmineff;
+
+  //as starting partiall solution for PASSAT, we use the propagated literals or the assignment from phases.best (the best partiall solution sofar)
+  for (int id = 1; id <= max_var; id++) {
+    //variable is not propagated yet, but has a assignment from phases.best
+    if (val(id) == 0 && phases.best[id] != 0) {
+      set_val(id, phases.best[id]);
+    }
+  }
+
+  bool no_conflict = true;
+  //local counter for ticks
+  int64_t ticks = 0;
+  
+  //PASSAT-Algorithm
+  while (ticks < limit) {
+    //propagate from the current best solution till a conflict is found
+    no_conflict = passat_propagate(ticks);
+    //if no conflict is found, SAT
+    if (no_conflict) break;
+    //resolve the conflict from propagation with ProbSAT Local Search
+    probSAT_repair(ticks);
+  }
+
+  LOG("walk_passat: %s", no_conflict ? "SAT" : "limit reached");
+    // save_final_minimum(...); // TODO
+  STOP_INNER_WALK();
 }
 
 } // namespace CaDiCaL
