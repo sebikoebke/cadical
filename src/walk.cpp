@@ -39,6 +39,10 @@ struct Walker {
   vector<int> propagation_queue;  // replacement for the trail for walk_passat
   vector<pair<double, double>> ls_score;      // polarity score for each variable <ls+, ls->
   priority_queue<pair<double, int>> ordering_O;      // Ordering O as priority queue with <s(v),v>
+  vector<vector<int>> passat_lookup_table; // positions in `clauses` where v+/v- occurs
+  vector<int> passat_clauses; // all clauses where all variables inside are activated
+  vector<int> conflict_counter;   // counter which shows if there is a conflict inside a clause, if c_c == 0 => conflict, decreased if the opposite polarity is assigned to true
+  vector<int> activation_counter; // counter which shows when a clauses contain only activated clauses. a_c is decreased, if one variable in a clause is activated
   vector<int> flip_count;         // LS Hotspots, indexed by variables
   Clause *conflict_clause = nullptr;  // pointer to the conflict clause, to be able to communicate between up_expansion and probSAT_repair
   std::vector<signed char> best_values; // best model stored so far
@@ -1089,8 +1093,79 @@ void Internal::walk () {
 
 /*----------------------------------------------------------------------------*/
 
-void Internal::passat_ordering(Walker &walker) {
+// passat_build() prepares ...
+// (a) passat_lookup_table
+// (b) conflict_counter[pos] : counter for each clause, starts with 
+//     conflict_counter[pos] = clauses[pos].size() and decrease, if a literal 
+//     inside the clause is wrong. If conflict_counter ==0 => empty clause (conflict)
+// (c) activation_counter[pos] : counter for the repair modul to show which clauses
+//     are fully activated
+// (d) ls_score[v] = <ls+(v), ls-(v)> : weighted occurrence, sum of 1/|C|.
+// (e) s(v) = ls+(v) + ls-(v) and push <s(v), v> in the ordering_O
+void Internal::passat_build (Walker &walker) {
+  walker.passat_lookup_table.resize (2 * vsize);
+  walker.conflict_counter.resize (clauses.size ());
+  walker.activation_counter.resize (clauses.size ());
+  // the first variable has index 1, therefore 0 is unused
+  walker.ls_score.resize (max_var + 1, make_pair (0.0, 0.0));
 
+  for (size_t pos = 0; pos < clauses.size (); pos++) {
+    Clause *c = clauses[pos];
+    if (c->garbage)
+      continue;
+    if (c->redundant) {
+      if (!opts.walkredundant)
+        continue;
+      if (!likely_to_be_kept_clause (c))
+        continue;
+    }
+
+    // weight as 1/|C|
+    const double weight = 1.0 / c->size;
+    // literals with val != -1
+    int not_false = 0;  
+    // literals with val == 0
+    int unassigned = 0;
+    for (const auto lit : *c) {
+      const int idx = abs (lit);
+      const signed char v = val (lit);
+      // if a literal is not false, we have to increase the conflict_counter of the clause
+      if (v >= 0)
+        not_false++;
+      // if a literal is unassigned, we have to increase the activation_counter of the clause
+      if (v == 0)
+        unassigned++;
+      // part of (d)
+      if (lit > 0)
+        walker.ls_score[idx].first += weight; // ls+(v)
+      else
+        walker.ls_score[idx].second += weight; // ls-(v)
+      // part of (a)
+      walker.passat_lookup_table[vlit (lit)].push_back ((int) pos);
+    }
+    // (b)
+    walker.conflict_counter[pos] = not_false;
+    // (c)
+    walker.activation_counter[pos] = unassigned;
+    // already fully activated clause
+    if (unassigned == 0)
+      walker.passat_clauses.push_back ((int) pos);
+  }
+
+  // part (e): max-heap over s(v) = ls+(v) + ls-(v)
+  // s(v) needs the complete ls_score, this is why we need a second for loop
+  // Luckily the second loop is cheap and just over all Variables once, therefore 
+  // linear with O(|variables|)
+  for (int idx = 1; idx <= max_var; idx++) {
+    // skip ELIMINATED/fixed variables (not part of the problem anymore).
+    // Already-ASSIGNED variables are not skipped here, up_expansion does that
+    // via its val()-check when popping from ordering_O.
+    if (!active (idx))
+      continue;
+    // (e)
+    const double s = walker.ls_score[idx].first + walker.ls_score[idx].second;
+    walker.ordering_O.push (make_pair (s, idx));
+  }
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1101,7 +1176,10 @@ bool Internal::passat_assign(Walker &walker, int lit) {
 
 /*----------------------------------------------------------------------------*/
 
-bool Internal::passat_up(Walker &walker, int64_t &ticks){
+// propagation process for up_expansion modul
+// keep in mind to remove a propagated literal out of the ordering_O, so that
+// later there is no check nessecary if a variable in ordering_O is already active
+bool Internal::passat_up(Walker &walker){
   //TODO: set the conflict pointer at the correct position
 
 }
@@ -1121,13 +1199,15 @@ bool Internal::passat_up(Walker &walker, int64_t &ticks){
 // does. Therefore we build a new queue with all the logic of propagate() where 
 // both up_expansion() and probSAT_repair() can be used
 
-bool Internal::up_expansion(Walker &walker, int64_t &ticks) {
+bool Internal::up_expansion(Walker &walker) {
   //TODO
 }
 
 /*---------------------------------------------------------------------------*/
 
-void Internal::probSAT_repair(Walker &walker, int64_t &ticks) {
+// Returns true if the conflict was fully resolved (broken == 0) so that
+// up_expansion can resume; false if it could not be repaired (-> UNSAT).
+bool Internal::probSAT_repair(Walker &walker) {
   //TODO
   //TODO: conflict_pointer auslesen, repairen und anschließend auf nullptr setzen
 }
@@ -1137,8 +1217,8 @@ void Internal::probSAT_repair(Walker &walker, int64_t &ticks) {
 void Internal::walk_passat() {
   START_INNER_WALK ();
 
-  backtrack ();
-  //brauche ich das hier überhaupt noch???
+    backtrack ();
+  
   //propagate() is called if unpropagated literals are still present in the trail after backtrack()
   if (propagated < trail.size () && !propagate ()) {
     LOG ("empty clause after root level propagation");
@@ -1156,26 +1236,20 @@ void Internal::walk_passat() {
 
   Walker walker (internal, limit);
 
-  //as starting partiall solution for PASSAT, we use the propagated literals or the assignment from phases.best (the best partiall solution sofar)
-  for (int id = 1; id <= max_var; id++) {
-    //variable is not propagated yet, but has a assignment from phases.best
-    if (val(id) == 0 && phases.best[id] != 0) {
-      passat_assign(walker, id * phases.best[id]);
-    }
-  }
+  // build occurrence lists, counters, ls_score and ordering_O for this run
+  passat_build (walker);
 
+  // PASSAT main loop on an (initially) empty assignment:
+  //   up_expansion activates variables from ordering_O and propagates (UP) until
+  //   SAT (all activated, no conflict) or a conflict; probSAT_repair then repairs
+  //   the fully-activated subproblem. Resume only if the conflict was resolved.
   bool no_conflict = true;
-  //local counter for ticks
-  int64_t ticks = 0;
-
-  //PASSAT-Algorithm
-  while (ticks < limit) {
-    //propagate from the current best solution till a conflict is found
-    no_conflict = up_expansion(walker, ticks);
-    //if no conflict is found, SAT
-    if (no_conflict) break;
-    //resolve the conflict from propagation with ProbSAT Local Search
-    probSAT_repair(walker, ticks);
+  while (walker.ticks < walker.limit) {
+    no_conflict = up_expansion (walker);
+    if (no_conflict)
+      break;                        // SAT over the activated set
+    if (!probSAT_repair (walker))
+      break;                        // conflict not resolvable -> UNSAT
   }
 
   LOG("walk_passat: %s", no_conflict ? "SAT" : "limit reached");
