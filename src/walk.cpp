@@ -1154,7 +1154,7 @@ void Internal::passat_build (Walker &walker) {
 
   // part (e): max-heap over s(v) = ls+(v) + ls-(v)
   // s(v) needs the complete ls_score, this is why we need a second for loop
-  // Luckily the second loop is cheap and just over all Variables once, therefore 
+  // luckily the second loop is cheap and just over all variables once, therefore 
   // linear with O(|variables|)
   for (int idx = 1; idx <= max_var; idx++) {
     // skip ELIMINATED/fixed variables (not part of the problem anymore).
@@ -1170,8 +1170,56 @@ void Internal::passat_build (Walker &walker) {
 
 /*----------------------------------------------------------------------------*/
 
+// passat_assign() assigns the literal 'lit' to true and keeps all PASSAT
+// bookkeeping consistent. It performs the following steps:
+//   1. set 'lit' to true (does nothing if it is already assigned)
+//   2. push 'lit' onto the propagation_queue so passat_up can propagate it
+//   3. decrement the activation_counter of every clause that contains the
+//      variable; once it hits 0 the clause is fully activated and gets
+//      appended to passat_clauses
+//   4. decrement the conflict_counter of every clause that contains '-lit'
+//      (that literal just turned false); if it hits 0 the clause is falsified
+//      and is recorded as the conflict clause
+// Returns true if no conflict arose (propagation may continue), false if
+// assigning 'lit' falsified at least one clause.
 bool Internal::passat_assign(Walker &walker, int lit) {
+  bool signal = true;
+  // Only assign if 'lit' is currently unassigned; otherwise there is nothing
+  // to do and we report that propagation may continue.
+  // NOTE: the guard returns true for any val(lit) != 0. If 'lit' were already
+  // false (val(lit) == -1) this would silently hide a contradiction. In our
+  // design that should never happens: passat_up only calls passat_assign on
+  // unassigned unit literals, and a real conflict is caught earlier via
+  // conflict_counter == 0 (just for debugging).
+  if (val(lit) == 0){
+    set_val(lit, 1);
+    // (2) enqueue for later propagation in passat_up
+    walker.propagation_queue.push_back(lit);
+    // (3) positive occurrences: the variable becomes active in these clauses
+    for(auto clause : walker.passat_lookup_table[vlit(lit)]) {
+      walker.activation_counter[clause] -= 1;
+      if (walker.activation_counter[clause] == 0) {
+        walker.passat_clauses.push_back(clause);
+      }
+    }
+    // (3) negative occurrences: the variable becomes active here too, and
+    // (4) '-lit' is now false, so the conflict_counter shrinks as well
+    for(auto clause : walker.passat_lookup_table[vlit(-lit)]){
+      walker.activation_counter[clause] -= 1;
+      if (walker.activation_counter[clause] == 0) {
+        walker.passat_clauses.push_back(clause);
+      }
 
+      walker.conflict_counter[clause] -= 1;
+      // Record only the first conflict clause; probSAT_repair inspects all of
+      // passat_clauses anyway, so any further conflicts need no extra handling.
+      if (signal && walker.conflict_counter[clause] == 0) {
+        walker.conflict_clause = clauses[clause];
+        signal = false;
+      }
+    }
+  }
+  return signal;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1214,6 +1262,7 @@ bool Internal::probSAT_repair(Walker &walker) {
 
 /*---------------------------------------------------------------------------*/
 
+// PASSAT-Algorithm
 void Internal::walk_passat() {
   START_INNER_WALK ();
 
