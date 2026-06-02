@@ -36,7 +36,8 @@ struct Walker {
   std::vector<int> flips; // remember the flips compared to the last best saved model
   int best_trail_pos;
   int64_t minimum = INT64_MAX;
-  vector<int> propagation_queue;  // replacement for the trail for walk_passat
+  vector<int> propagation_queue;  // our replacement for the trail in walk_passat: the list of all assigned literals. Never cleared during a walk_passat run; it grows during propagation and is modified if necessary during probSAT_repair
+  size_t propagated = 0;          // how far propagation_queue has been processed (like Internal::propagated)
   vector<pair<double, double>> ls_score;      // polarity score for each variable <ls+, ls->
   priority_queue<pair<double, int>> ordering_O;      // Ordering O as priority queue with <s(v),v>
   vector<vector<int>> passat_lookup_table; // positions in `clauses` where v+/v- occurs
@@ -1224,12 +1225,46 @@ bool Internal::passat_assign(Walker &walker, int lit) {
 
 /*----------------------------------------------------------------------------*/
 
-// propagation process for up_expansion modul
-// keep in mind to remove a propagated literal out of the ordering_O, so that
-// later there is no check nessecary if a variable in ordering_O is already active
+// Unit propagation for the up_expansion module.
+// passat_up is working on walker.propagation_queue and with walker.propagated
 bool Internal::passat_up(Walker &walker){
-  //TODO: set the conflict pointer at the correct position
+  // For every assigned literal still to be processed, look for clauses that
+  // just became unit and propagate them through passat_assign.
+  while (walker.propagated < walker.propagation_queue.size()){
+    const int lit = walker.propagation_queue[walker.propagated++];
+    // 'lit' is true, so only clauses containing '-lit' can shrink: clauses
+    // that contain 'lit' are already satisfied.
+    // Reading the occurrence row is charged like walk() charges reading a
+    // watch list, so that the tick measurement stays comparable to walk().
+    const auto &lit_clauses = walker.passat_lookup_table[vlit(-lit)];
+    walker.ticks += 1 + cache_lines(lit_clauses.size(), sizeof(int));
 
+    for (auto clause : lit_clauses){
+      // one tick per clause we actually visit
+      walker.ticks++; 
+      // conflict_counter == 1: exactly one literal is still not false. Find it:
+      // if it is unassigned the clause is unit and must be propagated; if it is
+      // already true the clause is satisfied and we skip it.
+      if (walker.conflict_counter[clause] == 1){
+        Clause *c = clauses[clause];
+        int unit = 0;
+        for (auto clause_lit : *c){
+          // scanning the clause touches each literal
+          walker.ticks++;
+          if (val(clause_lit) >= 0){
+            unit = clause_lit;
+            break;
+          }
+        }
+        if (val(unit) == 0){
+          // Propagating the unit may itself falsify a clause => passat_assign
+          // then records walker.conflict_clause and returns false.
+          if (!passat_assign(walker, unit)) return false;
+        }
+      }
+    }
+  }
+  return true;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1246,7 +1281,6 @@ bool Internal::passat_up(Walker &walker){
 // Because probSAT_repair() work on vals[], we cannot use a trail like propagate()
 // does. Therefore we build a new queue with all the logic of propagate() where 
 // both up_expansion() and probSAT_repair() can be used
-
 bool Internal::up_expansion(Walker &walker) {
   //TODO
 }
@@ -1256,7 +1290,8 @@ bool Internal::up_expansion(Walker &walker) {
 // Returns true if the conflict was fully resolved (broken == 0) so that
 // up_expansion can resume; false if it could not be repaired (-> UNSAT).
 bool Internal::probSAT_repair(Walker &walker) {
-  //TODO
+  // Remainder: Behalte den conflic_counter, die propagation_queue und propagated im Auge,
+  // die müssen sich entsprechend der Änderungen von probSAT mitändern
   //TODO: conflict_pointer auslesen, repairen und anschließend auf nullptr setzen
 }
 
