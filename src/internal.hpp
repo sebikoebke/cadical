@@ -1411,6 +1411,11 @@ struct Internal {
   bool passat_assign (Walker &walker, int lit);
   bool passat_up (Walker &walker);
   bool up_expansion (Walker &walker);
+  void build_broken(Walker &walker);
+  int pick_random_clause(Walker &walker);
+  int probSAT_pick_lit(Walker &walker, int picked_clause);
+  void flip_and_repair(Walker &walker, int lit);
+  void repair_propagation_queue(Walker &walker);
   bool probSAT_repair (Walker &walker);
   void walk_passat ();
 

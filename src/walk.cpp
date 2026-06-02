@@ -36,15 +36,19 @@ struct Walker {
   std::vector<int> flips; // remember the flips compared to the last best saved model
   int best_trail_pos;
   int64_t minimum = INT64_MAX;
-  vector<int> propagation_queue;  // our replacement for the trail in walk_passat: the list of all assigned literals. Never cleared during a walk_passat run; it grows during propagation and is modified if necessary during probSAT_repair
+  vector<int> propagation_queue;  // our replacement for the trail in walk_passat (with a difference): the list of all literals which are assigned or should. 
+                                  // Changed if probSAT_repair is finished with LS_repair: Old propagations are not longer needed, therefore ther are cut. Just pending and flipped variables remain.
   size_t propagated = 0;          // how far propagation_queue has been processed (like Internal::propagated)
   vector<pair<double, double>> ls_score;      // polarity score for each variable <ls+, ls->
   priority_queue<pair<double, int>> ordering_O;      // Ordering O as priority queue with <s(v),v>
   vector<vector<int>> passat_lookup_table; // positions in `clauses` where v+/v- occurs
-  vector<int> passat_clauses; // all clauses where all variables inside are activated
+  vector<int> passat_clauses;     // all clauses where all variables inside are activated
+  vector<int> broken_clauses;     // all broken clauses out of passat_clauses, used for probSAT_repair
   vector<int> conflict_counter;   // counter which shows if there is a conflict inside a clause, if c_c == 0 => conflict, decreased if the opposite polarity is assigned to true
   vector<int> activation_counter; // counter which shows when a clauses contain only activated clauses. a_c is decreased, if one variable in a clause is activated
   vector<int> flip_count;         // LS Hotspots, indexed by variables
+  vector<signed char> mark;       // per-variable dedup flag, invariant 0 outside repair_propagation_queue
+  vector<int> scratch;            // reusable buffer to rebuild propagation_queue without allocating
   Clause *conflict_clause = nullptr;  // pointer to the conflict clause, to be able to communicate between up_expansion and probSAT_repair
   std::vector<signed char> best_values; // best model stored so far
   double score (unsigned);              // compute score from break count
@@ -100,6 +104,7 @@ Walker::Walker (Internal *i, int64_t l)
       ticks (0), limit (l), best_trail_pos (-1) {
   random += internal->stats.walk.count; // different seed every time
   flips.reserve (i->max_var / 4);
+  mark.resize (i->max_var + 1, 0); // dedup flag for repair_propagation_queue, kept invariant 0
   best_values.resize (i->max_var + 1, 0);
 #ifndef NDEBUG
   current_best_model.resize (i->max_var + 1, 0);
@@ -1271,28 +1276,142 @@ bool Internal::passat_up(Walker &walker){
 
 // In the PASSAT-Paper "the UP-guided Expansion module is responsible for
 // enlarging the active variable set and construction the next subproblem."
-// First difference is that we already have a fully active variabel set. 
-// Each variable has either the value -1, 0, 1.
 // Therefore we use up_expansion to propagate as far as possible till we found 
-// a new subproblem which we can solve with probSAT_repair.
+// a new subproblem which can be sent to probSAT_repair.
 // When UP cannot propagate further on, we use the guidance of the PASSAT-Paper:
 // We choose the next variable to assign from a global ordering O (derived from 
 // clause structure) and feedback from LS.
-// Because probSAT_repair() work on vals[], we cannot use a trail like propagate()
-// does. Therefore we build a new queue with all the logic of propagate() where 
-// both up_expansion() and probSAT_repair() can be used
+// We cannot reuse CaDiCaL's trail/propagate() for this: probSAT_repair flips
+// already-assigned literals in place on vals[], which would violate the trail's
+// CDCL invariants (var.level/.reason, control, the propagated index). So
+// passat_assign/passat_up reimplement just the propagation part on our own
+// propagation_queue, without the CDCL bookkeeping.
 bool Internal::up_expansion(Walker &walker) {
-  //TODO
+  // First drain anything still pending in propagation_queue (e.g. flips that
+  // probSAT_repair re-enqueued). Only once propagation is exhausted do we pull
+  // the next variable from ordering_O.
+  if (!passat_up(walker)) return false;
+
+  while (!walker.ordering_O.empty()) {
+    // get the highest element of ordering_O and delete it
+    const int v = walker.ordering_O.top().second;
+    walker.ordering_O.pop();
+    // variable is already assigned => skip
+    if (val(v) != 0) continue;
+
+    // choose the better (higher score) polarity for the literal
+    const int lit = (walker.ls_score[v].first > walker.ls_score[v].second) ? v : -v;
+
+    // activate the literal. On conflict hand over to probSAT_repair
+    if (!passat_assign(walker, lit)) return false;
+    // propagate the consequences. On conflict hand over to probSAT_repair
+    if (!passat_up(walker)) return false;
+  }
+  // ordering empty and all variable assigned => SAT
+  return true;
 }
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+
+// Function which build the list of broken clauses
+void Internal::build_broken(Walker &walker){
+
+}
+
+/*----------------------------------------------------------------------------*/
+
+// return a random clause-position i from a list of claus-postion
+// We get the clause than by clauses[i]
+// Therefore we dont need the overhead from walk_pick_clause
+int Internal::pick_random_clause(Walker &walker) {
+
+}
+
+/*----------------------------------------------------------------------------*/
+
+// pick via ProbSAT a random literal of the earlier picked clause
+int Internal::probSAT_pick_lit(Walker &walker, int picked_clause){
+
+}
+
+/*----------------------------------------------------------------------------*/
+
+// function flipps and repair based on the given literal
+void Internal::flip_and_repair(Walker &walker, int lit){
+  // push the flip lit in walker.flips
+
+}
+
+/*----------------------------------------------------------------------------*/
+
+// Rebuilds the propagation_queue after a probSAT_repair run so that up_expansion
+// can resume propagation. We do NOT keep the old queue: since walk_passat never
+// backtracks, already-processed entries are history that is never read
+// again (their value lives in vals[] and their consequences were drawn earlier).
+void Internal::repair_propagation_queue(Walker &walker){
+  // collect pending variables (still behind 'propagated')
+  for (size_t k = walker.propagated; k < walker.propagation_queue.size(); k++){
+    const int v = abs(walker.propagation_queue[k]);
+    if (!walker.mark[v]){
+      walker.mark[v] = 1;
+      walker.scratch.push_back(val(v) > 0 ? v : -v);
+    }
+  }
+  // collect flipped variables (also those that were already processed)
+  for (const int lit : walker.flips){
+    const int v = abs(lit);
+    if (!walker.mark[v]){
+      walker.mark[v] = 1;
+      walker.scratch.push_back(val(v) > 0 ? v : -v);
+    }
+  }
+  // reset the dedup flags so 'mark' stays invariant 0 for the next call
+  for (const int lit : walker.scratch)
+    walker.mark[abs(lit)] = 0;
+
+  // make scratch the new queue in O(1) and discard the old one
+  std::swap(walker.propagation_queue, walker.scratch);
+  walker.scratch.clear();
+  walker.propagated = 0;
+}
 
 // Returns true if the conflict was fully resolved (broken == 0) so that
-// up_expansion can resume; false if it could not be repaired (-> UNSAT).
+// up_expansion can resume; false if it could not be repaired (=> UNSAT).
 bool Internal::probSAT_repair(Walker &walker) {
-  // Remainder: Behalte den conflic_counter, die propagation_queue und propagated im Auge,
-  // die müssen sich entsprechend der Änderungen von probSAT mitändern
-  //TODO: conflict_pointer auslesen, repairen und anschließend auf nullptr setzen
+  /*
+  1. build a list of broken clauses where ProbSAT should operate on. The list with 
+     all clauses where ProbSAT is able to look at already exist => PASSAT_CLAUSES
+  2. Flip decision of Literal l (wie auch in walk() vernwendet):
+     Wir wählen zufällig eine clause c aus broken und dann mit probsat ein literal l aus c.
+  3. Flip Literal l (which is decide in 2.). 
+  4. Make all adjustment and book keeping stuff.
+  5. Look if there is still broken clauses, then return to (2), otherwise SAT and break the loop
+  6. If a solution is found, write the solution in vals[] (maybe it is already written), wirte the new values on the propagation_queue (we need to do this correct?) 
+     and pass to up_expansion
+  */
+
+  build_broken(walker);
+  //Clear all earlier made flips
+  walker.flips.clear();
+  while(!walker.broken_clauses.empty() && walker.ticks < walker.limit){
+    // pick random clause
+    int c = pick_random_clause(walker);
+    // pick random literal via ProbSAT
+    int lit = probSAT_pick_lit(walker, c);
+    // make the actual LS_repair
+    flip_and_repair(walker, lit);
+  }
+  // Tick limit reached while clauses are still broken: the conflict could not be
+  // resolved within the budget -> signal failure so walk_passat stops.
+  if (!walker.broken_clauses.empty())
+    return false;
+
+  // broken == 0: the conflict is fully resolved. Rebuild the propagation_queue so
+  // up_expansion can resume on the repaired partial assignment, then clear the
+  // conflict pointer and report success.
+  repair_propagation_queue(walker);
+  walker.conflict_clause = nullptr;
+  return true;
 }
 
 /*---------------------------------------------------------------------------*/
