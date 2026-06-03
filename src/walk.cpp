@@ -1113,11 +1113,18 @@ void Internal::walk () {
 //     are fully activated
 // (d) walker.activated : number of variables that already carry a value, so
 //     up_expansion knows when every variable has been activated (SAT case).
+// (e) the ProbSAT score table, built from the average size of the tracked
+//     clauses (like walk() does) and used by probSAT_pick_lit.
 void Internal::passat_build (Walker &walker) {
   walker.passat_lookup_table.resize (2 * vsize);
   walker.conflict_counter.resize (clauses.size ());
   walker.activation_counter.resize (clauses.size ());
   walker.broken_pos.resize (clauses.size (), -1);
+
+  // accumulate total literals and clause count over the tracked clauses to
+  // derive the average clause size for the ProbSAT score table 
+  double total_size = 0;
+  int64_t counted = 0;
 
   for (size_t pos = 0; pos < clauses.size (); pos++) {
     Clause *c = clauses[pos];
@@ -1133,6 +1140,10 @@ void Internal::passat_build (Walker &walker) {
     // this clause is tracked (passes the same filter as up_expansion's check)
     walker.tracked_clauses++;
 #endif
+
+    // count this tracked clause for the average size (part (e))
+    total_size += c->size;
+    counted++;
 
     // literals with val != -1
     int not_false = 0;
@@ -1163,6 +1174,9 @@ void Internal::passat_build (Walker &walker) {
   for (int idx = 1; idx <= max_var; idx++)
     if (val (idx))
       walker.activated++;
+
+  // build the ProbSAT score table from the average clause size, like walk()
+  walker.populate_table (relative (total_size, counted));
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1347,9 +1361,82 @@ int Internal::pick_random_clause(Walker &walker, const vector<int> &list_of_clau
 
 /*----------------------------------------------------------------------------*/
 
-// pick via ProbSAT a random literal of the earlier picked clause
-int Internal::probSAT_pick_lit(Walker &walker, int picked_clause){
+// break-value of 'lit' for ProbSAT: the number of clauses that would become
+// broken if 'lit' were flipped to true. Flipping 'lit' turns '-lit' false, so
+// every clause that currently relies on '-lit' as its last satisfier
+// (conflict_counter == 1) would break.
+unsigned Internal::passat_break_value(Walker &walker, int lit){
+  unsigned res = 0;
+  const auto &row = walker.passat_lookup_table[vlit(-lit)];
+  // reading the occurrence row is charged like walk() charges a watch list
+  walker.ticks += 1 + cache_lines(row.size(), sizeof(int));
+  for (int c : row){
+    // one tick per clause we actually visit
+    walker.ticks++;
+    if (walker.conflict_counter[c] == 1)
+      res++;
+  }
+  return res;
+}
 
+/*----------------------------------------------------------------------------*/
+
+// pick via ProbSAT a random literal of the earlier picked clause
+// The picked clause is broken (all its literals are false). Every flippable
+// (non-assumed) literal is scored from its break-value (smaller break-value =>
+// higher score) and one literal is sampled by a roulette wheel, exactly as in
+// walk_pick_lit. Returns 0 if every literal is an assumption: then the clause
+// cannot be repaired without violating an assumption.
+int Internal::probSAT_pick_lit(Walker &walker, int picked_clause){
+  Clause *c = clauses[picked_clause];
+  assert (walker.scores.empty ());
+  // one tick for entering the pick, like walk_pick_lit charges the framework
+  walker.ticks += 1;
+  double sum = 0;
+
+  // Phase 1: score every flippable literal by its break-value.
+  for (const auto lit : *c){
+    // an assumed variable must never be flipped
+    if (assumed(lit) || assumed(-lit))
+      continue;
+    const unsigned bv = passat_break_value(walker, lit);
+    const double s = walker.score(bv);
+    walker.scores.push_back(s);
+    sum += s;
+  }
+
+  // every literal is assumed => nothing to flip, signal "not repairable"
+  if (walker.scores.empty()){
+    return 0;
+  }
+
+  // roulette wheel: pick a random limit in [0, sum).
+  const double lim = sum * walker.random.generate_double();
+
+  // Phase 2: walk the clause literals (i) and the scores (j) in lockstep,
+  // skipping the same assumed literals as in phase 1, and stop at the first
+  // literal whose running score sum exceeds the limit.
+  const auto end = c->end();
+  auto i = c->begin();
+  auto j = walker.scores.begin();
+  int res = 0;
+  // advance to the first scored (non-assumed) literal
+  for (;;){
+    assert (i != end);
+    res = *i++;
+    if (!(assumed(res) || assumed(-res)))
+      break;
+  }
+  sum = *j++;
+  while (sum <= lim && i != end){
+    res = *i++;
+    if (assumed(res) || assumed(-res))
+      continue;
+    sum += *j++;
+  }
+
+  walker.scores.clear();
+  return res;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1387,10 +1474,10 @@ void Internal::flip_and_repair(Walker &walker, int lit){
     }
   }
 
-  // 4. 
-  const auto &row = walker.passat_lookup_table[vlit(-lit)];
-  walker.ticks += 1 + cache_lines(row.size(), sizeof(int));
-  for (int c : row){
+  // 4.
+  const auto &neg_row = walker.passat_lookup_table[vlit(-lit)];
+  walker.ticks += 1 + cache_lines(neg_row.size(), sizeof(int));
+  for (int c : neg_row){
     walker.ticks++;
     walker.conflict_counter[c] -= 1;
     // conflict_counter == 0 => clause is now broken, append it
@@ -1464,6 +1551,11 @@ bool Internal::probSAT_repair(Walker &walker) {
     int c = pick_random_clause(walker, walker.broken_clauses);
     // pick random literal via ProbSAT
     int lit = probSAT_pick_lit(walker, c);
+    // lit == 0: the clause consists only of assumptions, so it cannot be
+    // repaired without violating an assumption => unsatisfiable under the
+    // assumptions, stop and report failure.
+    if (lit == 0)
+      return false;
     // make the actual LS_repair
     flip_and_repair(walker, lit);
   }
