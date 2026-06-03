@@ -39,12 +39,13 @@ struct Walker {
   vector<int> propagation_queue;  // our replacement for the trail in walk_passat (with a difference): the list of all literals which are assigned or should. 
                                   // Changed if probSAT_repair is finished with LS_repair: Old propagations are not longer needed, therefore ther are cut. Just pending and flipped variables remain.
   size_t propagated = 0;          // how far propagation_queue has been processed (like Internal::propagated)
-  size_t activated = 0;           // # assigned variables; up_expansion stops once all are
+  size_t activated = 0;           // counts assigned variables; up_expansion stops once all are
                                   // activated. Replaces ordering_O/ls_score: variable + polarity
                                   // selection is delegated to CaDiCaL's own decision heuristic.
   vector<vector<int>> passat_lookup_table; // positions in `clauses` where v+/v- occurs
   vector<int> passat_clauses;     // all clauses where all variables inside are activated
   vector<int> broken_clauses;     // all broken clauses out of passat_clauses, used for probSAT_repair
+  vector<int> broken_pos;         // position of a clause inside broken_clauses (indexed by clause pos), -1 if not broken; enables fast removal (like in WalkerFO)
   vector<int> conflict_counter;   // counter which shows if there is a conflict inside a clause, if c_c == 0 => conflict, decreased if the opposite polarity is assigned to true
   vector<int> activation_counter; // counter which shows when a clauses contain only activated clauses. a_c is decreased, if one variable in a clause is activated
   vector<int> flip_count;         // LS Hotspots, indexed by variables
@@ -1116,6 +1117,7 @@ void Internal::passat_build (Walker &walker) {
   walker.passat_lookup_table.resize (2 * vsize);
   walker.conflict_counter.resize (clauses.size ());
   walker.activation_counter.resize (clauses.size ());
+  walker.broken_pos.resize (clauses.size (), -1);
 
   for (size_t pos = 0; pos < clauses.size (); pos++) {
     Clause *c = clauses[pos];
@@ -1313,7 +1315,18 @@ bool Internal::up_expansion(Walker &walker) {
 
 // Function which build the list of broken clauses
 void Internal::build_broken(Walker &walker){
-
+  walker.broken_clauses.clear();
+  for (int i : walker.passat_clauses){
+    if (walker.conflict_counter[i] > 0) { // satisfied => not broken
+      walker.broken_pos[i] = -1;
+      continue;
+    }
+    // remember the position of the broken clause inside broken_clauses
+    // it is later cheaper to look up and flip the variable and remove the
+    // corresponding clause from broken_clauses
+    walker.broken_pos[i] = (int) walker.broken_clauses.size();
+    walker.broken_clauses.push_back(i);
+  }
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1340,9 +1353,54 @@ int Internal::probSAT_pick_lit(Walker &walker, int picked_clause){
 
 /*----------------------------------------------------------------------------*/
 
-// function flipps and repair based on the given literal
+// function flipps and repair based on the given literal:
+// 1. flip the literal
+// 2. delete all clauses c´ from broken_clauses
+// 3. increase the conflict_counter in all clauses of c´
+// 4. decrease the conflict_counter in all clauses which dont occur in broken_clauses
+//    but in passat_clauses. => If conflict_counter goes down to 0, add clause to
+//    broken clauses
+// 5. add the flipped variable to walker.flips 
 void Internal::flip_and_repair(Walker &walker, int lit){
-  // push the flip lit in walker.flips
+  // 1.
+  set_val(lit, 1);
+
+  // 2. and 3. 
+  const auto &row = walker.passat_lookup_table[vlit(lit)];
+  walker.ticks += 1 + cache_lines(row.size(), sizeof(int));
+  for (int c : row){
+    walker.ticks++;
+    walker.conflict_counter[c] += 1;
+    // conflict_counter == 1 means the clause was broken and is now
+    // satisfied => remove it from broken_clauses
+    if (walker.conflict_counter[c] == 1){
+      int change_position = walker.broken_pos[c];
+      int last_element = walker.broken_clauses.back();
+      // move the last element into the new free slot
+      walker.broken_clauses[change_position] = last_element;
+      // update broken_pos
+      walker.broken_pos[last_element] = change_position;
+      walker.broken_pos[c] = -1;
+      // cut off duplicate of last element
+      walker.broken_clauses.pop_back();
+    }
+  }
+
+  // 4. 
+  const auto &row = walker.passat_lookup_table[vlit(-lit)];
+  walker.ticks += 1 + cache_lines(row.size(), sizeof(int));
+  for (int c : row){
+    walker.ticks++;
+    walker.conflict_counter[c] -= 1;
+    // conflict_counter == 0 => clause is now broken, append it
+    if (walker.conflict_counter[c] == 0) {
+      walker.broken_pos[c] = (int) walker.broken_clauses.size();
+      walker.broken_clauses.push_back(c);
+    }
+  }
+
+  // 5.
+  walker.flips.push_back(lit);
 
 }
 
