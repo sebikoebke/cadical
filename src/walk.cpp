@@ -1317,7 +1317,8 @@ bool Internal::up_expansion(Walker &walker) {
 void Internal::build_broken(Walker &walker){
   walker.broken_clauses.clear();
   for (int i : walker.passat_clauses){
-    if (walker.conflict_counter[i] > 0) { // satisfied => not broken
+    // satisfied => not broken
+    if (walker.conflict_counter[i] > 0) {
       walker.broken_pos[i] = -1;
       continue;
     }
@@ -1482,6 +1483,15 @@ bool Internal::probSAT_repair(Walker &walker) {
 /*---------------------------------------------------------------------------*/
 
 // PASSAT-Algorithm
+// procedure:
+// 1. backtrack() to empty the trail
+// 2. propagate() unpropagated literals in the trail
+// 3. limit calculation
+// 4. walker instantiation
+// 5. build all necessary structures for passat
+// 6. make assumptions (if an assumption is failed break!)
+// 7. PASSAT-Loop: up_expansion and probSAT_repair
+// 8. clean up and return the best found phase
 void Internal::walk_passat() {
   START_INNER_WALK ();
 
@@ -1507,18 +1517,47 @@ void Internal::walk_passat() {
   // build occurrence lists, counters and the activation count for this run
   passat_build (walker);
 
+  // care about the assumptions
+  bool consistent_with_assumptions = true;
+  for (int lit : assumptions){
+    // get the value of the lit in vals[]
+    signed char assumptions_value = val(lit);
+    // already correctly assigned assumptions
+    if (assumptions_value > 0) {
+      continue;
+    }
+    // wrongly assigned assumption => inconsistent => UNSAT (???)
+    else if (assumptions_value < 0){
+      consistent_with_assumptions = false;
+      break;
+    }
+    // force an assignment immediately
+    else{
+      // eliminated/substituted assumption: leave it to reconstruction, don't force
+      if (!active(lit)) continue;
+      // try to assign the assumption
+      if(!passat_assign(walker, lit)){
+        consistent_with_assumptions = false;
+        break;
+      }
+    }
+  }
+
   // PASSAT main loop on an (initially) empty assignment:
   //   up_expansion activates variables via CaDiCaL's decision heuristic and
   //   propagates (UP) until
   //   SAT (all activated, no conflict) or a conflict; probSAT_repair then repairs
   //   the fully-activated subproblem. Resume only if the conflict was resolved.
-  bool no_conflict = true;
-  while (walker.ticks < walker.limit) {
-    no_conflict = up_expansion (walker);
-    if (no_conflict)
-      break;                        // SAT over the activated set
-    if (!probSAT_repair (walker))
-      break;                        // conflict not resolvable -> UNSAT
+  bool no_conflict = false;
+  if (consistent_with_assumptions){
+    no_conflict = true;
+    while (walker.ticks < walker.limit) {
+      no_conflict = up_expansion (walker);
+      if (no_conflict)
+        break;                        // SAT over the activated set
+      if (!probSAT_repair (walker))
+        break;                        // conflict not resolvable -> UNSAT
+    }
   }
 
   LOG("walk_passat: %s", no_conflict ? "SAT" : "limit reached");
