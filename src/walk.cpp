@@ -48,7 +48,7 @@ struct Walker {
   vector<int> activation_counter; // counter which shows when a clauses contain only activated clauses. a_c is decreased, if one variable in a clause is activated
   vector<int> flip_count;         // LS Hotspots, indexed by variables
   vector<signed char> mark;       // per-variable dedup flag, invariant 0 outside repair_propagation_queue
-  vector<int> scratch;            // reusable buffer to rebuild propagation_queue without allocating
+  vector<int> cache_queue;            // reusable cache to rebuild propagation_queue without allocating
   Clause *conflict_clause = nullptr;  // pointer to the conflict clause, to be able to communicate between up_expansion and probSAT_repair
   std::vector<signed char> best_values; // best model stored so far
   double score (unsigned);              // compute score from break count
@@ -1349,29 +1349,32 @@ void Internal::flip_and_repair(Walker &walker, int lit){
 // backtracks, already-processed entries are history that is never read
 // again (their value lives in vals[] and their consequences were drawn earlier).
 void Internal::repair_propagation_queue(Walker &walker){
-  // collect pending variables (still behind 'propagated')
+  // collect pending variables, mark is empty here, so no check is needed
+  // we dont need to think about the correct polarity insertion of v in cache_queue
+  // because vals[] already contain the correct polarity after probSAT_repair
+  // therefore cache_queue is up to date here
   for (size_t k = walker.propagated; k < walker.propagation_queue.size(); k++){
     const int v = abs(walker.propagation_queue[k]);
-    if (!walker.mark[v]){
-      walker.mark[v] = 1;
-      walker.scratch.push_back(val(v) > 0 ? v : -v);
-    }
+    walker.mark[v] = 1;
+    walker.cache_queue.push_back(val(v) > 0 ? v : -v);
   }
-  // collect flipped variables (also those that were already processed)
+  // collect flipped variables, mark is not empty here, so we need to check if 
+  // variable is already in the cache_queue
   for (const int lit : walker.flips){
     const int v = abs(lit);
     if (!walker.mark[v]){
       walker.mark[v] = 1;
-      walker.scratch.push_back(val(v) > 0 ? v : -v);
+      walker.cache_queue.push_back(val(v) > 0 ? v : -v);
     }
   }
-  // reset the dedup flags so 'mark' stays invariant 0 for the next call
-  for (const int lit : walker.scratch)
+  // reset mark. We consider only the instances of chache_queue 
+  // which should be cheaper than reset each of the |max_var| - positions by 0
+  for (const int lit : walker.cache_queue)
     walker.mark[abs(lit)] = 0;
 
-  // make scratch the new queue in O(1) and discard the old one
-  std::swap(walker.propagation_queue, walker.scratch);
-  walker.scratch.clear();
+  // make cache_queue the new queue in O(1) and discard the old one
+  std::swap(walker.propagation_queue, walker.cache_queue);
+  walker.cache_queue.clear();
   walker.propagated = 0;
 }
 
