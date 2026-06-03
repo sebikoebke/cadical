@@ -39,8 +39,9 @@ struct Walker {
   vector<int> propagation_queue;  // our replacement for the trail in walk_passat (with a difference): the list of all literals which are assigned or should. 
                                   // Changed if probSAT_repair is finished with LS_repair: Old propagations are not longer needed, therefore ther are cut. Just pending and flipped variables remain.
   size_t propagated = 0;          // how far propagation_queue has been processed (like Internal::propagated)
-  vector<pair<double, double>> ls_score;      // polarity score for each variable <ls+, ls->
-  priority_queue<pair<double, int>> ordering_O;      // Ordering O as priority queue with <s(v),v>
+  size_t activated = 0;           // # assigned variables; up_expansion stops once all are
+                                  // activated. Replaces ordering_O/ls_score: variable + polarity
+                                  // selection is delegated to CaDiCaL's own decision heuristic.
   vector<vector<int>> passat_lookup_table; // positions in `clauses` where v+/v- occurs
   vector<int> passat_clauses;     // all clauses where all variables inside are activated
   vector<int> broken_clauses;     // all broken clauses out of passat_clauses, used for probSAT_repair
@@ -1106,14 +1107,12 @@ void Internal::walk () {
 //     inside the clause is wrong. If conflict_counter ==0 => empty clause (conflict)
 // (c) activation_counter[pos] : counter for the repair modul to show which clauses
 //     are fully activated
-// (d) ls_score[v] = <ls+(v), ls-(v)> : weighted occurrence, sum of 1/|C|.
-// (e) s(v) = ls+(v) + ls-(v) and push <s(v), v> in the ordering_O
+// (d) walker.activated : number of variables that already carry a value, so
+//     up_expansion knows when every variable has been activated (SAT case).
 void Internal::passat_build (Walker &walker) {
   walker.passat_lookup_table.resize (2 * vsize);
   walker.conflict_counter.resize (clauses.size ());
   walker.activation_counter.resize (clauses.size ());
-  // the first variable has index 1, therefore 0 is unused
-  walker.ls_score.resize (max_var + 1, make_pair (0.0, 0.0));
 
   for (size_t pos = 0; pos < clauses.size (); pos++) {
     Clause *c = clauses[pos];
@@ -1126,14 +1125,11 @@ void Internal::passat_build (Walker &walker) {
         continue;
     }
 
-    // weight as 1/|C|
-    const double weight = 1.0 / c->size;
     // literals with val != -1
-    int not_false = 0;  
+    int not_false = 0;
     // literals with val == 0
     int unassigned = 0;
     for (const auto lit : *c) {
-      const int idx = abs (lit);
       const signed char v = val (lit);
       // if a literal is not false, we have to increase the conflict_counter of the clause
       if (v >= 0)
@@ -1141,11 +1137,6 @@ void Internal::passat_build (Walker &walker) {
       // if a literal is unassigned, we have to increase the activation_counter of the clause
       if (v == 0)
         unassigned++;
-      // part of (d)
-      if (lit > 0)
-        walker.ls_score[idx].first += weight; // ls+(v)
-      else
-        walker.ls_score[idx].second += weight; // ls-(v)
       // part of (a)
       walker.passat_lookup_table[vlit (lit)].push_back ((int) pos);
     }
@@ -1158,20 +1149,11 @@ void Internal::passat_build (Walker &walker) {
       walker.passat_clauses.push_back ((int) pos);
   }
 
-  // part (e): max-heap over s(v) = ls+(v) + ls-(v)
-  // s(v) needs the complete ls_score, this is why we need a second for loop
-  // luckily the second loop is cheap and just over all variables once, therefore 
-  // linear with O(|variables|)
-  for (int idx = 1; idx <= max_var; idx++) {
-    // skip ELIMINATED/fixed variables (not part of the problem anymore).
-    // Already-ASSIGNED variables are not skipped here, up_expansion does that
-    // via its val()-check when popping from ordering_O.
-    if (!active (idx))
-      continue;
-    // (e)
-    const double s = walker.ls_score[idx].first + walker.ls_score[idx].second;
-    walker.ordering_O.push (make_pair (s, idx));
-  }
+  // part (d)
+  walker.activated = 0;
+  for (int idx = 1; idx <= max_var; idx++)
+    if (val (idx))
+      walker.activated++;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1199,6 +1181,8 @@ bool Internal::passat_assign(Walker &walker, int lit) {
   // conflict_counter == 0 (just for debugging).
   if (val(lit) == 0){
     set_val(lit, 1);
+    // count this activation so up_expansion knows when all variables are assigned
+    walker.activated++;
     // (2) enqueue for later propagation in passat_up
     walker.propagation_queue.push_back(lit);
     // (3) positive occurrences: the variable becomes active in these clauses
@@ -1278,36 +1262,33 @@ bool Internal::passat_up(Walker &walker){
 // enlarging the active variable set and construction the next subproblem."
 // Therefore we use up_expansion to propagate as far as possible till we found 
 // a new subproblem which can be sent to probSAT_repair.
-// When UP cannot propagate further on, we use the guidance of the PASSAT-Paper:
-// We choose the next variable to assign from a global ordering O (derived from 
-// clause structure) and feedback from LS.
-// We cannot reuse CaDiCaL's trail/propagate() for this: probSAT_repair flips
-// already-assigned literals in place on vals[], which would violate the trail's
-// CDCL invariants (var.level/.reason, control, the propagated index). So
-// passat_assign/passat_up reimplement just the propagation part on our own
-// propagation_queue, without the CDCL bookkeeping.
+// When UP cannot propagate further, we pick the next unnassigned variable to activate with
+// CaDiCaL's own decision heuristic.
+// Either next_decision_variable_with_best_score() or next_decision_variable_on_queue()
+// is used for the variable picking and decide_phase() for the polarity.
+// We use propagation_queue as replacement for the trail, because its easier to manipulate
+// and dont break things when working on a local clone of the trail.
 bool Internal::up_expansion(Walker &walker) {
-  // First drain anything still pending in propagation_queue (e.g. flips that
-  // probSAT_repair re-enqueued). Only once propagation is exhausted do we pull
-  // the next variable from ordering_O.
+  // First execute anything pending in propagation_queue
+  // e.g. flips that probSAT_repair re-enqueued
   if (!passat_up(walker)) return false;
 
-  while (!walker.ordering_O.empty()) {
-    // get the highest element of ordering_O and delete it
-    const int v = walker.ordering_O.top().second;
-    walker.ordering_O.pop();
-    // variable is already assigned => skip
-    if (val(v) != 0) continue;
-
-    // choose the better (higher score) polarity for the literal
-    const int lit = (walker.ls_score[v].first > walker.ls_score[v].second) ? v : -v;
+  // Stop once every variable is assigned (SAT) or an error occur
+  while (walker.activated < (size_t) max_var) {
+    // pick a next unassigned variable to assign 
+    // because no propagation is left on the propagation_queue
+    const int idx = use_scores () ? next_decision_variable_with_best_score ()
+                                  : next_decision_variable_on_queue ();
+    const bool target = (stable || opts.target == 2);
+    // chose the polarity for the choosen variable idx
+    const int lit = decide_phase (idx, target);
 
     // activate the literal. On conflict hand over to probSAT_repair
     if (!passat_assign(walker, lit)) return false;
     // propagate the consequences. On conflict hand over to probSAT_repair
     if (!passat_up(walker)) return false;
   }
-  // ordering empty and all variable assigned => SAT
+  // all variables assigned, no conflict => SAT
   return true;
 }
 
@@ -1448,11 +1429,12 @@ void Internal::walk_passat() {
 
   Walker walker (internal, limit);
 
-  // build occurrence lists, counters, ls_score and ordering_O for this run
+  // build occurrence lists, counters and the activation count for this run
   passat_build (walker);
 
   // PASSAT main loop on an (initially) empty assignment:
-  //   up_expansion activates variables from ordering_O and propagates (UP) until
+  //   up_expansion activates variables via CaDiCaL's decision heuristic and
+  //   propagates (UP) until
   //   SAT (all activated, no conflict) or a conflict; probSAT_repair then repairs
   //   the fully-activated subproblem. Resume only if the conflict was resolved.
   bool no_conflict = true;
