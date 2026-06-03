@@ -55,6 +55,9 @@ struct Walker {
   double score (unsigned);              // compute score from break count
 #ifndef NDEBUG
   std::vector<signed char> current_best_model; // best model found so far
+  size_t tracked_clauses = 0;   // # clauses passat_build tracks (non-garbage,
+                                // non-skipped-redundant); used to assert in
+                                // up_expansion that no clause was forgotten
 #endif
   Walker (Internal *, int64_t limit);
   void populate_table (double size);
@@ -1124,6 +1127,10 @@ void Internal::passat_build (Walker &walker) {
       if (!likely_to_be_kept_clause (c))
         continue;
     }
+#ifndef NDEBUG
+    // this clause is tracked (passes the same filter as up_expansion's check)
+    walker.tracked_clauses++;
+#endif
 
     // literals with val != -1
     int not_false = 0;
@@ -1273,7 +1280,7 @@ bool Internal::up_expansion(Walker &walker) {
   // e.g. flips that probSAT_repair re-enqueued
   if (!passat_up(walker)) return false;
 
-  // Stop once every variable is assigned (SAT) or an error occur
+  // Loop until every variable is activated
   while (walker.activated < (size_t) max_var) {
     // pick a next unassigned variable to assign 
     // because no propagation is left on the propagation_queue
@@ -1289,6 +1296,16 @@ bool Internal::up_expansion(Walker &walker) {
     if (!passat_up(walker)) return false;
   }
   // all variables assigned, no conflict => SAT
+#ifndef NDEBUG
+  // Completeness: with every variable assigned, every tracked clause must be
+  // fully activated, i.e. present in passat_clauses. Comparing the count rules
+  // out a "forgotten" clause that the satisfaction loop below would not see.
+  assert (walker.passat_clauses.size () == walker.tracked_clauses);
+  // Satisfaction: no tracked clause is broken. conflict_counter only drops in
+  // passat_assign (which returns false on 0), so this should always hold here.
+  for (const int pos : walker.passat_clauses)
+    assert (walker.conflict_counter[pos] > 0);
+#endif
   return true;
 }
 
