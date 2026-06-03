@@ -1412,7 +1412,7 @@ struct Internal {
   bool passat_up (Walker &walker);
   bool up_expansion (Walker &walker);
   void build_broken(Walker &walker);
-  int pick_random_clause(Walker &walker);
+  int pick_random_clause(Walker &walker, const vector<int> &list_of_clauses);
   int probSAT_pick_lit(Walker &walker, int picked_clause);
   void flip_and_repair(Walker &walker, int lit);
   void repair_propagation_queue(Walker &walker);

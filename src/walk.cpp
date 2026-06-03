@@ -1320,11 +1320,17 @@ void Internal::build_broken(Walker &walker){
 
 /*----------------------------------------------------------------------------*/
 
-// return a random clause-position i from a list of claus-postion
+// return a random clause-position (identifier) i from a list of claus-postions
 // We get the clause than by clauses[i]
 // Therefore we dont need the overhead from walk_pick_clause
-int Internal::pick_random_clause(Walker &walker) {
-
+// (I try to do it generic, so it could be used for other purposes than a random
+// clause of broken)
+int Internal::pick_random_clause(Walker &walker, const vector<int> &list_of_clauses) {
+  assert (!list_of_clauses.empty ());
+  int64_t size = list_of_clauses.size ();
+  if (size > INT_MAX)
+    size = INT_MAX;
+  return list_of_clauses[walker.random.pick_int (0, size - 1)];
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1398,7 +1404,7 @@ bool Internal::probSAT_repair(Walker &walker) {
   walker.flips.clear();
   while(!walker.broken_clauses.empty() && walker.ticks < walker.limit){
     // pick random clause
-    int c = pick_random_clause(walker);
+    int c = pick_random_clause(walker, walker.broken_clauses);
     // pick random literal via ProbSAT
     int lit = probSAT_pick_lit(walker, c);
     // make the actual LS_repair
