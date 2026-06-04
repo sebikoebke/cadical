@@ -1381,17 +1381,18 @@ unsigned Internal::passat_break_value(Walker &walker, int lit){
 }
 
 /*----------------------------------------------------------------------------*/
-
-// - Problem: Aktuell ist unser bottleneck in probSAT_pick_lit,
-// dass passat_break_value sehr viele Abfragen macht.
-// - Ansatz: Anstatt den break-value zu berechnen, nehmen wir nur die Größe von
-// occ(-lit)
-// - Verlust: Gewichteter Zufall, es werden keine Flips bevorzugt, die wenig
-// kaputt machen.
-// - Gewinn: Eine Abfrage statt die Liste occ(-lit) durchgehen zu müssen
+// - Problem: Currently, our bottleneck is in probSAT_pick_lit,
+// because probSAT_break_value performs a large number of loop-iterations
+// - Approach: Instead of calculating the break value, we simply use the size of
+// |occ(-lit)|
+// - Loss: Weighted randomness (as before), flips that cause little
+// damage are not favored.
+// - Gain: One query (O(1)) instead of having to go through the list occ(-lit)
+// - Side effect: We have weighted randomness even though we do not read
+// the conflict_counter, but this does not need to exist and is smaller.
+// Example: Two variables a and b. If |occ(a)| = 4 and |occ(b)| = 100,
+// then break_value(a) < break_value(b) is more likely
 unsigned Internal::passat_fixed_occurence(Walker &walker, int lit){
-  // wir lesen nur die Groesse der Occurrence-Row, nicht ihren Inhalt
-  // => ein Tick fuer den Lookup, der teure per-Klausel-Scan entfaellt
   walker.ticks += 1;
   return (unsigned) walker.passat_lookup_table[vlit(-lit)].size();
 }
