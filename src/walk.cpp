@@ -52,7 +52,6 @@ struct Walker {
   vector<int> flip_count;         // LS Hotspots, indexed by variables
   vector<signed char> mark;       // per-variable dedup flag, invariant 0 outside repair_propagation_queue
   vector<int> cache_queue;            // reusable cache to rebuild propagation_queue without allocating
-  Clause *conflict_clause = nullptr;  // pointer to the conflict clause, to be able to communicate between up_expansion and probSAT_repair
   std::vector<signed char> best_values; // best model stored so far
   double score (unsigned);              // compute score from break count
 #ifndef NDEBUG
@@ -1191,7 +1190,7 @@ void Internal::passat_build (Walker &walker) {
 //      appended to passat_clauses
 //   4. decrement the conflict_counter of every clause that contains '-lit'
 //      (that literal just turned false); if it hits 0 the clause is falsified
-//      and is recorded as the conflict clause
+//      and we report a conflict
 // Returns true if no conflict arose (propagation may continue), false if
 // assigning 'lit' falsified at least one clause.
 bool Internal::passat_assign(Walker &walker, int lit) {
@@ -1225,12 +1224,11 @@ bool Internal::passat_assign(Walker &walker, int lit) {
       }
 
       walker.conflict_counter[clause] -= 1;
-      // Record only the first conflict clause; probSAT_repair inspects all of
-      // passat_clauses anyway, so any further conflicts need no extra handling.
-      if (signal && walker.conflict_counter[clause] == 0) {
-        walker.conflict_clause = clauses[clause];
+      // a clause whose conflict_counter hit 0 is falsified => report a conflict.
+      // probSAT_repair rebuilds all broken clauses from passat_clauses anyway, so
+      // we only need to signal that some conflict occurred, not which clause.
+      if (walker.conflict_counter[clause] == 0)
         signal = false;
-      }
     }
   }
   return signal;
@@ -1271,7 +1269,7 @@ bool Internal::passat_up(Walker &walker){
         }
         if (val(unit) == 0){
           // Propagating the unit may itself falsify a clause => passat_assign
-          // then records walker.conflict_clause and returns false.
+          // then returns false.
           if (!passat_assign(walker, unit)) return false;
         }
       }
@@ -1576,10 +1574,8 @@ bool Internal::probSAT_repair(Walker &walker) {
     return false;
 
   // broken == 0: the conflict is fully resolved. Rebuild the propagation_queue so
-  // up_expansion can resume on the repaired partial assignment, then clear the
-  // conflict pointer and report success.
+  // up_expansion can resume on the repaired partial assignment, then report success.
   repair_propagation_queue(walker);
-  walker.conflict_clause = nullptr;
   return true;
 }
 
