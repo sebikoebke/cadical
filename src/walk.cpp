@@ -33,6 +33,7 @@ struct Walker {
   double epsilon;                // smallest considered score
   vector<double> table;          // break value to score table
   vector<double> scores;         // scores of candidate literals
+  vector<pair<double, int>> scores_passat;   //maybe we can safe one loop with that structure
   std::vector<int> flips; // remember the flips compared to the last best saved model
   int best_trail_pos;
   int64_t minimum = INT64_MAX;
@@ -1381,61 +1382,70 @@ unsigned Internal::passat_break_value(Walker &walker, int lit){
 
 /*----------------------------------------------------------------------------*/
 
+// - Problem: Aktuell ist unser bottleneck in probSAT_pick_lit,
+// dass passat_break_value sehr viele Abfragen macht.
+// - Ansatz: Anstatt den break-value zu berechnen, nehmen wir nur die Größe von
+// occ(-lit)
+// - Verlust: Gewichteter Zufall, es werden keine Flips bevorzugt, die wenig
+// kaputt machen.
+// - Gewinn: Eine Abfrage statt die Liste occ(-lit) durchgehen zu müssen
+unsigned Internal::passat_fixed_occurence(Walker &walker, int lit){
+  // wir lesen nur die Groesse der Occurrence-Row, nicht ihren Inhalt
+  // => ein Tick fuer den Lookup, der teure per-Klausel-Scan entfaellt
+  walker.ticks += 1;
+  return (unsigned) walker.passat_lookup_table[vlit(-lit)].size();
+}
+
+/*-----------------------------------------------------------------------------*/
+
 // pick via ProbSAT a random literal of the earlier picked clause
 // The picked clause is broken (all its literals are false). Every flippable
 // (non-assumed) literal is scored from its break-value (smaller break-value =>
-// higher score) and one literal is sampled by a roulette wheel, exactly as in
-// walk_pick_lit. Returns 0 if every literal is an assumption: then the clause
+// higher score) and one literal is sampled by a roulette wheel (like walk() does)
+// Important: Returns 0 if every literal is an assumption: then the clause
 // cannot be repaired without violating an assumption.
+// In reality this conflict is catched earlier, but for safety its better to keep it
 int Internal::probSAT_pick_lit(Walker &walker, int picked_clause){
   Clause *c = clauses[picked_clause];
-  assert (walker.scores.empty ());
+  assert (walker.scores_passat.empty ());
   // one tick for entering the pick, like walk_pick_lit charges the framework
   walker.ticks += 1;
   double sum = 0;
 
   // Phase 1: score every flippable literal by its break-value.
   for (const auto lit : *c){
-    // an assumed variable must never be flipped
+    // an assumed variable is not allowed to be flipped
     if (assumed(lit) || assumed(-lit))
       continue;
-    const unsigned bv = passat_break_value(walker, lit);
+    // opts.passatfixedocc: trade the exact (state-aware) break value for the
+    // static occurrence count of -lit (O(1) instead of O(|occ(-lit)|)).
+    const unsigned bv = opts.passatfixedocc ? passat_fixed_occurence(walker, lit)
+                                            : passat_break_value(walker, lit);
     const double s = walker.score(bv);
-    walker.scores.push_back(s);
+    walker.scores_passat.push_back({s, lit});
     sum += s;
   }
 
   // every literal is assumed => nothing to flip, signal "not repairable"
-  if (walker.scores.empty()){
+  if (walker.scores_passat.empty()){
     return 0;
   }
 
   // roulette wheel: pick a random limit in [0, sum).
-  const double lim = sum * walker.random.generate_double();
+  const double limit = sum * walker.random.generate_double();
 
-  // Phase 2: walk the clause literals (i) and the scores (j) in lockstep,
-  // skipping the same assumed literals as in phase 1, and stop at the first
-  // literal whose running score sum exceeds the limit.
-  const auto end = c->end();
-  auto i = c->begin();
-  auto j = walker.scores.begin();
+  // Phase 2: pick a random lit
+  double current_value = 0;
   int res = 0;
-  // advance to the first scored (non-assumed) literal
-  for (;;){
-    assert (i != end);
-    res = *i++;
-    if (!(assumed(res) || assumed(-res)))
-      break;
-  }
-  sum = *j++;
-  while (sum <= lim && i != end){
-    res = *i++;
-    if (assumed(res) || assumed(-res))
-      continue;
-    sum += *j++;
+  for (const auto &pick : walker.scores_passat){
+    res = pick.second;
+    current_value += pick.first;
+    if (current_value > limit){
+      break; 
+    }
   }
 
-  walker.scores.clear();
+  walker.scores_passat.clear();
   return res;
 }
 
@@ -1547,20 +1557,20 @@ bool Internal::probSAT_repair(Walker &walker) {
   //Clear all earlier made flips
   walker.flips.clear();
   while(!walker.broken_clauses.empty() && walker.ticks < walker.limit){
-    // pick random clause
-    int c = pick_random_clause(walker, walker.broken_clauses);
-    // pick random literal via ProbSAT
-    int lit = probSAT_pick_lit(walker, c);
+    // pick random clause, then a literal of it via ProbSAT
+    int lit = probSAT_pick_lit(walker, pick_random_clause(walker, walker.broken_clauses));
+
     // lit == 0: the clause consists only of assumptions, so it cannot be
     // repaired without violating an assumption => unsatisfiable under the
     // assumptions, stop and report failure.
     if (lit == 0)
       return false;
+
     // make the actual LS_repair
     flip_and_repair(walker, lit);
   }
   // Tick limit reached while clauses are still broken: the conflict could not be
-  // resolved within the budget -> signal failure so walk_passat stops.
+  // resolved within the budget
   if (!walker.broken_clauses.empty())
     return false;
 
@@ -1636,10 +1646,10 @@ void Internal::walk_passat() {
   }
 
   // PASSAT main loop on an (initially) empty assignment:
-  //   up_expansion activates variables via CaDiCaL's decision heuristic and
-  //   propagates (UP) until
-  //   SAT (all activated, no conflict) or a conflict; probSAT_repair then repairs
-  //   the fully-activated subproblem. Resume only if the conflict was resolved.
+  // up_expansion activates variables via CaDiCaL's decision heuristic and
+  // propagates (UP) until
+  // SAT (all activated, no conflict) or a conflict; probSAT_repair then repairs
+  // the fully-activated subproblem. Resume only if the conflict was resolved.
   bool no_conflict = false;
   if (consistent_with_assumptions){
     no_conflict = true;
