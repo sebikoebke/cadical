@@ -785,6 +785,16 @@ void Stats::print (Internal *internal) {
          stats.walk.improved,
          relative (stats.walk.improved, stats.walk.count));
   }
+  if (all || stats.walk.passat) {
+    PRT ("walked_passat:   %15" PRId64 "   %10.2f    interval",
+         stats.walk.passat, relative (stats.conflicts, stats.walk.passat));
+    PRT ("  flips:         %15" PRId64 "   %10.2f    per walk_passat",
+         stats.walk.passatflips,
+         relative (stats.walk.passatflips, stats.walk.passat));
+    PRT ("  broken:        %15" PRId64 "   %10.2f    per flip",
+         stats.walk.passatbroken,
+         relative (stats.walk.passatbroken, stats.walk.passatflips));
+  }
   if (all || stats.weakened) {
     PRT ("weakened:        %15" PRId64 "   %10.2f    average size",
          stats.weakened, relative (stats.weakenedlen, stats.weakened));

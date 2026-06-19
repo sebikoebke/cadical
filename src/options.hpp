@@ -277,6 +277,7 @@ OPTION( walkfullocc,      0,   0,  1,1,0,1, "use Kissat's full occurrences inste
 OPTION( walkmaxeff,      1e7,  0,2e9,1,0,1, "maximum efficiency (in 1e3 ticks)") \
 OPTION( walkmineff,        0,  0,1e7,1,0,1, "minimum efficiency") \
 OPTION( walknonstable,     1,  0,  1,0,0,1, "walk in non-stabilizing phase") \
+OPTION( walkpassat,        0,  0,  1,1,0,1, "PASSAT: UP-guided expansion + probSAT repair") \
 OPTION( walkredundant,     0,  0,  1,0,0,1, "walk redundant clauses too") \
 OPTION( warmup,            1,  0,  1,0,0,1, "warmup before walk using propagation") \
 

@@ -133,11 +133,14 @@ struct Stats {
   } warmup;
 
   struct {
-    int64_t count = 0;
+    int64_t count = 0;  // count == how often walk() was cald
     int64_t broken = 0;
     int64_t flips = 0;
     int64_t minimum = 0;
     int64_t improved = 0;
+    int64_t passat = 0; // passat == how often walk_passat() was cald
+    int64_t passatflips = 0; // number of flips done in walk_passat (probSAT_repair)
+    int64_t passatbroken = 0; // sum of broken clauses present after each walk_passat flip
   } walk;
 
   struct {

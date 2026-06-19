@@ -1498,6 +1498,10 @@ void Internal::flip_and_repair(Walker &walker, int lit){
 
   // 5.
   walker.flips.push_back(lit);
+  stats.walk.passatflips++;
+  // accumulate the number of broken clauses still present after this flip,
+  // analogous to walk()'s stats.walk.broken (printed as "per flip")
+  stats.walk.passatbroken += walker.broken_clauses.size();
 
 }
 
@@ -1594,6 +1598,9 @@ bool Internal::probSAT_repair(Walker &walker) {
 void Internal::walk_passat() {
   START_INNER_WALK ();
 
+  // increase the statistic counter for passat
+  stats.walk.passat++;
+
     backtrack ();
   
   //propagate() is called if unpropagated literals are still present in the trail after backtrack()
@@ -1660,6 +1667,11 @@ void Internal::walk_passat() {
   }
 
   LOG("walk_passat: %s", no_conflict ? "SAT" : "limit reached");
+
+  // PHASE to show the progress
+  PHASE ("walk_passat", stats.walk.passat, "%s after %" PRId64 " ticks",
+         no_conflict ? "satisfied activated set" : "limit reached",
+         walker.ticks);
 
   // Save the result: the whole point of walk_passat is to leave a better
   // polarity assignment in phases.saved, which the following CDCL search uses
