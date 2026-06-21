@@ -40,6 +40,8 @@ struct Walker {
   vector<int> propagation_queue;  // our replacement for the trail in walk_passat (with a difference): the list of all literals which are assigned or should. 
                                   // Changed if probSAT_repair is finished with LS_repair: Old propagations are not longer needed, therefore ther are cut. Just pending and flipped variables remain.
   size_t propagated = 0;          // how far propagation_queue has been processed (like Internal::propagated)
+  vector<int> passat_trail;       // every literal we assigned via set_val during this walk
+                                  // used at cleanup to reset exactly those vals in O(assigned)
   size_t activated = 0;           // counts assigned variables; up_expansion stops once all are
                                   // activated. Replaces ordering_O/ls_score: variable + polarity
                                   // selection is delegated to CaDiCaL's own decision heuristic.
@@ -1111,8 +1113,8 @@ void Internal::walk () {
 //     inside the clause is wrong. If conflict_counter ==0 => empty clause (conflict)
 // (c) activation_counter[pos] : counter for the repair modul to show which clauses
 //     are fully activated
-// (d) walker.activated : number of variables that already carry a value, so
-//     up_expansion knows when every variable has been activated (SAT case).
+// (d) walker.activated : number of variables that already carry a value AND are activated, so
+//     up_expansion knows when every variable that could been activated is activated (SAT case).
 // (e) the ProbSAT score table, built from the average size of the tracked
 //     clauses (like walk() does) and used by probSAT_pick_lit.
 void Internal::passat_build (Walker &walker) {
@@ -1152,12 +1154,13 @@ void Internal::passat_build (Walker &walker) {
     for (const auto lit : *c) {
       const signed char v = val (lit);
       // if a literal is not false, we have to increase the conflict_counter of the clause
-      if (v >= 0)
+      if (v >= 0) 
         not_false++;
       // if a literal is unassigned, we have to increase the activation_counter of the clause
       if (v == 0)
         unassigned++;
-      // part of (a)
+      // (a) if a clause contain the variable v, the clause-position in clauses is inserted
+      // in the correct polarity of v in passat_lookup_table => passat_lookup_table[v] += [clause_position]
       walker.passat_lookup_table[vlit (lit)].push_back ((int) pos);
     }
     // (b)
@@ -1172,7 +1175,7 @@ void Internal::passat_build (Walker &walker) {
   // part (d)
   walker.activated = 0;
   for (int idx = 1; idx <= max_var; idx++)
-    if (val (idx))
+    if (val(idx))
       walker.activated++;
 
   // build the ProbSAT score table from the average clause size, like walk()
@@ -1182,7 +1185,9 @@ void Internal::passat_build (Walker &walker) {
 /*----------------------------------------------------------------------------*/
 
 // passat_assign() assigns the literal 'lit' to true and keeps all PASSAT
-// bookkeeping consistent. It performs the following steps:
+// bookkeeping consistent.
+// passat_assign() should not be called on a unactive variable !
+// It performs the following steps:
 //   1. set 'lit' to true (does nothing if it is already assigned)
 //   2. push 'lit' onto the propagation_queue so passat_up can propagate it
 //   3. decrement the activation_counter of every clause that contains the
@@ -1191,6 +1196,7 @@ void Internal::passat_build (Walker &walker) {
 //   4. decrement the conflict_counter of every clause that contains '-lit'
 //      (that literal just turned false); if it hits 0 the clause is falsified
 //      and we report a conflict
+//   5. increase walker.activated
 // Returns true if no conflict arose (propagation may continue), false if
 // assigning 'lit' falsified at least one clause.
 bool Internal::passat_assign(Walker &walker, int lit) {
@@ -1204,7 +1210,9 @@ bool Internal::passat_assign(Walker &walker, int lit) {
   // conflict_counter == 0 (just for debugging).
   if (val(lit) == 0){
     set_val(lit, 1);
-    // count this activation so up_expansion knows when all variables are assigned
+    // record on the passat_trail so cleanup can reset exactly this assignment
+    walker.passat_trail.push_back(lit);
+    // (5) count this activation so up_expansion knows when all variables are assigned
     walker.activated++;
     // (2) enqueue for later propagation in passat_up
     walker.propagation_queue.push_back(lit);
@@ -1297,10 +1305,11 @@ bool Internal::up_expansion(Walker &walker) {
 
   // Loop until every variable is activated
   while (walker.activated < (size_t) max_var) {
-    // pick a next unassigned variable to assign 
+    // pick a next unassigned variable to assign
     // because no propagation is left on the propagation_queue
     const int idx = use_scores () ? next_decision_variable_with_best_score ()
                                   : next_decision_variable_on_queue ();
+
     const bool target = (stable || opts.target == 2);
     // chose the polarity for the choosen variable idx
     const int lit = decide_phase (idx, target);
@@ -1517,14 +1526,14 @@ void Internal::repair_propagation_queue(Walker &walker){
   // because vals[] already contain the correct polarity after probSAT_repair
   // therefore cache_queue is up to date here
   for (size_t k = walker.propagated; k < walker.propagation_queue.size(); k++){
-    const int v = abs(walker.propagation_queue[k]);
+    const int v = vidx(walker.propagation_queue[k]);
     walker.mark[v] = 1;
     walker.cache_queue.push_back(val(v) > 0 ? v : -v);
   }
   // collect flipped variables, mark is not empty here, so we need to check if 
   // variable is already in the cache_queue
   for (const int lit : walker.flips){
-    const int v = abs(lit);
+    const int v = vidx(lit);
     if (!walker.mark[v]){
       walker.mark[v] = 1;
       walker.cache_queue.push_back(val(v) > 0 ? v : -v);
@@ -1533,7 +1542,7 @@ void Internal::repair_propagation_queue(Walker &walker){
   // reset mark. We consider only the instances of chache_queue 
   // which should be cheaper than reset each of the |max_var| - positions by 0
   for (const int lit : walker.cache_queue)
-    walker.mark[abs(lit)] = 0;
+    walker.mark[vidx(lit)] = 0;
 
   // make cache_queue the new queue in O(1) and discard the old one
   std::swap(walker.propagation_queue, walker.cache_queue);
@@ -1681,14 +1690,19 @@ void Internal::walk_passat() {
       phases.saved[id] = val (id);
 
   // vals[] is the solver's single global assignment
-  // table with the invariant "vals[v] != 0 <=> v is on the trail" 
-  // We broke that invariant by assigning via passat_assign() without pushing to the trail
-  // Restore it by clearing vals[] for all active variables and reset
-  // the decision level to the root, otherwise the next CDCL search runs on a
-  // corrupted state (like in walk_round)
-  for (int id = 1; id <= max_var; id++)
-    if (active (id))
-      set_val (id, 0);
+  // table with the invariant "vals[v] != 0 <=> v is on the trail"
+  // We broke that invariant by assigning via passat_assign() without pushing to the trail.
+  // Restore it by clearing exactly the literals we assigned (recorded on passat_trail) and
+  // reset the decision level to the root, otherwise the next CDCL search runs on a
+  // corrupted state (like in walk_round). Fixed vars are never on the trail, so their
+  // real root-level vals stay untouched.
+  for (const auto lit : walker.passat_trail) {
+    set_val (lit, 0);
+    int idx = vidx(lit);
+    if (!scores.contains (idx)) scores.push_back (idx);
+    if (queue.bumped < btab[idx]) update_queue_unassigned (idx);
+  }
+  
   level = 0;
 
   STOP_INNER_WALK();
