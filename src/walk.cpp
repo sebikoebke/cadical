@@ -1334,16 +1334,103 @@ bool Internal::up_expansion(Walker &walker) {
   }
   // all variables assigned, no conflict => SAT
 #ifndef NDEBUG
-  // Completeness: with every variable assigned, every tracked clause must be
-  // fully activated, i.e. present in passat_clauses. Comparing the count rules
-  // out a "forgotten" clause that the satisfaction loop below would not see.
+  // All tracked clause should be in passat_clauses, therefore fully assigned
   assert (walker.passat_clauses.size () == walker.tracked_clauses);
-  // Satisfaction: no tracked clause is broken. conflict_counter only drops in
-  // passat_assign (which returns false on 0), so this should always hold here.
+  // If SAT, there should be no conflict_counter == 0
   for (const int pos : walker.passat_clauses)
     assert (walker.conflict_counter[pos] > 0);
 #endif
   return true;
+}
+
+/*----------------------------------------------------------------------------*/
+
+// Idea: Propagate till the the propagation queue is empty
+bool Internal::advanced_propagation(Walker &walker){
+  bool no_conflict = true;
+
+  while (walker.propagated < walker.propagation_queue.size()){
+
+    const int lit = walker.propagation_queue[walker.propagated++];
+    
+    const auto &lit_clauses = walker.passat_lookup_table[vlit(-lit)];
+    walker.ticks += 1 + cache_lines(lit_clauses.size(), sizeof(int));
+
+    for (auto clause : lit_clauses){
+      // one tick per clause we actually visit
+      walker.ticks++; 
+      // conflict_counter == 1: exactly one literal is still not false. Find it:
+      // if it is unassigned the clause is unit and must be propagated; if it is
+      // already true the clause is satisfied and we skip it.
+      if (walker.conflict_counter[clause] == 1){
+        Clause *c = clauses[clause];
+        int unit = 0;
+        for (auto clause_lit : *c){
+          // scanning the clause touches each literal
+          walker.ticks++;
+          if (val(clause_lit) >= 0){
+            unit = clause_lit;
+            break;
+          }
+        }
+        if (val(unit) == 0){
+          // Propagating the unit may itself falsify a clause => passat_assign
+          if (!passat_assign(walker, unit)) no_conflict = false;
+        }
+      }
+    }
+  }
+  return no_conflict;
+}
+
+/*----------------------------------------------------------------------------*/
+
+// Idea: use advanced_propagation to force a fully assignment.
+// probSAT_repair works quite good, but on a to small subset if I use up_expansion
+// because up_expansion just assign till the first conflict arise.
+// advanced_expansion assign all possible propagation on the propagation_queue 
+// even if there is a conflict
+bool Internal::advanced_expansion(Walker &walker) {
+  stats.walk.passatexpansion++;
+
+  bool no_conflict = true;
+
+    if (!passat_up(walker)) no_conflict = false;
+
+  // Loop until every variable is activated which could be activated
+  while (walker.activated < walker.pre_assigned + walker.activatable) {
+    // pick a next unassigned variable to assign
+    // because no propagation is left on the propagation_queue
+    const int idx = use_scores () ? next_decision_variable_with_best_score ()
+                                  : next_decision_variable_on_queue ();
+
+    // next_decision_variable could pick an inactive variable
+    // => we have to make shure we are only picking active variables
+    if (!active (idx)) {
+      set_val (idx, 1);
+      walker.passat_trail.push_back (idx);
+      continue;
+    }
+
+    const bool target = (stable || opts.target == 2);
+    // chose the polarity for the choosen variable idx
+    const int lit = decide_phase (idx, target);
+
+    // activate the literal. On conflict hand over to probSAT_repair
+    if (!passat_assign(walker, lit)) no_conflict = false;
+    // propagate till propagation_queue is empty, then hand over to probSAT_repair
+    if (!advanced_propagation(walker)) no_conflict = false;
+  }
+  // all activatable variables assigned => the subproblem is fully expanded
+#ifndef NDEBUG
+  // All tracked clause should be in passat_clauses, therefore fully assigned
+  assert (walker.passat_clauses.size () == walker.tracked_clauses);
+  // if SAT, there should no conflict_counter == 0
+  if (no_conflict)
+    for (const int pos : walker.passat_clauses)
+      assert (walker.conflict_counter[pos] > 0);
+#endif
+  return no_conflict;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1698,12 +1785,12 @@ void Internal::walk_passat() {
     no_conflict = true;
     while (walker.ticks < walker.limit) {
       int64_t ticks_before = walker.ticks;
-      no_conflict = up_expansion (walker);
+      no_conflict = advanced_expansion(walker);
       stats.walk.passatexpansionticks += walker.ticks - ticks_before;
       if (no_conflict)
         break;                        // SAT over the activated set
       ticks_before = walker.ticks;
-      const bool repaired = probSAT_repair (walker);
+      const bool repaired = probSAT_repair(walker);
       stats.walk.passatrepairticks += walker.ticks - ticks_before;
       if (!repaired)
         break;                        // conflict not resolvable -> UNSAT
