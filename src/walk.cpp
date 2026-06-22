@@ -45,6 +45,9 @@ struct Walker {
   size_t activated = 0;           // counts assigned variables; up_expansion stops once all are
                                   // activated. Replaces ordering_O/ls_score: variable + polarity
                                   // selection is delegated to CaDiCaL's own decision heuristic.
+  size_t pre_assigned = 0;        // vars already assigned at build time (root fixed/units);
+                                  // counted in 'activated' but NOT activated by PASSAT
+  size_t activatable = 0;         // active & unassigned vars: the universe PASSAT can decide/propagate
   vector<vector<int>> passat_lookup_table; // positions in `clauses` where v+/v- occurs
   vector<int> passat_clauses;     // all clauses where all variables inside are activated
   vector<int> broken_clauses;     // all broken clauses out of passat_clauses, used for probSAT_repair
@@ -112,6 +115,7 @@ Walker::Walker (Internal *i, int64_t l)
   random += internal->stats.walk.count; // different seed every time
   flips.reserve (i->max_var / 4);
   mark.resize (i->max_var + 1, 0); // dedup flag for repair_propagation_queue, kept invariant 0
+  flip_count.resize (i->max_var + 1, 0);
   best_values.resize (i->max_var + 1, 0);
 #ifndef NDEBUG
   current_best_model.resize (i->max_var + 1, 0);
@@ -1174,9 +1178,16 @@ void Internal::passat_build (Walker &walker) {
 
   // part (d)
   walker.activated = 0;
-  for (int idx = 1; idx <= max_var; idx++)
-    if (val(idx))
-      walker.activated++;
+  walker.pre_assigned = 0;
+  walker.activatable = 0;
+  for (int idx = 1; idx <= max_var; idx++) {
+    if (val(idx)) {
+      walker.activated++;      // already assigned: counts as activated...
+      walker.pre_assigned++;   // ...but PASSAT did not activate it -> exclude from reach
+    } else if (active(idx)) {
+      walker.activatable++;    // active & unassigned: this is what PASSAT can actually activate
+    }
+  }
 
   // build the ProbSAT score table from the average clause size, like walk()
   walker.populate_table (relative (total_size, counted));
@@ -1299,6 +1310,8 @@ bool Internal::passat_up(Walker &walker){
 // We use propagation_queue as replacement for the trail, because its easier to manipulate
 // and dont break things when working on a local clone of the trail.
 bool Internal::up_expansion(Walker &walker) {
+  stats.walk.passatexpansion++;
+
   // First execute anything pending in propagation_queue
   // e.g. flips that probSAT_repair re-enqueued
   if (!passat_up(walker)) return false;
@@ -1468,6 +1481,9 @@ int Internal::probSAT_pick_lit(Walker &walker, int picked_clause){
 //    broken clauses
 // 5. add the flipped variable to walker.flips 
 void Internal::flip_and_repair(Walker &walker, int lit){
+  // thrashing: was this var already flipped in this walk_passat run?
+  const int fidx = vidx(lit);
+  if (walker.flip_count[fidx]++ > 0) stats.walk.passatreflips++;
   // 1.
   set_val(lit, 1);
 
@@ -1565,9 +1581,14 @@ bool Internal::probSAT_repair(Walker &walker) {
      and pass to up_expansion
   */
 
+  stats.walk.passatrepair++;
+
   build_broken(walker);
   //Clear all earlier made flips
   walker.flips.clear();
+  // convergence: track broken at start and the best (lowest) broken ever reached
+  const size_t start_broken = walker.broken_clauses.size();
+  size_t min_broken = start_broken;
   while(!walker.broken_clauses.empty() && walker.ticks < walker.limit){
     // pick random clause, then a literal of it via ProbSAT
     int lit = probSAT_pick_lit(walker, pick_random_clause(walker, walker.broken_clauses));
@@ -1580,14 +1601,23 @@ bool Internal::probSAT_repair(Walker &walker) {
 
     // make the actual LS_repair
     flip_and_repair(walker, lit);
+    if (walker.broken_clauses.size() < min_broken)
+      min_broken = walker.broken_clauses.size();
   }
+  // record broken at start for every repair (assumption-only exit excluded)
+  stats.walk.passatbrokenstart += start_broken;
+
   // Tick limit reached while clauses are still broken: the conflict could not be
   // resolved within the budget
-  if (!walker.broken_clauses.empty())
+  if (!walker.broken_clauses.empty()) {
+    // convergence: for FAILED repairs only, how close did we get to broken==0?
+    stats.walk.passatbrokenmin += min_broken;
     return false;
+  }
 
   // broken == 0: the conflict is fully resolved. Rebuild the propagation_queue so
   // up_expansion can resume on the repaired partial assignment, then report success.
+  stats.walk.passatrepairsuccess++;
   repair_propagation_queue(walker);
   return true;
 }
@@ -1667,13 +1697,21 @@ void Internal::walk_passat() {
   if (consistent_with_assumptions){
     no_conflict = true;
     while (walker.ticks < walker.limit) {
+      int64_t ticks_before = walker.ticks;
       no_conflict = up_expansion (walker);
+      stats.walk.passatexpansionticks += walker.ticks - ticks_before;
       if (no_conflict)
         break;                        // SAT over the activated set
-      if (!probSAT_repair (walker))
+      ticks_before = walker.ticks;
+      const bool repaired = probSAT_repair (walker);
+      stats.walk.passatrepairticks += walker.ticks - ticks_before;
+      if (!repaired)
         break;                        // conflict not resolvable -> UNSAT
     }
   }
+
+  stats.walk.passatactivations += walker.activated - walker.pre_assigned;
+  stats.walk.passatactivatable += walker.activatable;
 
   LOG("walk_passat: %s", no_conflict ? "SAT" : "limit reached");
 

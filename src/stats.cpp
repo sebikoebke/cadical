@@ -794,6 +794,38 @@ void Stats::print (Internal *internal) {
     PRT ("  broken:        %15" PRId64 "   %10.2f    per flip",
          stats.walk.passatbroken,
          relative (stats.walk.passatbroken, stats.walk.passatflips));
+     PRT ("  expansion:     %15" PRId64 "   %10.2f    per walk_passat",
+         stats.walk.passatexpansion,
+         relative (stats.walk.passatexpansion, stats.walk.passat));
+     PRT ("  repair:        %15" PRId64 "   %10.2f    per walk_passat",
+         stats.walk.passatrepair,
+         relative (stats.walk.passatrepair, stats.walk.passat));
+     PRT ("  activated-var: %15.2f   %10.2f    %% of activatable variables",
+         relative (stats.walk.passatactivations, stats.walk.passat),
+         percent (stats.walk.passatactivations, stats.walk.passatactivatable));
+     PRT ("  per-round:     %15.2f   %10.2f    new vars per up_expansion (%% of activatable)",
+         relative (stats.walk.passatactivations, stats.walk.passatexpansion),
+         percent (relative (stats.walk.passatactivations, stats.walk.passatexpansion),
+                  relative (stats.walk.passatactivatable, stats.walk.passat)));
+     PRT ("  exp-ticks:     %15" PRId64 "   %10.2f    %% of walk_passat ticks",
+         stats.walk.passatexpansionticks,
+         percent (stats.walk.passatexpansionticks,
+                  stats.walk.passatexpansionticks + stats.walk.passatrepairticks));
+     PRT ("  repair-ticks:  %15" PRId64 "   %10.2f    %% of walk_passat ticks",
+         stats.walk.passatrepairticks,
+         percent (stats.walk.passatrepairticks,
+                  stats.walk.passatexpansionticks + stats.walk.passatrepairticks));
+     PRT ("  reflips:       %15" PRId64 "   %10.2f    %% of flips re-flip a var",
+         stats.walk.passatreflips,
+         percent (stats.walk.passatreflips, stats.walk.passatflips));
+     PRT ("  repair-ok:     %15" PRId64 "   %10.2f    %% of repairs reach broken==0",
+         stats.walk.passatrepairsuccess,
+         percent (stats.walk.passatrepairsuccess, stats.walk.passatrepair));
+     PRT ("  broken-start:  %15.2f   %10s    avg broken at repair start",
+         relative (stats.walk.passatbrokenstart, stats.walk.passatrepair), "");
+     PRT ("  broken-min:    %15.2f   %10s    avg best broken (failed repairs only)",
+         relative (stats.walk.passatbrokenmin,
+                   stats.walk.passatrepair - stats.walk.passatrepairsuccess), "");
   }
   if (all || stats.weakened) {
     PRT ("weakened:        %15" PRId64 "   %10.2f    average size",

@@ -138,9 +138,19 @@ struct Stats {
     int64_t flips = 0;
     int64_t minimum = 0;
     int64_t improved = 0;
-    int64_t passat = 0; // passat == how often walk_passat() was cald
-    int64_t passatflips = 0; // number of flips done in walk_passat (probSAT_repair)
-    int64_t passatbroken = 0; // sum of broken clauses present after each walk_passat flip
+    int64_t passat = 0;           // passat == how often walk_passat() was cald
+    int64_t passatflips = 0;      // number of flips done in walk_passat (probSAT_repair)
+    int64_t passatbroken = 0;     // sum of broken clauses present after each walk_passat flip
+    int64_t passatexpansion = 0;  // number of up_expansion callse
+    int64_t passatactivations = 0; // number of variables PASSAT newly activated (excl. pre-assigned)
+    int64_t passatactivatable = 0; // sum of active&unassigned vars (the activatable universe)
+    int64_t passatexpansionticks = 0; // number of ticks per expansion
+    int64_t passatrepair = 0;     // how often probSAT repair was triggered
+    int64_t passatrepairticks = 0; //number of ticks per repair
+    int64_t passatrepairsuccess = 0; // repairs that reached broken==0 (converged)
+    int64_t passatbrokenstart = 0;   // sum of broken at the start of each repair
+    int64_t passatbrokenmin = 0;     // sum of the best (lowest) broken reached per repair
+    int64_t passatreflips = 0;       // flips that re-flip an already-flipped var 
   } walk;
 
   struct {
