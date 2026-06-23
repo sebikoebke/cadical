@@ -157,7 +157,6 @@ OPTION( minimize,          1,  0,  1,0,0,1, "minimize learned clauses") \
 OPTION( minimizedepth,   1e3,  0,1e3,0,0,1, "minimization depth") \
 OPTION( minimizeticks,     1,  0,  1,0,0,1, "increment ticks in minimization") \
 OPTION( otfs,              1,  0,  1,0,0,1, "on-the-fly self subsumption") \
-OPTION( passatfixedocc,    0,  0,  1,0,0,1, "PASSAT: use static occurrence count instead of break value") \
 OPTION( phase,             1,  0,  1,0,0,1, "initial phase") \
 OPTION( preprocessinit,  2e6,  0,2e9,2,0,1, "initial preprocessing base limit" ) \
 OPTION( preprocesslight,   1,  0,  1,0,1,1, "lightweight preprocessing" ) \

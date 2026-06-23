@@ -57,6 +57,13 @@ struct Walker {
   vector<int> flip_count;         // LS Hotspots, indexed by variables
   vector<signed char> mark;       // per-variable dedup flag, invariant 0 outside repair_propagation_queue
   vector<int> cache_queue;            // reusable cache to rebuild propagation_queue without allocating
+
+  bool cheap_break_value = true;   // if true, we calc a cheaper break value => O(1) instead of O(|clauses[-lit]|)
+  size_t passat_expansion_barrier = 100; // upper barrier for the expansion the idea is to switch from time to time between expansion and repair, 
+                                         // because in some old cases we did only expansion and in some only repair, both had a poorer performance
+                                         // note: if expansion == 0, the expansion is not limitted
+                                         // good results with 50 and 100, really bad with 75
+
   std::vector<signed char> best_values; // best model stored so far
   double score (unsigned);              // compute score from break count
 #ifndef NDEBUG
@@ -1395,7 +1402,9 @@ bool Internal::advanced_expansion(Walker &walker) {
 
   bool no_conflict = true;
 
-    if (!passat_up(walker)) no_conflict = false;
+  if (!passat_up(walker)) no_conflict = false;
+
+  const size_t start_activated = walker.activated;
 
   // Loop until every variable is activated which could be activated
   while (walker.activated < walker.pre_assigned + walker.activatable) {
@@ -1420,6 +1429,10 @@ bool Internal::advanced_expansion(Walker &walker) {
     if (!passat_assign(walker, lit)) no_conflict = false;
     // propagate till propagation_queue is empty, then hand over to probSAT_repair
     if (!advanced_propagation(walker)) no_conflict = false;
+
+    // is barrier activ (!= 0) and reached? If so pass to probSAT_repair
+    if (walker.passat_expansion_barrier <= walker.activated - start_activated && walker.passat_expansion_barrier)
+      return false;
   }
   // all activatable variables assigned => the subproblem is fully expanded
 #ifndef NDEBUG
@@ -1488,17 +1501,8 @@ unsigned Internal::passat_break_value(Walker &walker, int lit){
 }
 
 /*----------------------------------------------------------------------------*/
-// - Problem: Currently, our bottleneck is in probSAT_pick_lit,
-// because probSAT_break_value performs a large number of loop-iterations
-// - Approach: Instead of calculating the break value, we simply use the size of
-// |occ(-lit)|
-// - Loss: Weighted randomness (as before), flips that cause little
-// damage are not favored.
-// - Gain: One query (O(1)) instead of having to go through the list occ(-lit)
-// - Side effect: We have weighted randomness even though we do not read
-// the conflict_counter, but this does not need to exist and is smaller.
-// Example: Two variables a and b. If |occ(a)| = 4 and |occ(b)| = 100,
-// then break_value(a) < break_value(b) is more likely
+// helper function which dont go through all clauses from vlit[-lit] to calc the break value, 
+// just count how many clauses contain vlit[-lit]
 unsigned Internal::passat_fixed_occurence(Walker &walker, int lit){
   walker.ticks += 1;
   return (unsigned) walker.passat_lookup_table[vlit(-lit)].size();
@@ -1522,13 +1526,14 @@ int Internal::probSAT_pick_lit(Walker &walker, int picked_clause){
 
   // Phase 1: score every flippable literal by its break-value.
   for (const auto lit : *c){
-    // an assumed variable is not allowed to be flipped
-    if (assumed(lit) || assumed(-lit))
+    // an assumed or inactive (fixed, eliminated or substituted) variable is not allowed to be flipped
+    // otherwise flipping would mess the root level vals[] and those variables we cant cleanup here
+    if (assumed(lit) || assumed(-lit) || !active(lit))
       continue;
-    // opts.passatfixedocc: trade the exact (state-aware) break value for the
-    // static occurrence count of -lit (O(1) instead of O(|occ(-lit)|)).
-    const unsigned bv = opts.passatfixedocc ? passat_fixed_occurence(walker, lit)
-                                            : passat_break_value(walker, lit);
+
+    // we could use a cheaper break value calculation if we put cheap_break_value on true
+    const unsigned bv = walker.cheap_break_value ? passat_fixed_occurence(walker, lit) : passat_break_value(walker, lit);
+
     const double s = walker.score(bv);
     walker.scores_passat.push_back({s, lit});
     sum += s;
