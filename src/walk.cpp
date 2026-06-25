@@ -379,7 +379,7 @@ int Internal::walk_pick_lit (Walker &walker, Clause *c) {
   LOG ("picking literal by break-count");
   assert (walker.scores.empty ());
   const int64_t old = walker.ticks;
-  walker.ticks += 1;
+  walker.ticks++;
   double sum = 0;
   int64_t propagations = 0;
   for (const auto lit : *c) {
@@ -1197,14 +1197,14 @@ void Internal::passat_build (Walker &walker) {
   }
 
   // build the ProbSAT score table from the average clause size, like walk()
-  walker.populate_table (relative (total_size, counted));
+  walker.populate_table(relative (total_size, counted));
 }
 
 /*----------------------------------------------------------------------------*/
 
 // passat_assign() assigns the literal 'lit' to true and keeps all PASSAT
 // bookkeeping consistent.
-// passat_assign() should not be called on a unactive variable !
+// passat_assign() should not be called on a inactive variable !
 // It performs the following steps:
 //   1. set 'lit' to true (does nothing if it is already assigned)
 //   2. push 'lit' onto the propagation_queue so passat_up can propagate it
@@ -1227,6 +1227,7 @@ bool Internal::passat_assign(Walker &walker, int lit) {
   // unassigned unit literals, and a real conflict is caught earlier via
   // conflict_counter == 0 (just for debugging).
   if (val(lit) == 0){
+    assert (active (lit));
     set_val(lit, 1);
     // record on the passat_trail so cleanup can reset exactly this assignment
     walker.passat_trail.push_back(lit);
@@ -1236,7 +1237,7 @@ bool Internal::passat_assign(Walker &walker, int lit) {
     walker.propagation_queue.push_back(lit);
     // (3) positive occurrences: the variable becomes active in these clauses
     for(auto clause : walker.passat_lookup_table[vlit(lit)]) {
-      walker.activation_counter[clause] -= 1;
+      walker.activation_counter[clause]--;
       if (walker.activation_counter[clause] == 0) {
         walker.passat_clauses.push_back(clause);
       }
@@ -1244,12 +1245,12 @@ bool Internal::passat_assign(Walker &walker, int lit) {
     // (3) negative occurrences: the variable becomes active here too, and
     // (4) '-lit' is now false, so the conflict_counter shrinks as well
     for(auto clause : walker.passat_lookup_table[vlit(-lit)]){
-      walker.activation_counter[clause] -= 1;
+      walker.activation_counter[clause]--;
       if (walker.activation_counter[clause] == 0) {
         walker.passat_clauses.push_back(clause);
       }
 
-      walker.conflict_counter[clause] -= 1;
+      walker.conflict_counter[clause]--;
       // a clause whose conflict_counter hit 0 is falsified => report a conflict.
       // probSAT_repair rebuilds all broken clauses from passat_clauses anyway, so
       // we only need to signal that some conflict occurred, not which clause.
@@ -1504,7 +1505,7 @@ unsigned Internal::passat_break_value(Walker &walker, int lit){
 // helper function which dont go through all clauses from vlit[-lit] to calc the break value, 
 // just count how many clauses contain vlit[-lit]
 unsigned Internal::passat_fixed_occurence(Walker &walker, int lit){
-  walker.ticks += 1;
+  walker.ticks++;
   return (unsigned) walker.passat_lookup_table[vlit(-lit)].size();
 }
 
@@ -1521,7 +1522,7 @@ int Internal::probSAT_pick_lit(Walker &walker, int picked_clause){
   Clause *c = clauses[picked_clause];
   assert (walker.scores_passat.empty ());
   // one tick for entering the pick, like walk_pick_lit charges the framework
-  walker.ticks += 1;
+  walker.ticks++;
   double sum = 0;
 
   // Phase 1: score every flippable literal by its break-value.
@@ -1584,7 +1585,7 @@ void Internal::flip_and_repair(Walker &walker, int lit){
   walker.ticks += 1 + cache_lines(row.size(), sizeof(int));
   for (int c : row){
     walker.ticks++;
-    walker.conflict_counter[c] += 1;
+    walker.conflict_counter[c]++;
     // conflict_counter == 1 means the clause was broken and is now
     // satisfied => remove it from broken_clauses
     if (walker.conflict_counter[c] == 1){
@@ -1605,7 +1606,7 @@ void Internal::flip_and_repair(Walker &walker, int lit){
   walker.ticks += 1 + cache_lines(neg_row.size(), sizeof(int));
   for (int c : neg_row){
     walker.ticks++;
-    walker.conflict_counter[c] -= 1;
+    walker.conflict_counter[c]--;
     // conflict_counter == 0 => clause is now broken, append it
     if (walker.conflict_counter[c] == 0) {
       walker.broken_pos[c] = (int) walker.broken_clauses.size();
