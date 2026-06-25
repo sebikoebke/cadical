@@ -1420,6 +1420,7 @@ struct Internal {
   int probSAT_pick_lit(Walker &walker, int picked_clause);
   void flip_and_repair(Walker &walker, int lit);
   void repair_propagation_queue(Walker &walker);
+  void local_search_log(Walker &walker, const char *label);
   bool probSAT_repair (Walker &walker);
   void walk_passat ();
 

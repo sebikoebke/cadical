@@ -58,7 +58,13 @@ struct Walker {
   vector<signed char> mark;       // per-variable dedup flag, invariant 0 outside repair_propagation_queue
   vector<int> cache_queue;            // reusable cache to rebuild propagation_queue without allocating
 
-  bool cheap_break_value = true;   // if true, we calc a cheaper break value => O(1) instead of O(|clauses[-lit]|)
+  bool track_probSAT_repair = true;     // set to true, if we want to track the steps of the probSAT_repair (Local Search) modul               
+  FILE *measure_file = nullptr;   // the measurement of the probSAT_repair modul is written in local_search_modul_measure.log
+  size_t measure_round = 0;       // round index for "Start Repair"/"End Repair" in local_search_modul_measure.log
+  std::vector<int> measure_start_assignment; // signed assignment snapshot taken at "Start Repair";
+                                             // diffed against the "End Repair" assignment to report the
+                                             // net (final) flips of one repair round
+  bool cheap_break_value = false;   // if true, we calc a cheaper break value => O(1) instead of O(|clauses[-lit]|)
   size_t passat_expansion_barrier = 100; // upper barrier for the expansion the idea is to switch from time to time between expansion and repair, 
                                          // because in some old cases we did only expansion and in some only repair, both had a poorer performance
                                          // note: if expansion == 0, the expansion is not limitted
@@ -73,6 +79,7 @@ struct Walker {
                                 // up_expansion that no clause was forgotten
 #endif
   Walker (Internal *, int64_t limit);
+  ~Walker () { if (measure_file) fclose (measure_file); } //used for the measurement file of probSAT_repair
   void populate_table (double size);
   void push_flipped (int flipped);
   void save_walker_trail (bool);
@@ -1405,7 +1412,7 @@ bool Internal::advanced_expansion(Walker &walker) {
 
   if (!passat_up(walker)) no_conflict = false;
 
-  const size_t start_activated = walker.activated;
+  size_t start_activated = walker.activated;
 
   // Loop until every variable is activated which could be activated
   while (walker.activated < walker.pre_assigned + walker.activatable) {
@@ -1431,9 +1438,15 @@ bool Internal::advanced_expansion(Walker &walker) {
     // propagate till propagation_queue is empty, then hand over to probSAT_repair
     if (!advanced_propagation(walker)) no_conflict = false;
 
-    // is barrier activ (!= 0) and reached? If so pass to probSAT_repair
-    if (walker.passat_expansion_barrier <= walker.activated - start_activated && walker.passat_expansion_barrier)
-      return false;
+    // barrier active (!= 0) and reached (>= barrier newly activated vars)?
+    if (walker.passat_expansion_barrier &&
+        walker.passat_expansion_barrier <= walker.activated - start_activated) {
+      // a conflict occurred in this run => hand over to probSAT_repair
+      if (!no_conflict)
+        return false;
+      // nothing is broken, so there is nothing to repair. Reset the counter and start expanding again (no repair here)
+      start_activated = walker.activated;
+    }
   }
   // all activatable variables assigned => the subproblem is fully expanded
 #ifndef NDEBUG
@@ -1659,6 +1672,78 @@ void Internal::repair_propagation_queue(Walker &walker){
   walker.propagated = 0;
 }
 
+/*----------------------------------------------------------------------------*/
+
+// Helper function for the probSAT_reapir measurement log
+// Counts the rounds, conflicts and show the variable assignments before and after the repair modul
+// (could not do it in logging, because with logging the walk phase is never reached (take toooo long))
+void Internal::local_search_log(Walker &walker, const char *label) {
+  // lazily open the log file on the first dump of this walk_passat run
+  if (!walker.measure_file) {
+    walker.measure_file = fopen ("local_search_modul_measure.log", "w");
+    if (!walker.measure_file)
+      return;
+  }
+  FILE *f = walker.measure_file;
+  // bump the round on each Start so the matching Start/End share one index
+  if (!strcmp (label, "Start Repair"))
+    ++walker.measure_round;
+  fprintf (f, "[passat] Round %zu - %s:\n", walker.measure_round, label);
+  fprintf (f, "[passat] |conflicts| = %zu\n", walker.broken_clauses.size ());
+  // number of currently activated variables; repair only flips, never activates,
+  // so this must be identical before and after probSAT_repair
+  fprintf (f, "[passat] |variables| = %zu\n", walker.activated);
+  // collect the distinct variables occurring in passat_clauses, in index order,
+  // signed by their current assignment in vals[] (these vars are all activated)
+  std::vector<char> seen (max_var + 1, 0);
+  for (int pos : walker.passat_clauses)
+    for (const int lit : *clauses[pos])
+      seen[vidx (lit)] = 1;
+  std::vector<int> assignment;
+  for (int idx = 1; idx <= max_var; idx++)
+    if (seen[idx])
+      assignment.push_back (val (idx) > 0 ? idx : -idx);
+
+  fputs ("[passat] variables assignment = [", f);
+  for (size_t i = 0; i < assignment.size (); i++)
+    fprintf (f, "%s%d", i ? ", " : "", assignment[i]);
+  fputs ("]\n", f);
+
+  const bool is_start = !strcmp (label, "Start Repair");
+  if (is_start) {
+    // snapshot the assignment so the matching "End Repair" can diff against it
+    walker.measure_start_assignment = assignment;
+  } else {
+    // net (final) flips of this round: same variable set in the same order
+    // (repair never activates new vars), so compare element-wise and report the
+    // entries whose sign actually changed between Start and End.
+    const std::vector<int> &before = walker.measure_start_assignment;
+    if (before.size () == assignment.size ()) {
+      // number of variables whose net assignment changed over this round
+      size_t final_flips = 0;
+      for (size_t i = 0; i < assignment.size (); i++)
+        if (before[i] != assignment[i])
+          ++final_flips;
+      fprintf (f, "[passat] Flips: %zu\n", final_flips);
+      fputs ("[passat] From: [", f);
+      bool first = true;
+      for (size_t i = 0; i < assignment.size (); i++)
+        if (before[i] != assignment[i])
+          fprintf (f, "%s%d", first ? (first = false, "") : ", ", before[i]);
+      fputs ("]\n[passat] To: [", f);
+      first = true;
+      for (size_t i = 0; i < assignment.size (); i++)
+        if (before[i] != assignment[i])
+          fprintf (f, "%s%d", first ? (first = false, "") : ", ", assignment[i]);
+      fputs ("]\n", f);
+    }
+  }
+  // flush so the file can be read live while the solver is still running
+  fflush (f);
+}
+
+/*----------------------------------------------------------------------------*/
+
 // Returns true if the conflict was fully resolved (broken == 0) so that
 // up_expansion can resume; false if it could not be repaired (=> UNSAT).
 bool Internal::probSAT_repair(Walker &walker) {
@@ -1679,6 +1764,10 @@ bool Internal::probSAT_repair(Walker &walker) {
   build_broken(walker);
   //Clear all earlier made flips
   walker.flips.clear();
+
+  // measurement of the input in the  LS step right after expansion
+  if (walker.track_probSAT_repair) local_search_log(walker, "Start Repair");
+
   // convergence: track broken at start and the best (lowest) broken ever reached
   const size_t start_broken = walker.broken_clauses.size();
   size_t min_broken = start_broken;
@@ -1697,6 +1786,10 @@ bool Internal::probSAT_repair(Walker &walker) {
     if (walker.broken_clauses.size() < min_broken)
       min_broken = walker.broken_clauses.size();
   }
+
+  // measure the output of the LS step after probSAT_repair
+  if (walker.track_probSAT_repair) local_search_log(walker, "End Repair");
+
   // record broken at start for every repair (assumption-only exit excluded)
   stats.walk.passatbrokenstart += start_broken;
 
