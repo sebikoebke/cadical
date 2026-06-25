@@ -1848,6 +1848,19 @@ void Internal::walk_passat() {
   // build occurrence lists, counters and the activation count for this run
   passat_build (walker);
 
+  // select the expansion barrier size s from --walkpassat=n => s = n
+  // cases 1 to 3 are fixed sizes, 4 is unlimited (0 == no limit), 5 to 7 are proportional to the number
+  // of variables walk_passat works on
+  switch (opts.walkpassat) {
+  case 1: walker.passat_expansion_barrier = 10; break; // s = 10
+  case 2: walker.passat_expansion_barrier = 50; break; // s = 50
+  case 3: walker.passat_expansion_barrier = 100; break; // s = 100
+  case 4: walker.passat_expansion_barrier = 0; break; // unlimited
+  case 5: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 10); break; // s = 10% of active variables
+  case 6: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 5); break; // s = 20% of active variables
+  case 7: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 2); break; // s = 50% of active variables
+  }
+
   // care about the assumptions
   bool consistent_with_assumptions = true;
   for (int lit : assumptions){
