@@ -1887,6 +1887,7 @@ void Internal::walk_passat() {
   last.walk.ticks = start_ticks;
   limit *= 1e-3 * opts.walkeffort;
   if (limit < opts.walkmineff) limit = opts.walkmineff;
+  if (limit > 1e3 * opts.walkmaxeff) limit = 1e3 * opts.walkmaxeff;
 
   Walker walker (internal, limit);
 
