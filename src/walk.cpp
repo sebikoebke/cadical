@@ -1255,7 +1255,12 @@ bool Internal::passat_assign(Walker &walker, int lit) {
     // (2) enqueue for later propagation in passat_up
     walker.propagation_queue.push_back(lit);
     // (3) positive occurrences: the variable becomes active in these clauses
-    for(auto clause : walker.passat_lookup_table[vlit(lit)]) {
+    const auto &pos_clauses = walker.passat_lookup_table[vlit(lit)];
+    // we have to increase ticks here because we load a whole line of passat_lookup_table => random Mem Access
+    walker.ticks += 1 + cache_lines(pos_clauses.size(), sizeof(int));
+    for(auto clause : pos_clauses) {
+      // we have to increase ticks here because we work on the counters of a clause => random Mem Acces
+      walker.ticks++;
       walker.activation_counter[clause]--;
       if (walker.activation_counter[clause] == 0) {
         walker.passat_clauses.push_back(clause);
@@ -1263,7 +1268,12 @@ bool Internal::passat_assign(Walker &walker, int lit) {
     }
     // (3) negative occurrences: the variable becomes active here too, and
     // (4) '-lit' is now false, so the conflict_counter shrinks as well
-    for(auto clause : walker.passat_lookup_table[vlit(-lit)]){
+    const auto &neg_clauses = walker.passat_lookup_table[vlit(-lit)];
+    // we have to increase ticks here because we load a whole line of passat_lookup_table => random Mem Access
+    walker.ticks += 1 + cache_lines(neg_clauses.size(), sizeof(int));
+    for(auto clause : neg_clauses){
+      // we have to increase ticks here because we work on the counters of a clause => random Mem Acces
+      walker.ticks++;
       walker.activation_counter[clause]--;
       if (walker.activation_counter[clause] == 0) {
         walker.passat_clauses.push_back(clause);
@@ -1304,10 +1314,9 @@ bool Internal::passat_up(Walker &walker){
       // already true the clause is satisfied and we skip it.
       if (walker.conflict_counter[clause] == 1){
         Clause *c = clauses[clause];
+        walker.ticks += cache_lines(c->size, sizeof(int));
         int unit = 0;
         for (auto clause_lit : *c){
-          // scanning the clause touches each literal
-          walker.ticks++;
           if (val(clause_lit) >= 0){
             unit = clause_lit;
             break;
@@ -1391,10 +1400,9 @@ bool Internal::advanced_propagation(Walker &walker){
       // already true the clause is satisfied and we skip it.
       if (walker.conflict_counter[clause] == 1){
         Clause *c = clauses[clause];
+        //walker.ticks += cache_lines(c->size, sizeof(int));
         int unit = 0;
         for (auto clause_lit : *c){
-          // scanning the clause touches each literal
-          walker.ticks++;
           if (val(clause_lit) >= 0){
             unit = clause_lit;
             break;
