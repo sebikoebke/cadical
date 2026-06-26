@@ -58,17 +58,26 @@ struct Walker {
   vector<signed char> mark;       // per-variable dedup flag, invariant 0 outside repair_propagation_queue
   vector<int> cache_queue;            // reusable cache to rebuild propagation_queue without allocating
 
-  bool track_probSAT_repair = true;     // set to true, if we want to track the steps of the probSAT_repair (Local Search) modul               
+  bool track_probSAT_repair = false;     // set to true, if we want to track the steps of the probSAT_repair (Local Search) modul               
   FILE *measure_file = nullptr;   // the measurement of the probSAT_repair modul is written in local_search_modul_measure.log
   size_t measure_round = 0;       // round index for "Start Repair"/"End Repair" in local_search_modul_measure.log
   std::vector<int> measure_start_assignment; // signed assignment snapshot taken at "Start Repair";
                                              // diffed against the "End Repair" assignment to report the
                                              // net (final) flips of one repair round
-  bool cheap_break_value = false;   // if true, we calc a cheaper break value => O(1) instead of O(|clauses[-lit]|)
-  size_t passat_expansion_barrier = 100; // upper barrier for the expansion the idea is to switch from time to time between expansion and repair, 
+  bool cheap_break_value = true;   // if true, we calc a cheaper break value => O(1) instead of O(|clauses[-lit]|)
+  bool track_break_value = false;  // set to true to look at the (real, cheap) break-value pair of every flippable
+                                   // literal of each picked broken clause to break_value_measure.csv
+                                   // Be aware, measuring a walk_passat version where the real break value is used make no sense, 
+                                   // because you should not find a difference
+  FILE *break_value_file = nullptr; // CSV target for the break-value correlation measurement
+  size_t break_value_pick = 0;     // id of the picked broken clause to group clause's literals in the CSV
+  size_t passat_expansion_barrier = 100; // upper barrier for the expansion the idea is to switch from time to time between expansion and repair,
                                          // because in some old cases we did only expansion and in some only repair, both had a poorer performance
                                          // note: if expansion == 0, the expansion is not limitted
                                          // good results with 50 and 100, really bad with 75
+  bool use_up_expansion = false;  // if true, the main loop uses the original up_expansion
+                                  // therefore assign until the first conflict arise instead of advanced_expansion
+                                  // selected via --walkpassat=7
 
   std::vector<signed char> best_values; // best model stored so far
   double score (unsigned);              // compute score from break count
@@ -79,7 +88,10 @@ struct Walker {
                                 // up_expansion that no clause was forgotten
 #endif
   Walker (Internal *, int64_t limit);
-  ~Walker () { if (measure_file) fclose (measure_file); } //used for the measurement file of probSAT_repair
+  ~Walker () { // close the measurement files of probSAT_repair and the break-value correlation
+    if (measure_file) fclose (measure_file);
+    if (break_value_file) fclose (break_value_file);
+  }
   void populate_table (double size);
   void push_flipped (int flipped);
   void save_walker_trail (bool);
@@ -1538,12 +1550,34 @@ int Internal::probSAT_pick_lit(Walker &walker, int picked_clause){
   walker.ticks++;
   double sum = 0;
 
+  // open the CSV and start a new clause group
+  // One picked broken clause = one pick_id, its flippable literals are the rows that follow
+  if (walker.track_break_value) {
+    if (!walker.break_value_file) {
+      walker.break_value_file = fopen ("break_value_measure.csv", "w");
+      if (walker.break_value_file)
+        fprintf (walker.break_value_file,
+                 "pick_id,clause_idx,lit,real_break_value,cheap_break_value\n");
+    }
+    ++walker.break_value_pick;
+  }
+
   // Phase 1: score every flippable literal by its break-value.
   for (const auto lit : *c){
     // an assumed or inactive (fixed, eliminated or substituted) variable is not allowed to be flipped
     // otherwise flipping would mess the root level vals[] and those variables we cant cleanup here
     if (assumed(lit) || assumed(-lit) || !active(lit))
       continue;
+
+    // measure the (real, cheap) break-value pair for this literal
+    if (walker.track_break_value && walker.break_value_file) {
+      const int64_t saved_ticks = walker.ticks;
+      const unsigned real_bv  = passat_break_value (walker, lit);
+      const unsigned cheap_bv = passat_fixed_occurence (walker, lit);
+      walker.ticks = saved_ticks;
+      fprintf (walker.break_value_file, "%zu,%d,%d,%u,%u\n",
+               walker.break_value_pick, picked_clause, lit, real_bv, cheap_bv);
+    }
 
     // we could use a cheaper break value calculation if we put cheap_break_value on true
     const unsigned bv = walker.cheap_break_value ? passat_fixed_occurence(walker, lit) : passat_break_value(walker, lit);
@@ -1552,6 +1586,9 @@ int Internal::probSAT_pick_lit(Walker &walker, int picked_clause){
     walker.scores_passat.push_back({s, lit});
     sum += s;
   }
+  
+  if (walker.track_break_value && walker.break_value_file)
+    fflush (walker.break_value_file);
 
   // every literal is assumed => nothing to flip, signal "not repairable"
   if (walker.scores_passat.empty()){
@@ -1848,17 +1885,19 @@ void Internal::walk_passat() {
   // build occurrence lists, counters and the activation count for this run
   passat_build (walker);
 
-  // select the expansion barrier size s from --walkpassat=n => s = n
-  // cases 1 to 3 are fixed sizes, 4 is unlimited (0 == no limit), 5 to 7 are proportional to the number
-  // of variables walk_passat works on
-  switch (opts.walkpassat) {
+  // select the configuration from --walkpassat=n:
+  // cases 1 to 7 use the exact break value, cases 8 to 14 the cheap break value
+  // case 7 and 14 use up_expansion as described in the pap
+  // First check if we use the cheap break value, second we decide which barrier size we use
+  walker.cheap_break_value = (opts.walkpassat > 7);
+  switch (((opts.walkpassat - 1) % 7) + 1) {
   case 1: walker.passat_expansion_barrier = 10; break; // s = 10
-  case 2: walker.passat_expansion_barrier = 50; break; // s = 50
-  case 3: walker.passat_expansion_barrier = 100; break; // s = 100
-  case 4: walker.passat_expansion_barrier = 0; break; // unlimited
+  case 2: walker.passat_expansion_barrier = 100; break; // s = 100
+  case 3: walker.passat_expansion_barrier = 0; break; // unlimited
+  case 4: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 100); break; // s = 1% of active variables
   case 5: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 10); break; // s = 10% of active variables
-  case 6: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 5); break; // s = 20% of active variables
-  case 7: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 2); break; // s = 50% of active variables
+  case 6: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 2); break; // s = 50% of active variables
+  case 7: walker.use_up_expansion = true; break; // use the original up_expansion instead of advanced_expansion
   }
 
   // care about the assumptions
@@ -1897,7 +1936,8 @@ void Internal::walk_passat() {
     no_conflict = true;
     while (walker.ticks < walker.limit) {
       int64_t ticks_before = walker.ticks;
-      no_conflict = advanced_expansion(walker);
+      no_conflict = walker.use_up_expansion ? up_expansion(walker)
+                                            : advanced_expansion(walker);
       stats.walk.passatexpansionticks += walker.ticks - ticks_before;
       if (no_conflict)
         break;                        // SAT over the activated set
