@@ -1474,6 +1474,16 @@ bool Internal::advanced_expansion(Walker &walker) {
     // barrier active (!= 0) and reached (>= barrier newly activated vars)?
     if (walker.passat_expansion_barrier &&
         walker.passat_expansion_barrier <= walker.activated - start_activated) {
+      // measure how close the real number of newly activated variables is to the
+      // configured barrier: a single decision's UP cascade fully propagates, so the
+      // real count can overshoot the barrier. Track it to detect large divergences.
+      const size_t real_activated = walker.activated - start_activated;
+      const size_t overshoot = real_activated - walker.passat_expansion_barrier;
+      stats.walk.passatbarrierhits++;
+      stats.walk.passatbarrierreal += real_activated;
+      stats.walk.passatbarrierset += walker.passat_expansion_barrier;
+      if ((int64_t) overshoot > stats.walk.passatbarriermaxover)
+        stats.walk.passatbarriermaxover = overshoot;
       // a conflict occurred in this run => hand over to probSAT_repair
       if (!no_conflict) {
         // soft adaptive (d): only count as "significantly more" if conflicts grew by >20%;

@@ -153,6 +153,10 @@ struct Stats {
     int64_t passatreflips = 0;       // flips that re-flip an already-flipped var
     int64_t passatbarrierup = 0;     // dynamic barrier: number of increases (1% -> 10% -> 50%)
     int64_t passatbarrierdown = 0;   // dynamic barrier: number of decreases (jump back to 1%)
+    int64_t passatbarrierhits = 0;   // how often the expansion barrier was reached (checked)
+    int64_t passatbarrierreal = 0;   // sum of really activated vars (activated-start) at those hits
+    int64_t passatbarrierset = 0;    // sum of the configured barrier value at those hits
+    int64_t passatbarriermaxover = 0;// max overshoot (real activated - configured barrier) seen
     int64_t passatclauselits = 0;    // sum of tracked clause literals over all walk_passat builds
     int64_t passatclausecount = 0;   // sum of tracked clauses over all walk_passat builds
   } walk;

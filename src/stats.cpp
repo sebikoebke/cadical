@@ -832,6 +832,13 @@ void Stats::print (Internal *internal) {
      PRT ("  barrier-down:  %15" PRId64 "   %10.2f    dynamic barrier decreases per walk_passat",
          stats.walk.passatbarrierdown,
          relative (stats.walk.passatbarrierdown, stats.walk.passat));
+     PRT ("  barrier-real:  %15.2f   %10.2f    avg real activated per hit (%% of set barrier)",
+         relative (stats.walk.passatbarrierreal, stats.walk.passatbarrierhits),
+         percent (stats.walk.passatbarrierreal, stats.walk.passatbarrierset));
+     PRT ("  barrier-set:   %15.2f   %10s    avg configured barrier per hit",
+         relative (stats.walk.passatbarrierset, stats.walk.passatbarrierhits), "");
+     PRT ("  barrier-maxovr:%15" PRId64 "   %10s    max overshoot (real - set) at a hit",
+         stats.walk.passatbarriermaxover, "");
      PRT ("  avg-clsize:    %15.2f   %10s    average tracked clause size",
          relative (stats.walk.passatclauselits, stats.walk.passatclausecount), "");
   }
