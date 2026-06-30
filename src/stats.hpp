@@ -150,7 +150,11 @@ struct Stats {
     int64_t passatrepairsuccess = 0; // repairs that reached broken==0 (converged)
     int64_t passatbrokenstart = 0;   // sum of broken at the start of each repair
     int64_t passatbrokenmin = 0;     // sum of the best (lowest) broken reached per repair
-    int64_t passatreflips = 0;       // flips that re-flip an already-flipped var 
+    int64_t passatreflips = 0;       // flips that re-flip an already-flipped var
+    int64_t passatbarrierup = 0;     // dynamic barrier: number of increases (1% -> 10% -> 50%)
+    int64_t passatbarrierdown = 0;   // dynamic barrier: number of decreases (jump back to 1%)
+    int64_t passatclauselits = 0;    // sum of tracked clause literals over all walk_passat builds
+    int64_t passatclausecount = 0;   // sum of tracked clauses over all walk_passat builds
   } walk;
 
   struct {

@@ -58,7 +58,7 @@ struct Walker {
   vector<signed char> mark;       // per-variable dedup flag, invariant 0 outside repair_propagation_queue
   vector<int> cache_queue;            // reusable cache to rebuild propagation_queue without allocating
 
-  bool track_probSAT_repair = false;     // set to true, if we want to track the steps of the probSAT_repair (Local Search) modul               
+  bool track_probSAT_repair = true;     // set to true, if we want to track the steps of the probSAT_repair (Local Search) modul               
   FILE *measure_file = nullptr;   // the measurement of the probSAT_repair modul is written in local_search_modul_measure.log
   size_t measure_round = 0;       // round index for "Start Repair"/"End Repair" in local_search_modul_measure.log
   std::vector<int> measure_start_assignment; // signed assignment snapshot taken at "Start Repair";
@@ -78,6 +78,13 @@ struct Walker {
   bool use_up_expansion = false;  // if true, the main loop uses the original up_expansion
                                   // therefore assign until the first conflict arise instead of advanced_expansion
                                   // selected via --walkpassat=7
+
+  size_t expansion_conflict_counter = 0;   // counter for conflicts to adjust the barrier
+  int soft_more_count = 0;   // dynamic barrier (d): consecutive "significantly more conflicts" signals
+  int soft_fewer_count = 0;  // dynamic barrier (d): consecutive "fewer/similar conflicts" signals
+  bool dynamic_barrier = false;
+  size_t total_size = 0;   // sum of clause length
+  size_t clauses_count = 0;     // number of clauses that occur in our subset of clauses
 
   std::vector<signed char> best_values; // best model stored so far
   double score (unsigned);              // compute score from break count
@@ -1153,11 +1160,6 @@ void Internal::passat_build (Walker &walker) {
   walker.activation_counter.resize (clauses.size ());
   walker.broken_pos.resize (clauses.size (), -1);
 
-  // accumulate total literals and clause count over the tracked clauses to
-  // derive the average clause size for the ProbSAT score table 
-  double total_size = 0;
-  int64_t counted = 0;
-
   for (size_t pos = 0; pos < clauses.size (); pos++) {
     Clause *c = clauses[pos];
     if (c->garbage)
@@ -1174,8 +1176,8 @@ void Internal::passat_build (Walker &walker) {
 #endif
 
     // count this tracked clause for the average size (part (e))
-    total_size += c->size;
-    counted++;
+    walker.total_size += c->size;
+    walker.clauses_count++;
 
     // literals with val != -1
     int not_false = 0;
@@ -1216,7 +1218,10 @@ void Internal::passat_build (Walker &walker) {
   }
 
   // build the ProbSAT score table from the average clause size, like walk()
-  walker.populate_table(relative (total_size, counted));
+  const double avg_clause_size = relative (walker.total_size, walker.clauses_count);
+  stats.walk.passatclauselits += walker.total_size;
+  stats.walk.passatclausecount += walker.clauses_count;
+  walker.populate_table(avg_clause_size);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1283,8 +1288,10 @@ bool Internal::passat_assign(Walker &walker, int lit) {
       // a clause whose conflict_counter hit 0 is falsified => report a conflict.
       // probSAT_repair rebuilds all broken clauses from passat_clauses anyway, so
       // we only need to signal that some conflict occurred, not which clause.
-      if (walker.conflict_counter[clause] == 0)
+      if (walker.conflict_counter[clause] == 0) {
         signal = false;
+        if (walker.dynamic_barrier) walker.expansion_conflict_counter++;
+      }
     }
   }
   return signal;
@@ -1423,7 +1430,7 @@ bool Internal::advanced_propagation(Walker &walker){
 // Idea: use advanced_propagation to force a fully assignment.
 // probSAT_repair works quite good, but on a to small subset if I use up_expansion
 // because up_expansion just assign till the first conflict arise.
-// advanced_expansion assign all possible propagation on the propagation_queue 
+// advanced_expansion assign all possible propagation on the propagation_queue
 // even if there is a conflict
 bool Internal::advanced_expansion(Walker &walker) {
   stats.walk.passatexpansion++;
@@ -1433,6 +1440,12 @@ bool Internal::advanced_expansion(Walker &walker) {
   if (!passat_up(walker)) no_conflict = false;
 
   size_t start_activated = walker.activated;
+
+  size_t last_number_of_conflicts = 0;
+  if (walker.dynamic_barrier){
+    last_number_of_conflicts = walker.expansion_conflict_counter;
+    walker.expansion_conflict_counter = 0;
+  }
 
   // Loop until every variable is activated which could be activated
   while (walker.activated < walker.pre_assigned + walker.activatable) {
@@ -1462,10 +1475,46 @@ bool Internal::advanced_expansion(Walker &walker) {
     if (walker.passat_expansion_barrier &&
         walker.passat_expansion_barrier <= walker.activated - start_activated) {
       // a conflict occurred in this run => hand over to probSAT_repair
-      if (!no_conflict)
+      if (!no_conflict) {
+        // soft adaptive (d): only count as "significantly more" if conflicts grew by >20%;
+        // switch the barrier extreme only after two such signals in a row
+        if (walker.dynamic_barrier) {
+          const size_t one = std::max ((size_t) 1, walker.activatable / 100);
+          const size_t fifty = std::max ((size_t) 1, walker.activatable / 2);
+          if (walker.expansion_conflict_counter > last_number_of_conflicts * 1.2) {
+            walker.soft_more_count++;
+            walker.soft_fewer_count = 0;
+            if (walker.soft_more_count >= 2) {
+              if (walker.passat_expansion_barrier > one) stats.walk.passatbarrierdown++;
+              walker.passat_expansion_barrier = one;
+              walker.soft_more_count = 0;
+            }
+          } else {
+            walker.soft_fewer_count++;
+            walker.soft_more_count = 0;
+            if (walker.soft_fewer_count >= 2) {
+              if (walker.passat_expansion_barrier < fifty) stats.walk.passatbarrierup++;
+              walker.passat_expansion_barrier = fifty;
+              walker.soft_fewer_count = 0;
+            }
+          }
+        }
         return false;
+      }
       // nothing is broken, so there is nothing to repair. Reset the counter and start expanding again (no repair here)
       start_activated = walker.activated;
+
+      // soft adaptive (d): a conflict-free segment counts as a "fewer conflicts" signal
+      if (walker.dynamic_barrier) {
+        walker.soft_fewer_count++;
+        walker.soft_more_count = 0;
+        if (walker.soft_fewer_count >= 2) {
+          const size_t fifty = std::max ((size_t) 1, walker.activatable / 2);
+          if (walker.passat_expansion_barrier < fifty) stats.walk.passatbarrierup++;
+          walker.passat_expansion_barrier = fifty;
+          walker.soft_fewer_count = 0;
+        }
+      }
     }
   }
   // all activatable variables assigned => the subproblem is fully expanded
@@ -1897,16 +1946,45 @@ void Internal::walk_passat() {
   // select the configuration from --walkpassat=n:
   // cases 1 to 7 use the exact break value, cases 8 to 14 the cheap break value
   // case 7 and 14 use up_expansion as described in the pap
+  // case 15 uses the exact break value with a dynamically adjusted barrier
   // First check if we use the cheap break value, second we decide which barrier size we use
-  walker.cheap_break_value = (opts.walkpassat > 7);
-  switch (((opts.walkpassat - 1) % 7) + 1) {
-  case 1: walker.passat_expansion_barrier = 10; break; // s = 10
-  case 2: walker.passat_expansion_barrier = 100; break; // s = 100
-  case 3: walker.passat_expansion_barrier = 0; break; // unlimited
-  case 4: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 100); break; // s = 1% of active variables
-  case 5: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 10); break; // s = 10% of active variables
-  case 6: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 2); break; // s = 50% of active variables
-  case 7: walker.use_up_expansion = true; break; // use the original up_expansion instead of advanced_expansion
+  if (opts.walkpassat == 15) {
+    // (d) exact break value, soft adaptive barrier: jumps between 1% and 50% using a
+    // 20%-margin conflict comparison plus a 2x counter (hysteresis)
+    walker.cheap_break_value = false;
+    walker.dynamic_barrier = true;
+    // start from the average clause length: wide clauses (many conflicts) -> 1%, binary-dominated -> 50%
+    const double avg_clause_size = relative (walker.total_size, walker.clauses_count);
+    walker.passat_expansion_barrier = (avg_clause_size > 3.5)
+        ? std::max ((size_t) 1, walker.activatable / 100)   // 1%
+        : std::max ((size_t) 1, walker.activatable / 2);    // 50%
+  } else if (opts.walkpassat == 16) {
+    // (b) exact break value, static toggle: alternate 1% / 50% on every walk_passat call
+    walker.cheap_break_value = false;
+    walker.passat_expansion_barrier = (stats.walk.passat % 2)
+        ? std::max ((size_t) 1, walker.activatable / 100)   // 1% on odd invocations
+        : std::max ((size_t) 1, walker.activatable / 2);    // 50% on even invocations
+  } else if (opts.walkpassat >= 17 && opts.walkpassat <= 21) {
+    // exact break value, additional static percentage barriers
+    walker.cheap_break_value = false;
+    switch (opts.walkpassat) {
+    case 17: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 20); break;     // s = 5% of active variables
+    case 18: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable * 3 / 20); break; // s = 15% of active variables
+    case 19: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 5); break;      // s = 20% of active variables
+    case 20: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 4); break;      // s = 25% of active variables
+    case 21: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable * 3 / 4); break;  // s = 75% of active variables
+    }
+  } else {
+    walker.cheap_break_value = (opts.walkpassat > 7);
+    switch (((opts.walkpassat - 1) % 7) + 1) {
+    case 1: walker.passat_expansion_barrier = 10; break; // s = 10
+    case 2: walker.passat_expansion_barrier = 100; break; // s = 100
+    case 3: walker.passat_expansion_barrier = 0; break; // unlimited
+    case 4: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 100); break; // s = 1% of active variables
+    case 5: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 10); break; // s = 10% of active variables
+    case 6: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 2); break; // s = 50% of active variables
+    case 7: walker.use_up_expansion = true; break; // use the original up_expansion instead of advanced_expansion
+    }
   }
 
   // care about the assumptions

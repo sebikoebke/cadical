@@ -826,6 +826,14 @@ void Stats::print (Internal *internal) {
      PRT ("  broken-min:    %15.2f   %10s    avg best broken (failed repairs only)",
          relative (stats.walk.passatbrokenmin,
                    stats.walk.passatrepair - stats.walk.passatrepairsuccess), "");
+     PRT ("  barrier-up:    %15" PRId64 "   %10.2f    dynamic barrier increases per walk_passat",
+         stats.walk.passatbarrierup,
+         relative (stats.walk.passatbarrierup, stats.walk.passat));
+     PRT ("  barrier-down:  %15" PRId64 "   %10.2f    dynamic barrier decreases per walk_passat",
+         stats.walk.passatbarrierdown,
+         relative (stats.walk.passatbarrierdown, stats.walk.passat));
+     PRT ("  avg-clsize:    %15.2f   %10s    average tracked clause size",
+         relative (stats.walk.passatclauselits, stats.walk.passatclausecount), "");
   }
   if (all || stats.weakened) {
     PRT ("weakened:        %15" PRId64 "   %10.2f    average size",
