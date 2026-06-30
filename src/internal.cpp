@@ -63,6 +63,11 @@ Internal::~Internal () {
   PROFILES
 #undef PROFILE
 #endif
+  // close walk_passat measurement files (now owned by Internal, see internal.hpp)
+  if (measure_file)
+    fclose (measure_file);
+  if (break_value_file)
+    fclose (break_value_file);
   delete[] (char *) dummy_binary;
   for (const auto &c : clauses)
     delete_clause (c);

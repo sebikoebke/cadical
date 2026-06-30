@@ -1407,6 +1407,12 @@ struct Internal {
   int walk_pick_lit (Walker &walker, TaggedBinary c);
   int walk_round (int64_t limit, bool prev);
   void walk ();
+  // walk_passat measurement files in Internal so they stay open across all walk_passat runs
+  FILE *measure_file = nullptr;     // local_search_modul_measure.log (probSAT_repair)
+  FILE *break_value_file = nullptr; // break_value_measure.csv (break-value correlation)
+  size_t measure_round = 0;         // round index shared by matching Start/End Repair
+  size_t break_value_pick = 0;      // id of the picked broken clause, groups its literals
+
   void passat_build (Walker &walker);
   bool passat_assign (Walker &walker, int lit);
   bool passat_up (Walker &walker);
@@ -1420,7 +1426,8 @@ struct Internal {
   int probSAT_pick_lit(Walker &walker, int picked_clause);
   void flip_and_repair(Walker &walker, int lit);
   void repair_propagation_queue(Walker &walker);
-  void local_search_log(Walker &walker, const char *label);
+  void write_log_file (Walker &walker, const char *label, int picked_clause,
+                       int lit, unsigned real_bv, unsigned cheap_bv);
   bool probSAT_repair (Walker &walker);
   void walk_passat ();
 

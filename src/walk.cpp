@@ -58,19 +58,15 @@ struct Walker {
   vector<signed char> mark;       // per-variable dedup flag, invariant 0 outside repair_propagation_queue
   vector<int> cache_queue;            // reusable cache to rebuild propagation_queue without allocating
 
-  bool track_probSAT_repair = false;     // set to true, if we want to track the steps of the probSAT_repair (Local Search) modul               
-  FILE *measure_file = nullptr;   // the measurement of the probSAT_repair modul is written in local_search_modul_measure.log
-  size_t measure_round = 0;       // round index for "Start Repair"/"End Repair" in local_search_modul_measure.log
+  bool track_probSAT_repair = false;     // set to true, if we want to track the steps of the probSAT_repair (Local Search) modul
   std::vector<int> measure_start_assignment; // signed assignment snapshot taken at "Start Repair";
                                              // diffed against the "End Repair" assignment to report the
                                              // net (final) flips of one repair round
   bool cheap_break_value = true;   // if true, we calc a cheaper break value => O(1) instead of O(|clauses[-lit]|)
   bool track_break_value = false;  // set to true to look at the (real, cheap) break-value pair of every flippable
                                    // literal of each picked broken clause to break_value_measure.csv
-                                   // Be aware, measuring a walk_passat version where the real break value is used make no sense, 
+                                   // Be aware, measuring a walk_passat version where the real break value is used make no sense,
                                    // because you should not find a difference
-  FILE *break_value_file = nullptr; // CSV target for the break-value correlation measurement
-  size_t break_value_pick = 0;     // id of the picked broken clause to group clause's literals in the CSV
   size_t passat_expansion_barrier = 100; // upper barrier for the expansion the idea is to switch from time to time between expansion and repair,
                                          // because in some old cases we did only expansion and in some only repair, both had a poorer performance
                                          // note: if expansion == 0, the expansion is not limitted
@@ -88,10 +84,6 @@ struct Walker {
                                 // up_expansion that no clause was forgotten
 #endif
   Walker (Internal *, int64_t limit);
-  ~Walker () { // close the measurement files of probSAT_repair and the break-value correlation
-    if (measure_file) fclose (measure_file);
-    if (break_value_file) fclose (break_value_file);
-  }
   void populate_table (double size);
   void push_flipped (int flipped);
   void save_walker_trail (bool);
@@ -1558,17 +1550,9 @@ int Internal::probSAT_pick_lit(Walker &walker, int picked_clause){
   walker.ticks++;
   double sum = 0;
 
-  // open the CSV and start a new clause group
-  // One picked broken clause = one pick_id, its flippable literals are the rows that follow
-  if (walker.track_break_value) {
-    if (!walker.break_value_file) {
-      walker.break_value_file = fopen ("break_value_measure.csv", "w");
-      if (walker.break_value_file)
-        fprintf (walker.break_value_file,
-                 "pick_id,clause_idx,lit,real_break_value,cheap_break_value\n");
-    }
-    ++walker.break_value_pick;
-  }
+  // start with a new broken clause => new id and row for break_value track file
+  if (walker.track_break_value)
+    ++break_value_pick;
 
   // Phase 1: score every flippable literal by its break-value.
   for (const auto lit : *c){
@@ -1578,13 +1562,12 @@ int Internal::probSAT_pick_lit(Walker &walker, int picked_clause){
       continue;
 
     // measure the (real, cheap) break-value pair for this literal
-    if (walker.track_break_value && walker.break_value_file) {
+    if (walker.track_break_value) {
       const int64_t saved_ticks = walker.ticks;
       const unsigned real_bv  = passat_break_value (walker, lit);
       const unsigned cheap_bv = passat_fixed_occurence (walker, lit);
       walker.ticks = saved_ticks;
-      fprintf (walker.break_value_file, "%zu,%d,%d,%u,%u\n",
-               walker.break_value_pick, picked_clause, lit, real_bv, cheap_bv);
+      write_log_file (walker, nullptr, picked_clause, lit, real_bv, cheap_bv);
     }
 
     // we could use a cheaper break value calculation if we put cheap_break_value on true
@@ -1594,9 +1577,6 @@ int Internal::probSAT_pick_lit(Walker &walker, int picked_clause){
     walker.scores_passat.push_back({s, lit});
     sum += s;
   }
-  
-  if (walker.track_break_value && walker.break_value_file)
-    fflush (walker.break_value_file);
 
   // every literal is assumed => nothing to flip, signal "not repairable"
   if (walker.scores_passat.empty()){
@@ -1719,72 +1699,92 @@ void Internal::repair_propagation_queue(Walker &walker){
 
 /*----------------------------------------------------------------------------*/
 
-// Helper function for the probSAT_reapir measurement log
-// Counts the rounds, conflicts and show the variable assignments before and after the repair modul
-// (could not do it in logging, because with logging the walk phase is never reached (take toooo long))
-void Internal::local_search_log(Walker &walker, const char *label) {
-  // lazily open the log file on the first dump of this walk_passat run
-  if (!walker.measure_file) {
-    walker.measure_file = fopen ("local_search_modul_measure.log", "w");
-    if (!walker.measure_file)
-      return;
-  }
-  FILE *f = walker.measure_file;
-  // bump the round on each Start so the matching Start/End share one index
-  if (!strcmp (label, "Start Repair"))
-    ++walker.measure_round;
-  fprintf (f, "[passat] Round %zu - %s:\n", walker.measure_round, label);
-  fprintf (f, "[passat] |conflicts| = %zu\n", walker.broken_clauses.size ());
-  // number of currently activated variables; repair only flips, never activates,
-  // so this must be identical before and after probSAT_repair
-  fprintf (f, "[passat] |variables| = %zu\n", walker.activated);
-  // collect the distinct variables occurring in passat_clauses, in index order,
-  // signed by their current assignment in vals[] (these vars are all activated)
-  std::vector<char> seen (max_var + 1, 0);
-  for (int pos : walker.passat_clauses)
-    for (const int lit : *clauses[pos])
-      seen[vidx (lit)] = 1;
-  std::vector<int> assignment;
-  for (int idx = 1; idx <= max_var; idx++)
-    if (seen[idx])
-      assignment.push_back (val (idx) > 0 ? idx : -idx);
-
-  fputs ("[passat] variables assignment = [", f);
-  for (size_t i = 0; i < assignment.size (); i++)
-    fprintf (f, "%s%d", i ? ", " : "", assignment[i]);
-  fputs ("]\n", f);
-
-  const bool is_start = !strcmp (label, "Start Repair");
-  if (is_start) {
-    // snapshot the assignment so the matching "End Repair" can diff against it
-    walker.measure_start_assignment = assignment;
-  } else {
-    // net (final) flips of this round: same variable set in the same order
-    // (repair never activates new vars), so compare element-wise and report the
-    // entries whose sign actually changed between Start and End.
-    const std::vector<int> &before = walker.measure_start_assignment;
-    if (before.size () == assignment.size ()) {
-      // number of variables whose net assignment changed over this round
-      size_t final_flips = 0;
-      for (size_t i = 0; i < assignment.size (); i++)
-        if (before[i] != assignment[i])
-          ++final_flips;
-      fprintf (f, "[passat] Flips: %zu\n", final_flips);
-      fputs ("[passat] From: [", f);
-      bool first = true;
-      for (size_t i = 0; i < assignment.size (); i++)
-        if (before[i] != assignment[i])
-          fprintf (f, "%s%d", first ? (first = false, "") : ", ", before[i]);
-      fputs ("]\n[passat] To: [", f);
-      first = true;
-      for (size_t i = 0; i < assignment.size (); i++)
-        if (before[i] != assignment[i])
-          fprintf (f, "%s%d", first ? (first = false, "") : ", ", assignment[i]);
-      fputs ("]\n", f);
+// Unified measurement-log writer for walk_passat
+// Depending on which tracking flag is set it appends to the corresponding file
+// The log files are opened in Internal, so they are opened once and stay open across all
+// walk_passat runs of this solver run
+void Internal::write_log_file (Walker &walker, const char *label,
+                               int picked_clause, int lit, unsigned real_bv,
+                               unsigned cheap_bv) {
+  if (walker.track_probSAT_repair && label) {
+    // open once; never truncated again for the rest of the solver run
+    if (!measure_file) {
+      measure_file = fopen ("local_search_modul_measure.log", "w");
+      if (!measure_file)
+        return;
     }
+    FILE *f = measure_file;
+    // bump the round on each Start so the matching Start/End share one index
+    if (!strcmp (label, "Start Repair"))
+      ++measure_round;
+    fprintf (f, "[passat] Round %zu - %s:\n", measure_round, label);
+    fprintf (f, "[passat] |conflicts| = %zu\n", walker.broken_clauses.size ());
+    // number of currently activated variables; repair only flips, never activates,
+    // so this must be identical before and after probSAT_repair
+    fprintf (f, "[passat] |variables| = %zu\n", walker.activated);
+    // collect the distinct variables occurring in passat_clauses, in index order,
+    // signed by their current assignment in vals[] (these vars are all activated)
+    std::vector<char> seen (max_var + 1, 0);
+    for (int pos : walker.passat_clauses)
+      for (const int l : *clauses[pos])
+        seen[vidx (l)] = 1;
+    std::vector<int> assignment;
+    for (int idx = 1; idx <= max_var; idx++)
+      if (seen[idx])
+        assignment.push_back (val (idx) > 0 ? idx : -idx);
+
+    fputs ("[passat] variables assignment = [", f);
+    for (size_t i = 0; i < assignment.size (); i++)
+      fprintf (f, "%s%d", i ? ", " : "", assignment[i]);
+    fputs ("]\n", f);
+
+    const bool is_start = !strcmp (label, "Start Repair");
+    if (is_start) {
+      // snapshot the assignment so the matching "End Repair" can diff against it
+      walker.measure_start_assignment = assignment;
+    } else {
+      // net (final) flips of this round: same variable set in the same order
+      // (repair never activates new vars), so compare element-wise and report the
+      // entries whose sign actually changed between Start and End.
+      const std::vector<int> &before = walker.measure_start_assignment;
+      if (before.size () == assignment.size ()) {
+        // number of variables whose net assignment changed over this round
+        size_t final_flips = 0;
+        for (size_t i = 0; i < assignment.size (); i++)
+          if (before[i] != assignment[i])
+            ++final_flips;
+        fprintf (f, "[passat] Flips: %zu\n", final_flips);
+        fputs ("[passat] From: [", f);
+        bool first = true;
+        for (size_t i = 0; i < assignment.size (); i++)
+          if (before[i] != assignment[i])
+            fprintf (f, "%s%d", first ? (first = false, "") : ", ", before[i]);
+        fputs ("]\n[passat] To: [", f);
+        first = true;
+        for (size_t i = 0; i < assignment.size (); i++)
+          if (before[i] != assignment[i])
+            fprintf (f, "%s%d", first ? (first = false, "") : ", ", assignment[i]);
+        fputs ("]\n", f);
+      }
+    }
+    // flush so the file can be read live while the solver is still running
+    fflush (f);
   }
-  // flush so the file can be read live while the solver is still running
-  fflush (f);
+
+  if (walker.track_break_value && !label) {
+    // open once and write the header on creation; persists across walk_passat calls
+    if (!break_value_file) {
+      break_value_file = fopen ("break_value_measure.csv", "w");
+      if (!break_value_file)
+        return;
+      fprintf (break_value_file,
+               "pick_id,clause_idx,lit,real_break_value,cheap_break_value\n");
+    }
+    // One picked broken clause = one pick_id, its flippable literals are the rows
+    fprintf (break_value_file, "%zu,%d,%d,%u,%u\n", break_value_pick,
+             picked_clause, lit, real_bv, cheap_bv);
+    fflush (break_value_file);
+  }
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1811,7 +1811,7 @@ bool Internal::probSAT_repair(Walker &walker) {
   walker.flips.clear();
 
   // measurement of the input in the  LS step right after expansion
-  if (walker.track_probSAT_repair) local_search_log(walker, "Start Repair");
+  if (walker.track_probSAT_repair) write_log_file (walker, "Start Repair", 0, 0, 0, 0);
 
   // convergence: track broken at start and the best (lowest) broken ever reached
   const size_t start_broken = walker.broken_clauses.size();
@@ -1833,7 +1833,7 @@ bool Internal::probSAT_repair(Walker &walker) {
   }
 
   // measure the output of the LS step after probSAT_repair
-  if (walker.track_probSAT_repair) local_search_log(walker, "End Repair");
+  if (walker.track_probSAT_repair) write_log_file (walker, "End Repair", 0, 0, 0, 0);
 
   // record broken at start for every repair (assumption-only exit excluded)
   stats.walk.passatbrokenstart += start_broken;
