@@ -2057,10 +2057,10 @@ void Internal::walk_passat() {
         ? std::max ((size_t) 1, walker.activatable / 100)   // 1%
         : std::max ((size_t) 1, walker.activatable / 2);    // 50%
   } else if (opts.walkpassat == 16) {
-    // exact break value, 1% barrier (like =4) plus improvement tracking: keep the better
+    // exact break value, x % barrier plus improvement tracking: keep the better
     // of the post-expansion and the post-repair assignment when writing phases.saved
     walker.cheap_break_value = false;
-    walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 100); // 0,1%
+    walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 1000); // 0,1%
     walker.passat_track_improvement = true;
   } else if (opts.walkpassat == 17) {
     // exact break value, 1% barrier with a HARD stop: once the barrier is hit the
@@ -2079,7 +2079,7 @@ void Internal::walk_passat() {
     // of the crossing cascade size steer the barrier up and down (see ema_barrier).
     walker.cheap_break_value = false;
     walker.ema_barrier = true;
-    walker.barrier_ema = std::max (1.0, (double) walker.activatable / 1000.0); // start at 1%
+    walker.barrier_ema = std::max (1.0, (double) walker.activatable / 100.0); // start at 1%
     walker.passat_expansion_barrier = std::max ((size_t) 1, (size_t) (walker.barrier_ema + 0.5));
   } else if (opts.walkpassat == 20) {
     // like =15 (soft-adaptive barrier) but with the CHEAP break value
