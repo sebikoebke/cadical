@@ -150,7 +150,10 @@ struct Stats {
     int64_t passatrepairsuccess = 0; // repairs that reached broken==0 (converged)
     int64_t passatbrokenstart = 0;   // sum of broken at the start of each repair
     int64_t passatbrokenmin = 0;     // sum of the best (lowest) broken reached per repair
-    int64_t passatreflips = 0;       // flips that re-flip an already-flipped var 
+    int64_t passatreflips = 0;       // flips that re-flip an already-flipped var
+    int64_t passatexpkept = 0;       // failed repairs where the best assignment never improved on expansion
+    int64_t passatbarrierup = 0;     // dynamic barrier: number of increases (jump up to 50%)
+    int64_t passatbarrierdown = 0;   // dynamic barrier: number of decreases (jump down to 1%)
   } walk;
 
   struct {
