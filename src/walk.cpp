@@ -58,7 +58,7 @@ struct Walker {
   vector<signed char> mark;       // per-variable dedup flag, invariant 0 outside repair_propagation_queue
   vector<int> cache_queue;            // reusable cache to rebuild propagation_queue without allocating
 
-  bool track_probSAT_repair = true;     // set to true, if we want to track the steps of the probSAT_repair (Local Search) modul               
+  bool track_probSAT_repair = false;    // set to true, if we want to track the steps of the probSAT_repair (Local Search) modul
   FILE *measure_file = nullptr;   // the measurement of the probSAT_repair modul is written in local_search_modul_measure.log
   size_t measure_round = 0;       // round index for "Start Repair"/"End Repair" in local_search_modul_measure.log
   std::vector<int> measure_start_assignment; // signed assignment snapshot taken at "Start Repair";
@@ -71,6 +71,10 @@ struct Walker {
                                    // because you should not find a difference
   FILE *break_value_file = nullptr; // CSV target for the break-value correlation measurement
   size_t break_value_pick = 0;     // id of the picked broken clause to group clause's literals in the CSV
+  bool track_barrier = false;      // set to true to log every barrier hit (set vs. real activated) to
+                                   // barrier_measure.csv, to see how far the real barrier overshoots the set one.
+                                   // The file handle itself lives on Internal (barrier_file/barrier_hit) so it
+                                   // survives the per-call Walker and is not truncated on every walk_passat()
   size_t passat_expansion_barrier = 100; // upper barrier for the expansion the idea is to switch from time to time between expansion and repair,
                                          // because in some old cases we did only expansion and in some only repair, both had a poorer performance
                                          // note: if expansion == 0, the expansion is not limitted
@@ -79,10 +83,31 @@ struct Walker {
                                   // therefore assign until the first conflict arise instead of advanced_expansion
                                   // selected via --walkpassat=7
 
+  bool passat_hard_barrier = false;       // v17: stop draining the propagation queue as soon as the
+                                          // barrier is hit instead of finishing the cascade (no overshoot)
+  size_t expansion_start_activated = 0;   // activated count at the start of the current expansion segment,
+                                          // shared with advanced_propagation so it can enforce the hard barrier
+
+  bool passat_track_improvement = false; // v16: keep the best assignment seen during the repair
+                                         // instead of its final state, since probSAT_repair is a
+                                         // random walk and usually ends worse than its best point
+  size_t last_start_broken = 0;          // broken clauses at the start of the last probSAT_repair
+                                         // call (== broken clauses right after the expansion)
+  size_t last_min_broken = 0;            // fewest broken clauses reached during the last repair
+  std::vector<signed char> best_repair_model; // v16: assignment at last_min_broken (the best the
+                                              // random walk passed through); restored on a failed repair
+
   size_t expansion_conflict_counter = 0;   // counter for conflicts to adjust the barrier
   int soft_more_count = 0;   // dynamic barrier (d): consecutive "significantly more conflicts" signals
   int soft_fewer_count = 0;  // dynamic barrier (d): consecutive "fewer/similar conflicts" signals
   bool dynamic_barrier = false;
+
+  bool ema_barrier = false;          // v19: adapt the barrier via an exponential moving average of the
+                                     // crossing cascade size. Unlike "barrier := real" (real >= barrier at
+                                     // a hit, so it could only grow) a single crossing cascade can be smaller
+                                     // than the current barrier, so the barrier moves up AND down.
+  double barrier_ema = 0.0;          // current EMA value (starts at 1% of activatable), rounded into the barrier
+  double barrier_ema_alpha = 0.3;    // smoothing factor: new = (1-a)*old + a*cascade_size
   size_t total_size = 0;   // sum of clause length
   size_t clauses_count = 0;     // number of clauses that occur in our subset of clauses
 
@@ -1394,6 +1419,13 @@ bool Internal::advanced_propagation(Walker &walker){
 
   while (walker.propagated < walker.propagation_queue.size()){
 
+    // v17 hard barrier: stop pulling further literals from the queue once the segment
+    // budget is reached, instead of draining the whole cascade (which causes the overshoot).
+    // The un-propagated tail is preserved by repair_propagation_queue and resumed later.
+    if (walker.passat_hard_barrier && walker.passat_expansion_barrier &&
+        walker.activated - walker.expansion_start_activated >= walker.passat_expansion_barrier)
+      break;
+
     const int lit = walker.propagation_queue[walker.propagated++];
     
     const auto &lit_clauses = walker.passat_lookup_table[vlit(-lit)];
@@ -1440,6 +1472,8 @@ bool Internal::advanced_expansion(Walker &walker) {
   if (!passat_up(walker)) no_conflict = false;
 
   size_t start_activated = walker.activated;
+  // share the segment start with advanced_propagation for the hard barrier (v17)
+  walker.expansion_start_activated = start_activated;
 
   size_t last_number_of_conflicts = 0;
   if (walker.dynamic_barrier){
@@ -1467,9 +1501,11 @@ bool Internal::advanced_expansion(Walker &walker) {
     const int lit = decide_phase (idx, target);
 
     // activate the literal. On conflict hand over to probSAT_repair
+    const size_t activated_before_cascade = walker.activated; // v19: size of this decision's UP cascade
     if (!passat_assign(walker, lit)) no_conflict = false;
     // propagate till propagation_queue is empty, then hand over to probSAT_repair
     if (!advanced_propagation(walker)) no_conflict = false;
+    const size_t cascade_size = walker.activated - activated_before_cascade;
 
     // barrier active (!= 0) and reached (>= barrier newly activated vars)?
     if (walker.passat_expansion_barrier &&
@@ -1484,6 +1520,40 @@ bool Internal::advanced_expansion(Walker &walker) {
       stats.walk.passatbarrierset += walker.passat_expansion_barrier;
       if ((int64_t) overshoot > stats.walk.passatbarriermaxover)
         stats.walk.passatbarriermaxover = overshoot;
+
+      // log the (set barrier, real activated, overshoot) triple of this hit to a CSV,
+      // so the divergence between the configured and the real barrier can be inspected offline
+      if (walker.track_barrier) {
+        // barrier_file/barrier_hit live on Internal, so the file is opened once (with the
+        // header) on the first hit of the whole solve and appended to afterwards, instead of
+        // being truncated on every fresh per-call Walker.
+        if (!barrier_file) {
+          barrier_file = fopen ("barrier_measure.csv", "w");
+          if (barrier_file)
+            fprintf (barrier_file,
+                     "hit_id,set_barrier,real_activated,overshoot,conflict\n");
+        }
+        if (barrier_file) {
+          ++barrier_hit;
+          fprintf (barrier_file, "%zu,%zu,%zu,%zu,%d\n",
+                   barrier_hit, walker.passat_expansion_barrier,
+                   real_activated, overshoot, no_conflict ? 0 : 1);
+          fflush (barrier_file);
+        }
+      }
+
+      // v19: feed the crossing cascade into the exponential moving average and use the
+      // rounded EMA as the new barrier. The crossing cascade may be smaller than the current
+      // barrier, so the barrier follows the recent cascade sizes up AND down (unlike := real).
+      if (walker.ema_barrier) {
+        walker.barrier_ema = (1.0 - walker.barrier_ema_alpha) * walker.barrier_ema
+                           + walker.barrier_ema_alpha * (double) cascade_size;
+        const size_t new_barrier =
+            std::max ((size_t) 1, (size_t) (walker.barrier_ema + 0.5));
+        if (new_barrier > walker.passat_expansion_barrier) stats.walk.passatbarrierup++;
+        else if (new_barrier < walker.passat_expansion_barrier) stats.walk.passatbarrierdown++;
+        walker.passat_expansion_barrier = new_barrier;
+      }
       // a conflict occurred in this run => hand over to probSAT_repair
       if (!no_conflict) {
         // soft adaptive (d): only count as "significantly more" if conflicts grew by >20%;
@@ -1513,6 +1583,7 @@ bool Internal::advanced_expansion(Walker &walker) {
       }
       // nothing is broken, so there is nothing to repair. Reset the counter and start expanding again (no repair here)
       start_activated = walker.activated;
+      walker.expansion_start_activated = start_activated;
 
       // soft adaptive (d): a conflict-free segment counts as a "fewer conflicts" signal
       if (walker.dynamic_barrier) {
@@ -1874,7 +1945,17 @@ bool Internal::probSAT_repair(Walker &walker) {
 
   // convergence: track broken at start and the best (lowest) broken ever reached
   const size_t start_broken = walker.broken_clauses.size();
+  // expose to the main loop so v16 can compare repair against the expansion result
+  walker.last_start_broken = start_broken;
   size_t min_broken = start_broken;
+  walker.last_min_broken = start_broken;
+  // v16: remember the best (fewest broken) assignment of the walk. We start from the
+  // post-expansion assignment, which is the best so far at broken == start_broken.
+  if (walker.passat_track_improvement) {
+    walker.best_repair_model.resize (max_var + 1);
+    for (int id = 1; id <= max_var; id++)
+      walker.best_repair_model[id] = val (id);
+  }
   while(!walker.broken_clauses.empty() && walker.ticks < walker.limit){
     // pick random clause, then a literal of it via ProbSAT
     int lit = probSAT_pick_lit(walker, pick_random_clause(walker, walker.broken_clauses));
@@ -1887,8 +1968,15 @@ bool Internal::probSAT_repair(Walker &walker) {
 
     // make the actual LS_repair
     flip_and_repair(walker, lit);
-    if (walker.broken_clauses.size() < min_broken)
+    if (walker.broken_clauses.size() < min_broken) {
       min_broken = walker.broken_clauses.size();
+      walker.last_min_broken = min_broken;
+      // v16: snapshot the new best assignment (fires at most start_broken times, since
+      // min_broken strictly decreases) so a failed repair can fall back to it
+      if (walker.passat_track_improvement)
+        for (int id = 1; id <= max_var; id++)
+          walker.best_repair_model[id] = val (id);
+    }
   }
 
   // measure the output of the LS step after probSAT_repair
@@ -1956,7 +2044,7 @@ void Internal::walk_passat() {
   // select the configuration from --walkpassat=n:
   // cases 1 to 7 use the exact break value, cases 8 to 14 the cheap break value
   // case 7 and 14 use up_expansion as described in the pap
-  // case 15 uses the exact break value with a dynamically adjusted barrier
+  // case 15 uses the exact break value with a soft-adaptive barrier, case 19 with an EMA-adaptive barrier
   // First check if we use the cheap break value, second we decide which barrier size we use
   if (opts.walkpassat == 15) {
     // (d) exact break value, soft adaptive barrier: jumps between 1% and 50% using a
@@ -1969,21 +2057,49 @@ void Internal::walk_passat() {
         ? std::max ((size_t) 1, walker.activatable / 100)   // 1%
         : std::max ((size_t) 1, walker.activatable / 2);    // 50%
   } else if (opts.walkpassat == 16) {
-    // (b) exact break value, static toggle: alternate 1% / 50% on every walk_passat call
+    // exact break value, 1% barrier (like =4) plus improvement tracking: keep the better
+    // of the post-expansion and the post-repair assignment when writing phases.saved
     walker.cheap_break_value = false;
-    walker.passat_expansion_barrier = (stats.walk.passat % 2)
-        ? std::max ((size_t) 1, walker.activatable / 100)   // 1% on odd invocations
-        : std::max ((size_t) 1, walker.activatable / 2);    // 50% on even invocations
-  } else if (opts.walkpassat >= 17 && opts.walkpassat <= 21) {
-    // exact break value, additional static percentage barriers
+    walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 100); // 0,1%
+    walker.passat_track_improvement = true;
+  } else if (opts.walkpassat == 17) {
+    // exact break value, 1% barrier with a HARD stop: once the barrier is hit the
+    // propagation queue is no longer drained (no overshoot), unlike =4 which finishes
+    // the cascade. Compare barrier-real in the stats: =17 should sit close to 100% of set.
     walker.cheap_break_value = false;
-    switch (opts.walkpassat) {
-    case 17: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 20); break;     // s = 5% of active variables
-    case 18: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable * 3 / 20); break; // s = 15% of active variables
-    case 19: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 5); break;      // s = 20% of active variables
-    case 20: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 4); break;      // s = 25% of active variables
-    case 21: walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable * 3 / 4); break;  // s = 75% of active variables
-    }
+    walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 100); // 1%
+    walker.passat_hard_barrier = true;
+  } else if (opts.walkpassat == 18) {
+    // like =16 (0.1% barrier + improvement tracking) but with the CHEAP break value
+    walker.cheap_break_value = true;
+    walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 1000); // 0,1%
+    walker.passat_track_improvement = true;
+  } else if (opts.walkpassat == 19) {
+    // exact break value, EMA-adaptive barrier: start at 1% and let an exponential moving average
+    // of the crossing cascade size steer the barrier up and down (see ema_barrier).
+    walker.cheap_break_value = false;
+    walker.ema_barrier = true;
+    walker.barrier_ema = std::max (1.0, (double) walker.activatable / 1000.0); // start at 1%
+    walker.passat_expansion_barrier = std::max ((size_t) 1, (size_t) (walker.barrier_ema + 0.5));
+  } else if (opts.walkpassat == 20) {
+    // like =15 (soft-adaptive barrier) but with the CHEAP break value
+    walker.cheap_break_value = true;
+    walker.dynamic_barrier = true;
+    const double avg_clause_size = relative (walker.total_size, walker.clauses_count);
+    walker.passat_expansion_barrier = (avg_clause_size > 3.5)
+        ? std::max ((size_t) 1, walker.activatable / 100)   // 1%
+        : std::max ((size_t) 1, walker.activatable / 2);    // 50%
+  } else if (opts.walkpassat == 21) {
+    // exact break value, combines the soft-adaptive barrier of =15 with the improvement
+    // tracking of =16: dynamic barrier (1% <-> 50%) plus keeping the better of the
+    // post-expansion and the post-repair assignment.
+    walker.cheap_break_value = false;
+    walker.dynamic_barrier = true;
+    walker.passat_track_improvement = true;
+    const double avg_clause_size = relative (walker.total_size, walker.clauses_count);
+    walker.passat_expansion_barrier = (avg_clause_size > 3.5)
+        ? std::max ((size_t) 1, walker.activatable / 100)   // 1%
+        : std::max ((size_t) 1, walker.activatable / 2);    // 50%
   } else {
     walker.cheap_break_value = (opts.walkpassat > 7);
     switch (((opts.walkpassat - 1) % 7) + 1) {
@@ -2038,9 +2154,22 @@ void Internal::walk_passat() {
       stats.walk.passatexpansionticks += walker.ticks - ticks_before;
       if (no_conflict)
         break;                        // SAT over the activated set
+
       ticks_before = walker.ticks;
       const bool repaired = probSAT_repair(walker);
       stats.walk.passatrepairticks += walker.ticks - ticks_before;
+
+      // v16 improvement tracking: a failed repair leaves val[] in the random walk's last
+      // (usually not best) state. Restore the best assignment the walk passed through,
+      // which probSAT_repair recorded in best_repair_model (it equals the post-expansion
+      // assignment when the walk never improved). Count that no-improvement case separately.
+      if (walker.passat_track_improvement && !repaired) {
+        for (int id = 1; id <= max_var; id++)
+          set_val (id, walker.best_repair_model[id]);
+        if (walker.last_min_broken >= walker.last_start_broken)
+          stats.walk.passatexpkept++;
+      }
+
       if (!repaired)
         break;                        // conflict not resolvable -> UNSAT
     }

@@ -159,6 +159,7 @@ struct Stats {
     int64_t passatbarriermaxover = 0;// max overshoot (real activated - configured barrier) seen
     int64_t passatclauselits = 0;    // sum of tracked clause literals over all walk_passat builds
     int64_t passatclausecount = 0;   // sum of tracked clauses over all walk_passat builds
+    int64_t passatexpkept = 0;       // v16: times the post-expansion assignment was kept (repair did not improve)
   } walk;
 
   struct {

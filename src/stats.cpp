@@ -841,6 +841,9 @@ void Stats::print (Internal *internal) {
          stats.walk.passatbarriermaxover, "");
      PRT ("  avg-clsize:    %15.2f   %10s    average tracked clause size",
          relative (stats.walk.passatclauselits, stats.walk.passatclausecount), "");
+     PRT ("  exp-kept:      %15" PRId64 "   %10.2f %%  v16: failed repairs that never improved on expansion",
+         stats.walk.passatexpkept,
+         percent (stats.walk.passatexpkept, stats.walk.passatrepair));
   }
   if (all || stats.weakened) {
     PRT ("weakened:        %15" PRId64 "   %10.2f    average size",

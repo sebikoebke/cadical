@@ -78,6 +78,8 @@ Internal::~Internal () {
     vals -= vsize;
     delete[] vals;
   }
+  if (barrier_file)
+    fclose (barrier_file);
 }
 
 /*------------------------------------------------------------------------*/

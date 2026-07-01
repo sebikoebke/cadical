@@ -173,6 +173,11 @@ struct Internal {
   /*----------------------------------------------------------------------*/
 
   int mode; // current internal state
+  // walk_passat barrier measurement (branch passat_experiments): kept on Internal, not on
+  // the per-call Walker, so the CSV is opened once and appended to across all walk_passat()
+  // calls of one solve instead of being truncated (fopen "w") on every call.
+  FILE *barrier_file = nullptr; // CSV target for the barrier measurement, or null while inactive
+  size_t barrier_hit = 0;       // running row id, continuous across all walk_passat() calls
   int tier1[2] = {
       2, 2}; // tier1 limit for 0=focused, 1=stable; aka tier1[stable]
   int tier2[2] = {
