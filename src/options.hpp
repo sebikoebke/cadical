@@ -276,7 +276,7 @@ OPTION( walkfullocc,      0,   0,  1,1,0,1, "use Kissat's full occurrences inste
 OPTION( walkmaxeff,      1e7,  0,2e9,1,0,1, "maximum efficiency (in 1e3 ticks)") \
 OPTION( walkmineff,        0,  0,1e7,1,0,1, "minimum efficiency") \
 OPTION( walknonstable,     1,  0,  1,0,0,1, "walk in non-stabilizing phase") \
-OPTION( walkpassat,        0,  0, 16,1,0,1, "PASSAT: 0=off; 1-7 exact break (s=10, s=100, s=unlim, s=1%, s=10%, s=50%, up_expansion), 8-14 cheap break, 15 dynamic soft-adaptive barrier,  16 s=0.1% + improvement-tracking") \
+OPTION( walkpassat,        0,  0, 16,1,0,1, "PASSAT: 0=off; 1-7 exact break (s=10, s=100, s=unlim, s=1pct, s=10pct, s=50pct, up_expansion), 8-14 cheap break, 15 dynamic soft-adaptive barrier, 16 s=0.1pct + improvement-tracking") \
 OPTION( walkredundant,     0,  0,  1,0,0,1, "walk redundant clauses too") \
 OPTION( warmup,            1,  0,  1,0,0,1, "warmup before walk using propagation") \
 
