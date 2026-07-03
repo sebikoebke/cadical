@@ -75,16 +75,18 @@ struct Walker {
                                   // therefore assign until the first conflict arise instead of advanced_expansion
                                   // selected via --walkpassat=7
 
-  bool dynamic_barrier = false;   // walkpassat=15 use a (dynamic) soft adaptive barrier
+  bool dynamic_barrier = false;   // walkpassat=15 use a (dynamic) soft adaptive barrier toggling 1% <-> 10%
   size_t expansion_conflict_counter = 0;   // conflicts accumulated during the current advanced_expansion run
   size_t last_expansion_conflicts = 0;     // conflicts of the previous run, for the 20% comparison
-  int dynamic_counter = 0;  // how many runs in a row had >20% fewer conflicts (2 -> switch up to 50%)
+  int dynamic_counter = 0;  // (unused) legacy counter from the earlier 50% ramp-up scheme, kept for ABI stability
   double avg_clause_size = 0.0; // average tracked clause length (set in passat_build)
 
   bool passat_track_improvement = false; // walkpassat=16 use the option to write the best found assignment (fewest broken clauses) in phases_best
   size_t last_start_broken = 0;          // broken clauses at the start of the last probSAT_repair
   size_t last_min_broken = 0;            // fewest broken clauses reached during the last repair
   std::vector<signed char> best_repair_model; 
+
+  bool increased_passat_limit = false; // walkpassat=18..21: multiply the tick limit by 7
 
   std::vector<signed char> best_values; // best model stored so far
   double score (unsigned);              // compute score from break count
@@ -1934,30 +1936,41 @@ void Internal::walk_passat() {
   passat_build (walker);
 
   // select the configuration from --walkpassat=n:
-  // cases 1 to 7 use the exact break value, cases 8 to 14 the cheap break value
-  // case 7 and 14 use up_expansion as described in the pap
+  // versions 1 to 7 use the exact break value, versions 8 to 14 the cheap break value
+  // version 7 and 14 use up_expansion as described in the pap
   // First check if we use the cheap break value, second we decide which barrier size we use
-  // case 15 uses the exact break value with a (dynamic) soft-adaptive barrier
-  // case 16 uses the exact break value, a 0.1% barrier and improvement tracking
-  if (opts.walkpassat == 15) {
-    // 1. Decide on the average clause length if we want to use a barrier of 1% or 50%
-    //    If average clause-length is > 3.5 => 1% (because static 1% works better on long clauses)
-    // 2a. We decide after each run of advanced_expansion, if the conflicts of the current run
-    //    were 20% higher than the conflicts of the run before, if so we set the barrier down to 1%
-    // 2b. If the run has 20% conflicts less, we increase a counter by one. 
-    //     If the counter reach 2 we set the barrier to 50%, because we want to expand now faster
+  // version 15 uses the exact break value with a (dynamic) soft-adaptive barrier + imrpovement tracking (like v16)
+  // version 16 uses the exact break value, a 0.1% barrier and improvement tracking : keep the better of the
+  // post-expansion and the post-repair assignment when writing phases.saved
+  // version 17 = version 5 + improvement tracking
+  // version 18 = version 5 + 7x tick limit
+  // version 19 = version 15 + 7x tick limit
+  // version 20 = version 16 + 7x tick limit
+  // version 21 = version 17 + 7x tick limit
+  if (opts.walkpassat == 15 || opts.walkpassat == 19) {
+    // 1. Pick the starting barrier from the average clause length:
+    //    avg clause-length > 3.5 => start at 1% (static 1% works better on long clauses), else 10%.
+    // 2a. After each advanced_expansion run: if this run had >20% MORE conflicts than the previous
+    //     run, drop the barrier straight down to 1% (repair more, expand less).
+    // 2b. If this run had >20% FEWER conflicts, raise the barrier to 10% to expand faster.
     walker.cheap_break_value = false;
     walker.dynamic_barrier = true;
-    // start from the average clause length: wide clauses (many conflicts) -> 1%, binary-dominated -> 50%
+    // start from the average clause length: wide clauses (many conflicts) -> 1%, binary-dominated -> 10%
     walker.passat_expansion_barrier = (walker.avg_clause_size > 3.5)
         ? std::max ((size_t) 1, walker.activatable / 100)   // 1%
-        : std::max ((size_t) 1, walker.activatable / 2);    // 50%
-  } else if (opts.walkpassat == 16) {
-    // exact break value, 0.1% barrier plus improvement tracking: keep the better of the
-    // post-expansion and the post-repair assignment when writing phases.saved
+        : std::max ((size_t) 1, walker.activatable / 10);    // 10%
+    walker.passat_track_improvement = true;
+    walker.increased_passat_limit = (opts.walkpassat == 19);
+  } else if (opts.walkpassat == 16 || opts.walkpassat == 20) {
     walker.cheap_break_value = false;
     walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 1000); // 0.1%
     walker.passat_track_improvement = true;
+    walker.increased_passat_limit = (opts.walkpassat == 20); // v20 = v16 + 7x
+  } else if (opts.walkpassat == 17 || opts.walkpassat == 18 || opts.walkpassat == 21) {
+    walker.cheap_break_value = false;
+    walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 10); // 10%
+    walker.passat_track_improvement = (opts.walkpassat == 17 || opts.walkpassat == 21);
+    walker.increased_passat_limit = (opts.walkpassat == 18 || opts.walkpassat == 21);
   } else {
     walker.cheap_break_value = (opts.walkpassat > 7);
     switch (((opts.walkpassat - 1) % 7) + 1) {
@@ -1970,6 +1983,9 @@ void Internal::walk_passat() {
     case 7: walker.use_up_expansion = true; break; // use the original up_expansion instead of advanced_expansion
     }
   }
+
+  // if the increasing limit flag is true => 7x larger tick limit
+  if (walker.increased_passat_limit) walker.limit *= 7;
 
   // care about the assumptions
   bool consistent_with_assumptions = true;
@@ -2025,16 +2041,11 @@ void Internal::walk_passat() {
             const size_t one = std::max ((size_t) 1, walker.activatable / 100);
             if (walker.passat_expansion_barrier > one) stats.walk.passatbarrierdown++;
             walker.passat_expansion_barrier = one;
-            walker.dynamic_counter = 0;
           } else if (cur < prev * 0.8) {
-            // 20% fewer conflicts => dynamic_counter one up, dynamich_counter == 2, barrier up to 50% => expand faster
-            walker.dynamic_counter++;
-            if (walker.dynamic_counter >= 2) {
-              const size_t fifty = std::max ((size_t) 1, walker.activatable / 2);
-              if (walker.passat_expansion_barrier < fifty) stats.walk.passatbarrierup++;
-              walker.passat_expansion_barrier = fifty;
-              walker.dynamic_counter = 0;
-            }
+            // 20% fewer conflicts => barrier up to 10% => expand faster
+            const size_t ten = std::max ((size_t) 1, walker.activatable / 10);
+            if (walker.passat_expansion_barrier < ten) stats.walk.passatbarrierup++;
+            walker.passat_expansion_barrier = ten;
           }
         }
         walker.last_expansion_conflicts = cur;
