@@ -49,14 +49,18 @@ struct Walker {
                                   // counted in 'activated' but NOT activated by PASSAT
   size_t activatable = 0;         // active & unassigned vars: the universe PASSAT can decide/propagate
   vector<vector<int>> passat_lookup_table; // positions in `clauses` where v+/v- occurs
-  vector<int> passat_clauses;     // all clauses where all variables inside are activated
-  vector<int> broken_clauses;     // all broken clauses out of passat_clauses, used for probSAT_repair
+  vector<int> broken_clauses;     // all currently broken (conflict_counter == 0) clauses, used for probSAT_repair;
+                                  // maintained incrementally by passat_assign and flip_and_repair
   vector<int> broken_pos;         // position of a clause inside broken_clauses (indexed by clause pos), -1 if not broken; enables fast removal (like in WalkerFO)
   vector<int> conflict_counter;   // counter which shows if there is a conflict inside a clause, if c_c == 0 => conflict, decreased if the opposite polarity is assigned to true
-  vector<int> activation_counter; // counter which shows when a clauses contain only activated clauses. a_c is decreased, if one variable in a clause is activated
+  vector<int> bv;                 // incrementally exact break values, indexed by vlit:
+                                  // bv[vlit(l)] = # clauses with conflict_counter == 1 whose unique
+                                  // not-false (critical) literal is -l (=> flipping l to true breaks a clause)
+  vector<int> clauses_critical_literal; // per clause: the critical literal (signed, like on the trail)
+                                        // avoids a rescanning process of the clause in flip_and_repair
   vector<int> flip_count;         // LS Hotspots, indexed by variables
   vector<signed char> mark;       // per-variable dedup flag, invariant 0 outside repair_propagation_queue
-  vector<int> cache_queue;            // reusable cache to rebuild propagation_queue without allocating
+  vector<int> cache_queue;        // reusable cache to rebuild propagation_queue without allocating
 
   bool track_probSAT_repair = false;     // set to true, if we want to track the steps of the probSAT_repair (Local Search) modul
   std::vector<int> measure_start_assignment; // signed assignment snapshot taken at "Start Repair";
@@ -92,9 +96,6 @@ struct Walker {
   double score (unsigned);              // compute score from break count
 #ifndef NDEBUG
   std::vector<signed char> current_best_model; // best model found so far
-  size_t tracked_clauses = 0;   // # clauses passat_build tracks (non-garbage,
-                                // non-skipped-redundant); used to assert in
-                                // up_expansion that no clause was forgotten
 #endif
   Walker (Internal *, int64_t limit);
   void populate_table (double size);
@@ -1143,11 +1144,10 @@ void Internal::walk () {
 
 // passat_build() prepares ...
 // (a) passat_lookup_table
-// (b) conflict_counter[pos] : counter for each clause, starts with 
-//     conflict_counter[pos] = clauses[pos].size() and decrease, if a literal 
-//     inside the clause is wrong. If conflict_counter ==0 => empty clause (conflict)
-// (c) activation_counter[pos] : counter for the repair modul to show which clauses
-//     are fully activated
+// (b) conflict_counter[pos] : number of not-false literals (true + unassigned)
+//     of each clause; decreased when a literal inside the clause turns false.
+//     conflict_counter == 0 => clause falsified (broken) and, since unassigned
+//     literals count as not-false, automatically fully assigned
 // (d) walker.activated : number of variables that already carry a value AND are activated, so
 //     up_expansion knows when every variable that could been activated is activated (SAT case).
 // (e) the ProbSAT score table, built from the average size of the tracked
@@ -1155,8 +1155,9 @@ void Internal::walk () {
 void Internal::passat_build (Walker &walker) {
   walker.passat_lookup_table.resize (2 * vsize);
   walker.conflict_counter.resize (clauses.size ());
-  walker.activation_counter.resize (clauses.size ());
   walker.broken_pos.resize (clauses.size (), -1);
+  walker.bv.resize(2 * vsize, 0);
+  walker.clauses_critical_literal.resize(clauses.size ());
 
   // accumulate total literals and clause count over the tracked clauses to
   // derive the average clause size for the ProbSAT score table 
@@ -1173,38 +1174,34 @@ void Internal::passat_build (Walker &walker) {
       if (!likely_to_be_kept_clause (c))
         continue;
     }
-#ifndef NDEBUG
-    // this clause is tracked (passes the same filter as up_expansion's check)
-    walker.tracked_clauses++;
-#endif
-
     // count this tracked clause for the average size (part (e))
     total_size += c->size;
     counted++;
 
-    // literals with val != -1
-    int not_false = 0;
-    // literals with val == 0
-    int unassigned = 0;
     for (const auto lit : *c) {
       const signed char v = val (lit);
+
       // if a literal is not false, we have to increase the conflict_counter of the clause
       if (v >= 0) 
-        not_false++;
-      // if a literal is unassigned, we have to increase the activation_counter of the clause
-      if (v == 0)
-        unassigned++;
+        walker.conflict_counter[pos]++;
+
       // (a) if a clause contain the variable v, the clause-position in clauses is inserted
       // in the correct polarity of v in passat_lookup_table => passat_lookup_table[v] += [clause_position]
       walker.passat_lookup_table[vlit (lit)].push_back ((int) pos);
     }
-    // (b)
-    walker.conflict_counter[pos] = not_false;
-    // (c)
-    walker.activation_counter[pos] = unassigned;
-    // already fully activated clause
-    if (unassigned == 0)
-      walker.passat_clauses.push_back ((int) pos);
+
+    if (walker.conflict_counter[pos] == 1) {
+      for (auto lit : *c) {
+        const signed char v = val (lit);
+        if (v >= 0) {
+          // adjust the break value
+          walker.bv[vlit(-lit)]++;
+          // save the critical literal
+          walker.clauses_critical_literal[pos] = lit;
+          break;
+        }
+      }
+    }
   }
 
   // part (d)
@@ -1229,26 +1226,24 @@ void Internal::passat_build (Walker &walker) {
 
 /*----------------------------------------------------------------------------*/
 
-// passat_assign() assigns the literal 'lit' to true and keeps all PASSAT
+// passat_assign() assigns the literal lit to true and keeps all PASSAT
 // bookkeeping consistent.
 // passat_assign() should not be called on a inactive variable !
 // It performs the following steps:
-//   1. set 'lit' to true (does nothing if it is already assigned)
-//   2. push 'lit' onto the propagation_queue so passat_up can propagate it
-//   3. decrement the activation_counter of every clause that contains the
-//      variable; once it hits 0 the clause is fully activated and gets
-//      appended to passat_clauses
-//   4. decrement the conflict_counter of every clause that contains '-lit'
+//   1. set lit to true (does nothing if it is already assigned)
+//   2. push lit onto the propagation_queue so passat_up can propagate it
+//   3. decrement the conflict_counter of every clause that contains -lit
 //      (that literal just turned false); if it hits 0 the clause is falsified
-//      and we report a conflict
-//   5. increase walker.activated
+//      (and thereby fully assigned), so it is appended to broken_clauses and
+//      we report a conflict
+//   4. increase walker.activated
 // Returns true if no conflict arose (propagation may continue), false if
-// assigning 'lit' falsified at least one clause.
+// assigning lit falsified at least one clause.
 bool Internal::passat_assign(Walker &walker, int lit) {
   bool signal = true;
   // Only assign if 'lit' is currently unassigned; otherwise there is nothing
   // to do and we report that propagation may continue.
-  // NOTE: the guard returns true for any val(lit) != 0. If 'lit' were already
+  // NOTE: the guard returns true for any val(lit) != 0. If lit were already
   // false (val(lit) == -1) this would silently hide a contradiction. In our
   // design that should never happens: passat_up only calls passat_assign on
   // unassigned unit literals, and a real conflict is caught earlier via
@@ -1258,42 +1253,49 @@ bool Internal::passat_assign(Walker &walker, int lit) {
     set_val(lit, 1);
     // record on the passat_trail so cleanup can reset exactly this assignment
     walker.passat_trail.push_back(lit);
-    // (5) count this activation so up_expansion knows when all variables are assigned
+    // (4) count this activation so up_expansion knows when all variables are assigned
     walker.activated++;
     // (2) enqueue for later propagation in passat_up
     walker.propagation_queue.push_back(lit);
-    // (3) positive occurrences: the variable becomes active in these clauses
-    const auto &pos_clauses = walker.passat_lookup_table[vlit(lit)];
-    // we have to increase ticks here because we load a whole line of passat_lookup_table => random Mem Access
-    walker.ticks += 1 + cache_lines(pos_clauses.size(), sizeof(int));
-    for(auto clause : pos_clauses) {
-      // we have to increase ticks here because we work on the counters of a clause => random Mem Acces
-      walker.ticks++;
-      walker.activation_counter[clause]--;
-      if (walker.activation_counter[clause] == 0) {
-        walker.passat_clauses.push_back(clause);
-      }
-    }
-    // (3) negative occurrences: the variable becomes active here too, and
-    // (4) '-lit' is now false, so the conflict_counter shrinks as well
+
+    // (3) negative occurrences: -lit is now false, so the conflict_counter shrinks
     const auto &neg_clauses = walker.passat_lookup_table[vlit(-lit)];
     // we have to increase ticks here because we load a whole line of passat_lookup_table => random Mem Access
     walker.ticks += 1 + cache_lines(neg_clauses.size(), sizeof(int));
     for(auto clause : neg_clauses){
       // we have to increase ticks here because we work on the counters of a clause => random Mem Acces
       walker.ticks++;
-      walker.activation_counter[clause]--;
-      if (walker.activation_counter[clause] == 0) {
-        walker.passat_clauses.push_back(clause);
-      }
-
+      
       walker.conflict_counter[clause]--;
-      // a clause whose conflict_counter hit 0 is falsified => report a conflict.
-      // probSAT_repair rebuilds all broken clauses from passat_clauses anyway, so
-      // we only need to signal that some conflict occurred, not which clause.
+      // a clause whose conflict_counter hit 0 is falsified 
+      // => it is added broken_clauses here
+      // conflict_counter == 0 implies that all lits in the clause are assigned
       if (walker.conflict_counter[clause] == 0) {
         signal = false;
+        walker.broken_pos[clause] = (int) walker.broken_clauses.size();
+        walker.broken_clauses.push_back(clause);
         if (walker.dynamic_barrier) walker.expansion_conflict_counter++; // v15
+
+                walker.ticks++;
+        assert (walker.clauses_critical_literal[clause] == -lit);
+        walker.bv[vlit(lit)]--;
+        walker.clauses_critical_literal[clause] = 0;
+      }
+
+      // adjust the break value
+      if (walker.conflict_counter[clause] == 1) {
+        Clause *c = clauses[clause];
+        // scanning the clause for the critical literal is charged like a unit scan (passat_up)
+        walker.ticks += cache_lines(c->size, sizeof(int));
+        for (auto other : *c) {
+          if (val (other) >= 0) {
+            // other is the only non false literal => if it is flipped to fals the clause is broken
+            // => bv of -other has to be incremented
+            walker.bv[vlit(-other)]++;
+            walker.clauses_critical_literal[clause] = other;
+            break;
+          }
+        }
       }
     }
   }
@@ -1302,39 +1304,34 @@ bool Internal::passat_assign(Walker &walker, int lit) {
 
 /*----------------------------------------------------------------------------*/
 
-// Unit propagation for the up_expansion module.
+// Unit propagation for the up_expansion module
 // passat_up is working on walker.propagation_queue and with walker.propagated
 bool Internal::passat_up(Walker &walker){
   // For every assigned literal still to be processed, look for clauses that
-  // just became unit and propagate them through passat_assign.
+  // just became unit and propagate them through passat_assign
   while (walker.propagated < walker.propagation_queue.size()){
     const int lit = walker.propagation_queue[walker.propagated++];
     // 'lit' is true, so only clauses containing '-lit' can shrink: clauses
-    // that contain 'lit' are already satisfied.
+    // that contain 'lit' are already satisfied
     // Reading the occurrence row is charged like walk() charges reading a
-    // watch list, so that the tick measurement stays comparable to walk().
+    // watch list, so that the tick measurement stays comparable to walk()
     const auto &lit_clauses = walker.passat_lookup_table[vlit(-lit)];
     walker.ticks += 1 + cache_lines(lit_clauses.size(), sizeof(int));
 
     for (auto clause : lit_clauses){
       // one tick per clause we actually visit
       walker.ticks++; 
-      // conflict_counter == 1: exactly one literal is still not false. Find it:
-      // if it is unassigned the clause is unit and must be propagated; if it is
-      // already true the clause is satisfied and we skip it.
+      // conflict_counter == 1: exactly one literal is still not false.
+      // the searched literal is actually already in clauses_critical_literal
       if (walker.conflict_counter[clause] == 1){
-        Clause *c = clauses[clause];
-        walker.ticks += cache_lines(c->size, sizeof(int));
-        int unit = 0;
-        for (auto clause_lit : *c){
-          if (val(clause_lit) >= 0){
-            unit = clause_lit;
-            break;
-          }
-        }
-        if (val(unit) == 0){
-          // Propagating the unit may itself falsify a clause => passat_assign
-          // then returns false.
+        // one tick because clause_critical_literal[clause] may be random
+        walker.ticks++;
+
+        const int unit = walker.clauses_critical_literal[clause];
+
+        assert (unit && val (unit) >= 0);
+
+        if (val(unit) == 0) {
           if (!passat_assign(walker, unit)) return false;
         }
       }
@@ -1378,14 +1375,8 @@ bool Internal::up_expansion(Walker &walker) {
     // propagate the consequences. On conflict hand over to probSAT_repair
     if (!passat_up(walker)) return false;
   }
-  // all variables assigned, no conflict => SAT
-#ifndef NDEBUG
-  // All tracked clause should be in passat_clauses, therefore fully assigned
-  assert (walker.passat_clauses.size () == walker.tracked_clauses);
-  // If SAT, there should be no conflict_counter == 0
-  for (const int pos : walker.passat_clauses)
-    assert (walker.conflict_counter[pos] > 0);
-#endif
+  // all variables assigned, no conflict => SAT: no clause may be broken
+  assert (walker.broken_clauses.empty ());
   return true;
 }
 
@@ -1405,21 +1396,18 @@ bool Internal::advanced_propagation(Walker &walker){
     for (auto clause : lit_clauses){
       // one tick per clause we actually visit
       walker.ticks++; 
-      // conflict_counter == 1: exactly one literal is still not false. Find it:
-      // if it is unassigned the clause is unit and must be propagated; if it is
-      // already true the clause is satisfied and we skip it.
+
+      // conflict_counter == 1: exactly one literal is still not false.
+      // the searched literal is actually already in clauses_critical_literal
       if (walker.conflict_counter[clause] == 1){
-        Clause *c = clauses[clause];
-        //walker.ticks += cache_lines(c->size, sizeof(int));
-        int unit = 0;
-        for (auto clause_lit : *c){
-          if (val(clause_lit) >= 0){
-            unit = clause_lit;
-            break;
-          }
-        }
-        if (val(unit) == 0){
-          // Propagating the unit may itself falsify a clause => passat_assign
+        // one tick because clause_critical_literal[clause] may be random
+        walker.ticks++;
+
+        const int unit = walker.clauses_critical_literal[clause];
+
+        assert (unit && val (unit) >= 0);
+
+        if (val(unit) == 0) {
           if (!passat_assign(walker, unit)) no_conflict = false;
         }
       }
@@ -1479,34 +1467,9 @@ bool Internal::advanced_expansion(Walker &walker) {
     }
   }
   // all activatable variables assigned => the subproblem is fully expanded
-#ifndef NDEBUG
-  // All tracked clause should be in passat_clauses, therefore fully assigned
-  assert (walker.passat_clauses.size () == walker.tracked_clauses);
-  // if SAT, there should no conflict_counter == 0
-  if (no_conflict)
-    for (const int pos : walker.passat_clauses)
-      assert (walker.conflict_counter[pos] > 0);
-#endif
+  // without a conflict no clause may be broken 
+  assert (!no_conflict || walker.broken_clauses.empty ());
   return no_conflict;
-}
-
-/*----------------------------------------------------------------------------*/
-
-// Function which build the list of broken clauses
-void Internal::build_broken(Walker &walker){
-  walker.broken_clauses.clear();
-  for (int i : walker.passat_clauses){
-    // satisfied => not broken
-    if (walker.conflict_counter[i] > 0) {
-      walker.broken_pos[i] = -1;
-      continue;
-    }
-    // remember the position of the broken clause inside broken_clauses
-    // it is later cheaper to look up and flip the variable and remove the
-    // corresponding clause from broken_clauses
-    walker.broken_pos[i] = (int) walker.broken_clauses.size();
-    walker.broken_clauses.push_back(i);
-  }
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1582,14 +1545,29 @@ int Internal::probSAT_pick_lit(Walker &walker, int picked_clause){
     // measure the (real, cheap) break-value pair for this literal
     if (walker.track_break_value) {
       const int64_t saved_ticks = walker.ticks;
-      const unsigned real_bv  = passat_break_value (walker, lit);
+      const unsigned real_bv  = walker.bv[vlit(lit)];
       const unsigned cheap_bv = passat_fixed_occurence (walker, lit);
       walker.ticks = saved_ticks;
       write_log_file (walker, nullptr, picked_clause, lit, real_bv, cheap_bv);
     }
 
+#ifndef NDEBUG
+    // incrementally maintained break value must equal the exact break value
+    {
+      const int64_t saved_ticks = walker.ticks;
+      assert (passat_break_value (walker, lit) == (unsigned) walker.bv[vlit (lit)]);
+      walker.ticks = saved_ticks;
+    }
+#endif
+
     // we could use a cheaper break value calculation if we put cheap_break_value on true
-    const unsigned bv = walker.cheap_break_value ? passat_fixed_occurence(walker, lit) : passat_break_value(walker, lit);
+    unsigned bv;
+    if (walker.cheap_break_value)
+      bv = passat_fixed_occurence(walker, lit);
+    else {
+      walker.ticks++;
+      bv = walker.bv[vlit(lit)];
+    }
 
     const double s = walker.score(bv);
     walker.scores_passat.push_back({s, lit});
@@ -1623,12 +1601,12 @@ int Internal::probSAT_pick_lit(Walker &walker, int picked_clause){
 
 // function flipps and repair based on the given literal:
 // 1. flip the literal
-// 2. delete all clauses c´ from broken_clauses
-// 3. increase the conflict_counter in all clauses of c´
-// 4. decrease the conflict_counter in all clauses which dont occur in broken_clauses
-//    but in passat_clauses. => If conflict_counter goes down to 0, add clause to
-//    broken clauses
-// 5. add the flipped variable to walker.flips 
+// 2. increase the conflict_counter in all clauses containing lit.
+//    clause whose counter rises from 0 to 1 was broken and is removed from broken_clauses
+//    also adjust the clauses_critical_literal
+// 3. decrease the conflict_counter in all clauses containing -lit
+//    clause whose counter drops to 0 becomes broken and is appended to broken_clauses
+// 4. add the flipped variable to walker.flips
 void Internal::flip_and_repair(Walker &walker, int lit){
   // thrashing: was this var already flipped in this walk_passat run?
   const int fidx = vidx(lit);
@@ -1636,11 +1614,22 @@ void Internal::flip_and_repair(Walker &walker, int lit){
   // 1.
   set_val(lit, 1);
 
-  // 2. and 3. 
+  // 2.
   const auto &row = walker.passat_lookup_table[vlit(lit)];
   walker.ticks += 1 + cache_lines(row.size(), sizeof(int));
   for (int c : row){
     walker.ticks++;
+
+    // first adjust the old critical literal break value => it is not longer the only positive variable
+    if (walker.conflict_counter[c] == 1){
+      walker.ticks++;
+      // the entry that was incremented for critical literal m is bv[vlit(-m)]
+      const int m = walker.clauses_critical_literal[c];
+      assert (m);
+      walker.bv[vlit(-m)]--;
+      walker.clauses_critical_literal[c] = 0;
+    }
+
     walker.conflict_counter[c]++;
     // conflict_counter == 1 means the clause was broken and is now
     // satisfied => remove it from broken_clauses
@@ -1654,10 +1643,16 @@ void Internal::flip_and_repair(Walker &walker, int lit){
       walker.broken_pos[c] = -1;
       // cut off duplicate of last element
       walker.broken_clauses.pop_back();
+
+      //adjust the break_value of lit
+      walker.ticks++;
+      walker.bv[vlit(-lit)]++;
+      // the clause is critical now and lit is its only true literal
+      walker.clauses_critical_literal[c] = lit;
     }
   }
 
-  // 4.
+  // 3.
   const auto &neg_row = walker.passat_lookup_table[vlit(-lit)];
   walker.ticks += 1 + cache_lines(neg_row.size(), sizeof(int));
   for (int c : neg_row){
@@ -1667,10 +1662,33 @@ void Internal::flip_and_repair(Walker &walker, int lit){
     if (walker.conflict_counter[c] == 0) {
       walker.broken_pos[c] = (int) walker.broken_clauses.size();
       walker.broken_clauses.push_back(c);
+
+      // the critical literal was -lit, which just turned false, 
+      // so the entry bv[vlit(lit)] that counted this clause has to go down
+      walker.ticks++;
+      assert (walker.clauses_critical_literal[c] == -lit);
+      walker.bv[vlit(lit)]--;
+      walker.clauses_critical_literal[c] = 0;
+    }
+
+    // adjust the break value
+    if (walker.conflict_counter[c] == 1) {
+      Clause *clause = clauses[c];
+      // scanning the clause for the critical literal is charged like a unit scan (passat_up) 
+      walker.ticks += cache_lines(clause->size, sizeof(int));
+      for (auto other : *clause) {
+        if (val (other) >= 0) {
+          // 'other' ist das einzige nicht-falsche Literal: flippt man es auf
+          // false (macht also -other true), bricht die Klausel => bv von -other
+          walker.bv[vlit(-other)]++;
+          walker.clauses_critical_literal[c] = other;
+          break;
+        }
+      }
     }
   }
 
-  // 5.
+  // 4.
   walker.flips.push_back(lit);
   stats.walk.passatflips++;
   // accumulate the number of broken clauses still present after this flip,
@@ -1738,12 +1756,13 @@ void Internal::write_log_file (Walker &walker, const char *label, int picked_cla
     // number of currently activated variables; repair only flips, never activates,
     // so this must be identical before and after probSAT_repair
     fprintf (f, "[passat] |variables| = %zu\n", walker.activated);
-    // collect the distinct variables occurring in passat_clauses, in index order,
-    // signed by their current assignment in vals[] (these vars are all activated)
+    // collect the variables PASSAT activated (recorded on passat_trail), in
+    // index order, signed by their current assignment in vals[]. Root-fixed
+    // variables are not listed; repair never flips those anyway, so the
+    // Start/End diff below is unaffected.
     std::vector<char> seen (max_var + 1, 0);
-    for (int pos : walker.passat_clauses)
-      for (const int l : *clauses[pos])
-        seen[vidx (l)] = 1;
+    for (const int l : walker.passat_trail)
+      seen[vidx (l)] = 1;
     std::vector<int> assignment;
     for (int idx = 1; idx <= max_var; idx++)
       if (seen[idx])
@@ -1809,20 +1828,20 @@ void Internal::write_log_file (Walker &walker, const char *label, int picked_cla
 // up_expansion can resume; false if it could not be repaired (=> UNSAT).
 bool Internal::probSAT_repair(Walker &walker) {
   /*
-  1. build a list of broken clauses where ProbSAT should operate on. The list with 
-     all clauses where ProbSAT is able to look at already exist => PASSAT_CLAUSES
+  1. operate on walker.broken_clauses, which passat_assign and flip_and_repair
+     maintain incrementally (a broken clause is always fully assigned, since
+     conflict_counter counts not-false = true + unassigned literals)
   2. Flip decision of Literal l (wie auch in walk() vernwendet):
      Wir wählen zufällig eine clause c aus broken und dann mit probsat ein literal l aus c.
-  3. Flip Literal l (which is decide in 2.). 
+  3. Flip Literal l (which is decide in 2.).
   4. Make all adjustment and book keeping stuff.
   5. Look if there is still broken clauses, then return to (2), otherwise SAT and break the loop
-  6. If a solution is found, write the solution in vals[] (maybe it is already written), wirte the new values on the propagation_queue (we need to do this correct?) 
+  6. If a solution is found, write the solution in vals[] (maybe it is already written), wirte the new values on the propagation_queue (we need to do this correct?)
      and pass to up_expansion
   */
 
   stats.walk.passatrepair++;
 
-  build_broken(walker);
   //Clear all earlier made flips
   walker.flips.clear();
 
@@ -1891,6 +1910,10 @@ bool Internal::probSAT_repair(Walker &walker) {
   // up_expansion can resume on the repaired partial assignment, then report success.
   stats.walk.passatrepairsuccess++;
   repair_propagation_queue(walker);
+
+  // the next expansion starts with an empty broken list
+  assert (walker.broken_clauses.empty ());
+
   return true;
 }
 
@@ -1943,10 +1966,10 @@ void Internal::walk_passat() {
   // version 16 uses the exact break value, a 0.1% barrier and improvement tracking : keep the better of the
   // post-expansion and the post-repair assignment when writing phases.saved
   // version 17 = version 5 + improvement tracking
-  // version 18 = version 5 + 7x tick limit
-  // version 19 = version 15 + 7x tick limit
-  // version 20 = version 16 + 7x tick limit
-  // version 21 = version 17 + 7x tick limit
+  // version 18 = version 5 + 3x tick limit
+  // version 19 = version 15 + 3x tick limit
+  // version 20 = version 16 + 3x tick limit
+  // version 21 = version 17 + 3x tick limit
   if (opts.walkpassat == 15 || opts.walkpassat == 19) {
     // 1. Pick the starting barrier from the average clause length:
     //    avg clause-length > 3.5 => start at 1% (static 1% works better on long clauses), else 10%.
@@ -1984,8 +2007,8 @@ void Internal::walk_passat() {
     }
   }
 
-  // if the increasing limit flag is true => 7x larger tick limit
-  if (walker.increased_passat_limit) walker.limit *= 7;
+  // if the increasing limit flag is true => 3x larger tick limit
+  if (walker.increased_passat_limit) walker.limit *= 3;
 
   // care about the assumptions
   bool consistent_with_assumptions = true;

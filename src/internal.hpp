@@ -1419,7 +1419,6 @@ struct Internal {
   bool up_expansion (Walker &walker);
   bool advanced_propagation (Walker &walker);
   bool advanced_expansion (Walker &walker);
-  void build_broken(Walker &walker);
   int pick_random_clause(Walker &walker, const vector<int> &list_of_clauses);
   unsigned passat_break_value (Walker &walker, int lit);
   unsigned passat_fixed_occurence(Walker &walker, int lit);
