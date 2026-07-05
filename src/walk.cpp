@@ -90,6 +90,13 @@ struct Walker {
   size_t last_min_broken = 0;            // fewest broken clauses reached during the last repair
   std::vector<signed char> best_repair_model; 
 
+  bool anti_stagnation = false;   // true if we want to expand further even if not all conflicts areresolved => goal: full assignment over complete conflict solving
+                                  // on the one hand, with more variables we could find easier a solution via flipping for stagnating problems
+                                  // on the other hand, with more variables the number of conflicts increase in the flipping process
+  bool resolved_conflicts = true; // did the last probSAT_repair end with broken == 0? 
+  size_t stagnation_counter = 0;  // flips since the last improvement of min_broken, reset at each repair start
+  bool assumption_unsat = false;  // repair hit an assumption-only broken clause -> unrepairable, hard stop
+
   bool increased_passat_limit = false; // walkpassat=18..21: multiply the tick limit by 3
 
   std::vector<signed char> best_values; // best model stored so far
@@ -1428,6 +1435,11 @@ bool Internal::advanced_expansion(Walker &walker) {
 
   bool no_conflict = true;
 
+  // remember if probSAT_repair passed a solution with conflicts
+  if (walker.anti_stagnation){
+    no_conflict = walker.resolved_conflicts;
+  }
+
   if (!passat_up(walker)) no_conflict = false;
 
   size_t start_activated = walker.activated;
@@ -1845,6 +1857,8 @@ bool Internal::probSAT_repair(Walker &walker) {
   //Clear all earlier made flips
   walker.flips.clear();
 
+  walker.stagnation_counter = 0;
+
   // measurement of the input in the  LS step right after expansion
   if (walker.track_probSAT_repair) write_log_file (walker, "Start Repair", 0, 0, 0, 0);
 
@@ -1855,13 +1869,20 @@ bool Internal::probSAT_repair(Walker &walker) {
   size_t min_broken = start_broken;
   walker.last_min_broken = start_broken;
 
+  // the stagnation limit must be determined experimentally
+  // Keep in mind that the larger the limit is the longer probSAT_repair runs and can resolve conflicts,
+  // but less variables become active
+  // We have to find a good balance between number of active variables and correct solved conflcits by probSAT_repair
+  // 1.000 was better than 10.000
+  const size_t stagnation_limit = 1000 * start_broken;
+
   // remember the last assignment of the walk if improvement option is activ
   if (walker.passat_track_improvement) {
     walker.best_repair_model.resize (walker.passat_trail.size ());
     for (size_t i = 0; i < walker.passat_trail.size (); i++)
       walker.best_repair_model[i] = val (walker.passat_trail[i]);
   }
-  
+
   while(!walker.broken_clauses.empty() && walker.ticks < walker.limit){
     // pick random clause, then a literal of it via ProbSAT
     int lit = probSAT_pick_lit(walker, pick_random_clause(walker, walker.broken_clauses));
@@ -1869,8 +1890,11 @@ bool Internal::probSAT_repair(Walker &walker) {
     // lit == 0: the clause consists only of assumptions, so it cannot be
     // repaired without violating an assumption => unsatisfiable under the
     // assumptions, stop and report failure.
-    if (lit == 0)
+    if (lit == 0) {
+      walker.assumption_unsat = true;
+      walker.resolved_conflicts = false;
       return false;
+    }
 
     // make the actual LS_repair
     flip_and_repair(walker, lit);
@@ -1889,8 +1913,23 @@ bool Internal::probSAT_repair(Walker &walker) {
           walker.best_repair_model[i] = val(walker.passat_trail[i]);
         }
       }
+      
+      // reset the stagnation counter because we found a better solution
+      walker.stagnation_counter = 0;
+    } else {
+      // increase the stagnation counter because the last found solution was not better than the min solution
+      walker.stagnation_counter++;
+    }
+
+    if (walker.anti_stagnation && walker.stagnation_counter >= stagnation_limit) {
+      // repair is stagnating and only burns ticks without improving
+      // => stop earlier and invest the remaining ticks in further expansion
+      stats.walk.passatstagnationbreaks++;
+      break;
     }
   }
+
+  stats.walk.passatstagnation += walker.stagnation_counter;
 
   // measure the output of the LS step after probSAT_repair
   if (walker.track_probSAT_repair) write_log_file (walker, "End Repair", 0, 0, 0, 0);
@@ -1903,6 +1942,10 @@ bool Internal::probSAT_repair(Walker &walker) {
   if (!walker.broken_clauses.empty()) {
     // convergence: for FAILED repairs only, how close did we get to broken==0?
     stats.walk.passatbrokenmin += min_broken;
+    walker.resolved_conflicts = false;
+    
+    if (walker.anti_stagnation && !walker.assumption_unsat)
+      repair_propagation_queue(walker);
     return false;
   }
 
@@ -1913,6 +1956,8 @@ bool Internal::probSAT_repair(Walker &walker) {
 
   // the next expansion starts with an empty broken list
   assert (walker.broken_clauses.empty ());
+
+  walker.resolved_conflicts = true;
 
   return true;
 }
@@ -1970,7 +2015,14 @@ void Internal::walk_passat() {
   // version 19 = version 15 + 3x tick limit
   // version 20 = version 16 + 3x tick limit
   // version 21 = version 17 + 3x tick limit
-  if (opts.walkpassat == 15 || opts.walkpassat == 19) {
+  // version 22 = version 5 + anti-stagnation
+  // version 23 = version 22 + 3x tick limit
+  if (opts.walkpassat == 22 || opts.walkpassat == 23) {
+    walker.cheap_break_value = false;
+    walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 10); // 10% like v5
+    walker.anti_stagnation = true;
+    walker.increased_passat_limit = (opts.walkpassat == 23);
+  } else if (opts.walkpassat == 15 || opts.walkpassat == 19) {
     // 1. Pick the starting barrier from the average clause length:
     //    avg clause-length > 3.5 => start at 1% (static 1% works better on long clauses), else 10%.
     // 2a. After each advanced_expansion run: if this run had >20% MORE conflicts than the previous
@@ -2054,6 +2106,10 @@ void Internal::walk_passat() {
                                             : advanced_expansion(walker);
       stats.walk.passatexpansionticks += walker.ticks - ticks_before;
 
+      // SAT over the activated set
+      if (no_conflict)
+        break;
+
       // update the dynamic barrier: after each run compare this runs conflicts to the previous runs conflicts
       if (walker.dynamic_barrier) {
         const size_t cur = walker.expansion_conflict_counter;
@@ -2074,17 +2130,13 @@ void Internal::walk_passat() {
         walker.last_expansion_conflicts = cur;
         first_run = false;
       }
-
-      // SAT over the activated set
-      if (no_conflict)
-        break;
       
       ticks_before = walker.ticks;
       const bool repaired = probSAT_repair(walker);
       stats.walk.passatrepairticks += walker.ticks - ticks_before;
       // if improvement version (walkpassat=16) is used and a reapir failed, 
       // we check if the current assignment is the best assignment the walk passed through
-      if (walker.passat_track_improvement && !repaired) {
+      if (walker.passat_track_improvement && !repaired && !walker.anti_stagnation) {
         // restore only the activated vars
         // everything else was never touched by probSAT
         for (size_t i = 0; i < walker.passat_trail.size (); i++)
@@ -2094,7 +2146,8 @@ void Internal::walk_passat() {
       }
 
       // conflict not resolvable -> UNSAT
-      if (!repaired)
+      // only anti_stagnation keeps going with expansion if tick limit is not exceeded
+      if (!repaired && (!walker.anti_stagnation || walker.assumption_unsat))
         break;
     }
   }

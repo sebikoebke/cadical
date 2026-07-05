@@ -154,6 +154,8 @@ struct Stats {
     int64_t passatexpkept = 0;       // failed repairs where the best assignment never improved on expansion
     int64_t passatbarrierup = 0;     // dynamic barrier: number of increases (jump up to 50%)
     int64_t passatbarrierdown = 0;   // dynamic barrier: number of decreases (jump down to 1%)
+    int64_t passatstagnation = 0;    // sum of stagnation_counter at the end of each repair (flips since last min_broken improvement)
+    int64_t passatstagnationbreaks = 0; // anti-stagnation: repairs stopped early because stagnation_counter reached the limit
   } walk;
 
   struct {

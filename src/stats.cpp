@@ -835,6 +835,12 @@ void Stats::print (Internal *internal) {
      PRT ("  barrier-down:  %15" PRId64 "   %10.2f    dynamic barrier decreases per walk_passat",
          stats.walk.passatbarrierdown,
          relative (stats.walk.passatbarrierdown, stats.walk.passat));
+     PRT ("  stagnation:    %15" PRId64 "   %10.2f    avg flips since last improvement at repair end",
+         stats.walk.passatstagnation,
+         relative (stats.walk.passatstagnation, stats.walk.passatrepair));
+     PRT ("  stag-breaks:   %15" PRId64 "   %10.2f    %% of repairs stopped by stagnation limit",
+         stats.walk.passatstagnationbreaks,
+         percent (stats.walk.passatstagnationbreaks, stats.walk.passatrepair));
   }
   if (all || stats.weakened) {
     PRT ("weakened:        %15" PRId64 "   %10.2f    average size",
