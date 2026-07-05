@@ -90,7 +90,7 @@ struct Walker {
   size_t last_min_broken = 0;            // fewest broken clauses reached during the last repair
   std::vector<signed char> best_repair_model; 
 
-  bool increased_passat_limit = false; // walkpassat=18..21: multiply the tick limit by 7
+  bool increased_passat_limit = false; // walkpassat=18..21: multiply the tick limit by 3
 
   std::vector<signed char> best_values; // best model stored so far
   double score (unsigned);              // compute score from break count
@@ -1988,7 +1988,7 @@ void Internal::walk_passat() {
     walker.cheap_break_value = false;
     walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 1000); // 0.1%
     walker.passat_track_improvement = true;
-    walker.increased_passat_limit = (opts.walkpassat == 20); // v20 = v16 + 7x
+    walker.increased_passat_limit = (opts.walkpassat == 20); // v20 = v16 + 3x
   } else if (opts.walkpassat == 17 || opts.walkpassat == 18 || opts.walkpassat == 21) {
     walker.cheap_break_value = false;
     walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 10); // 10%
