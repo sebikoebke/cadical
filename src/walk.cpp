@@ -2162,6 +2162,13 @@ void Internal::walk_passat() {
          no_conflict ? "satisfied activated set" : "limit reached",
          walker.ticks);
 
+#ifndef QUIET
+  if (opts.profile >= 2)
+    PHASE ("walk_passat", stats.walk.passat, "%.2f million ticks per second",
+           1e-6 *
+               relative (walker.ticks, time () - profiles.walk.started));
+#endif
+
   // Save the result: the whole point of walk_passat is to leave a better
   // polarity assignment in phases.saved, which the following CDCL search uses
   // as decision phases
