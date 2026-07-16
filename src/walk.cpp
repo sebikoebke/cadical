@@ -107,7 +107,7 @@ struct Walker {
   vector<int> tuc_pos;            // position of a clause in tuc_clauses for faster lookups, initialized with -1
   vector<int> autarky_set;        // set with all literals that build an autarky
                                   // the advantage is, that we could bould easily a set of clauses with passat_lookup_table if we want to generate the autarky clauses
-  bool show_autarky = true;
+  bool show_autarky = false;
   vector<signed char> unflippable;  // show if a literal is in an autarky => unflippable[lit] == 1 => lit is in an autarky
   vector<signed char> unvisitable;  // show if a clause is fullfilled by alsan autarky => unvisitable[lit] == 1 => clause is fullfilled by an autarky
   vector<signed char> not_autark;   // set of variables that cant be autark
@@ -2423,10 +2423,10 @@ void Internal::walk_passat() {
   // version 21 = version 17 + 3x tick limit
   // version 22 = version 5 + anti-stagnation
   // version 23 = version 22 + 3x tick limit
-  // version 24 = version 5 + autarky bookkeeping (satisfied_counter + tuc_clauses/tuc_pos)
-  // version 25 = version 7 (classic PASSAT, up_expansion) + autarky bookkeeping
+  // version 24 = version 5 + autarky finding
+  // version 25 = version 7 (classic PASSAT, up_expansion) + autarky finding
   // version 26 = version 25 + 3x tick limit
-  // version 27 = version 19 (v15 dynamic barrier + improvement-tracking + 3xtl) + autarky bookkeeping
+  // version 27 = dynamic barrier + 3xtl (=v19) + autarky finding
   if (opts.walkpassat == 24) {
     walker.cheap_break_value = false;
     walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 10); // 10% like v5
@@ -2443,7 +2443,7 @@ void Internal::walk_passat() {
     walker.passat_expansion_barrier = (walker.avg_clause_size > 3.5)
         ? std::max ((size_t) 1, walker.activatable / 100)   // 1%
         : std::max ((size_t) 1, walker.activatable / 10);    // 10%
-    walker.passat_track_improvement = true;
+    walker.passat_track_improvement = false;
     walker.increased_passat_limit = true;
     walker.autarky_mode = true;
   } else if (opts.walkpassat == 22 || opts.walkpassat == 23) {
