@@ -1410,8 +1410,11 @@ struct Internal {
   // walk_passat measurement files in Internal so they stay open across all walk_passat runs
   FILE *measure_file = nullptr;     // local_search_modul_measure.log (probSAT_repair)
   FILE *break_value_file = nullptr; // break_value_measure.csv (break-value correlation)
+  FILE *autarky_file = nullptr;     // autarky.log (build_autarky, show_autarky flag)
   size_t measure_round = 0;         // round index shared by matching Start/End Repair
   size_t break_value_pick = 0;      // id of the picked broken clause, groups its literals
+  size_t autarky_log_count = 0;     // running number of autarkies written to autarky.log
+  size_t pure_log_count = 0;        // running number of pure-literal blocks written to autarky.log
 
   void passat_build (Walker &walker);
   bool passat_assign (Walker &walker, int lit);
@@ -1423,10 +1426,15 @@ struct Internal {
   unsigned passat_break_value (Walker &walker, int lit);
   unsigned passat_fixed_occurence(Walker &walker, int lit);
   int probSAT_pick_lit(Walker &walker, int picked_clause);
+  int tuc_pick_lit(Walker &walker, int picked_clause);
   void flip_and_repair(Walker &walker, int lit);
   void repair_propagation_queue(Walker &walker);
   void write_log_file (Walker &walker, const char *label, int picked_clause,
                        int lit, unsigned real_bv, unsigned cheap_bv);
+  void build_autarky(Walker &walker);
+  void write_autarky_log(Walker &walker);
+  void passat_assign_pure_literals (Walker &walker);
+  void write_pure_log (Walker &walker);
   bool probSAT_repair (Walker &walker);
   void walk_passat ();
 

@@ -276,7 +276,7 @@ OPTION( walkfullocc,      0,   0,  1,1,0,1, "use Kissat's full occurrences inste
 OPTION( walkmaxeff,      1e7,  0,2e9,1,0,1, "maximum efficiency (in 1e3 ticks)") \
 OPTION( walkmineff,        0,  0,1e7,1,0,1, "minimum efficiency") \
 OPTION( walknonstable,     1,  0,  1,0,0,1, "walk in non-stabilizing phase") \
-OPTION( walkpassat,        0,  0, 23,1,0,1, "PASSAT: 0=off; 1-7 exact break (s=10, s=100, s=unlim, s=1pct, s=10pct, s=50pct, up_expansion), 8-14 cheap break, 15 dynamic barrier 1pct<->10pct + improvement-tracking, 16 s=0.1pct + improvement-tracking, 17 v5+improv, 18 v5+3x tick limit, 19 v15+3xtl, 20 v16+3xtl, 21 v17+3xtl, 22 v5+anti-stagnation, 23 v22+3xtl") \
+OPTION( walkpassat,        0,  0, 27,1,0,1, "PASSAT: 0=off; 1-7 exact break (s=10, s=100, s=unlim, s=1pct, s=10pct, s=50pct, up_expansion), 8-14 cheap break, 15 dynamic barrier 1pct<->10pct + improvement-tracking, 16 s=0.1pct + improvement-tracking, 17 v5+improv, 18 v5+3x tick limit, 19 v15+3xtl, 20 v16+3xtl, 21 v17+3xtl, 22 v5+anti-stagnation, 23 v22+3xtl, 24 v5+autarky, 25 v7+autarky, 26 v25+3xtl, 27 v19+autarky") \
 OPTION( walkredundant,     0,  0,  1,0,0,1, "walk redundant clauses too") \
 OPTION( warmup,            1,  0,  1,0,0,1, "warmup before walk using propagation") \
 

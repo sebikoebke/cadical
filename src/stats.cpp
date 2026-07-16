@@ -841,6 +841,16 @@ void Stats::print (Internal *internal) {
      PRT ("  stag-breaks:   %15" PRId64 "   %10.2f    %% of repairs stopped by stagnation limit",
          stats.walk.passatstagnationbreaks,
          percent (stats.walk.passatstagnationbreaks, stats.walk.passatrepair));
+     PRT ("  autarky:       %15" PRId64 "                 autarkies could be found after repair",
+         stats.walk.passatautarky);
+     PRT ("  autarky-lits:  %15" PRId64 "                 literals in an autarky set",
+         stats.walk.passatautarkylits);
+     PRT ("  autarky-claus: %15" PRId64 "                 clauses in a autarky set",
+         stats.walk.passatautarkyclauses);
+     PRT ("  pure-lits:     %15" PRId64 "                 pure literals before the walk_passat loop",
+         stats.walk.passatpureliterals);
+     PRT ("  pure-claus:    %15" PRId64 "                 clauses satisfied by a pure literals",
+         stats.walk.passatpureclauses);
   }
   if (all || stats.weakened) {
     PRT ("weakened:        %15" PRId64 "   %10.2f    average size",

@@ -156,6 +156,11 @@ struct Stats {
     int64_t passatbarrierdown = 0;   // dynamic barrier: number of decreases (jump down to 1%)
     int64_t passatstagnation = 0;    // sum of stagnation_counter at the end of each repair (flips since last min_broken improvement)
     int64_t passatstagnationbreaks = 0; // anti-stagnation: repairs stopped early because stagnation_counter reached the limit
+    int64_t passatautarky = 0;       // number of build_autarky calls that found a non-empty autark part
+    int64_t passatautarkylits = 0;   // literals fixed as unflippable because of an autarky
+    int64_t passatautarkyclauses = 0; // clauses marked unvisitable because of an autarky
+    int64_t passatpureliterals = 0;  // pure literals detected and fixed before the main loop
+    int64_t passatpureclauses = 0;   // clauses satisfied by a fixed pure literal before the main loop
   } walk;
 
   struct {
