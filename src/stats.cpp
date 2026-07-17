@@ -808,9 +808,11 @@ void Stats::print (Internal *internal) {
          percent (relative (stats.walk.passatactivations, stats.walk.passatexpansion),
                   relative (stats.walk.passatactivatable, stats.walk.passat)));
      {
+       const int64_t passatautarkyticks =
+           stats.walk.passatautarkyticksexp + stats.walk.passatautarkyticksrep;
        const int64_t passattotalticks =
            stats.walk.passatexpansionticks + stats.walk.passatrepairticks +
-           stats.walk.passatpureticks + stats.walk.passatautarkyticks;
+           stats.walk.passatpureticks + passatautarkyticks;
        PRT ("  expan-ticks:   %15" PRId64 "   %10.2f    %% of walk_passat ticks",
            stats.walk.passatexpansionticks,
            percent (stats.walk.passatexpansionticks, passattotalticks));
@@ -821,8 +823,14 @@ void Stats::print (Internal *internal) {
            stats.walk.passatpureticks,
            percent (stats.walk.passatpureticks, passattotalticks));
        PRT ("  autarky-ticks: %15" PRId64 "   %10.2f    %% of walk_passat ticks",
-           stats.walk.passatautarkyticks,
-           percent (stats.walk.passatautarkyticks, passattotalticks));
+           passatautarkyticks,
+           percent (passatautarkyticks, passattotalticks));
+       PRT ("   after-expand: %15" PRId64 "   %10.2f    %% of autarky ticks",
+           stats.walk.passatautarkyticksexp,
+           percent (stats.walk.passatautarkyticksexp, passatautarkyticks));
+       PRT ("   after-repair: %15" PRId64 "   %10.2f    %% of autarky ticks",
+           stats.walk.passatautarkyticksrep,
+           percent (stats.walk.passatautarkyticksrep, passatautarkyticks));
      }
      PRT ("  reflips:       %15" PRId64 "   %10.2f    %% of flips re-flip a var",
          stats.walk.passatreflips,
@@ -850,12 +858,24 @@ void Stats::print (Internal *internal) {
      PRT ("  stag-breaks:   %15" PRId64 "   %10.2f    %% of repairs stopped by stagnation limit",
          stats.walk.passatstagnationbreaks,
          percent (stats.walk.passatstagnationbreaks, stats.walk.passatrepair));
-     PRT ("  autarky:       %15" PRId64 "                 autarkies could be found after repair",
+     PRT ("  autarky:       %15" PRId64 "                 build_autarky calls that saw a non-empty autark set",
          stats.walk.passatautarky);
      PRT ("  autarky-lits:  %15" PRId64 "                 literals in an autarky set",
          stats.walk.passatautarkylits);
+     PRT ("   after-expand: %15" PRId64 "   %10.2f %%  of autarky literals",
+         stats.walk.passatautarkylitsexp,
+         percent (stats.walk.passatautarkylitsexp, stats.walk.passatautarkylits));
+     PRT ("   after-repair: %15" PRId64 "   %10.2f %%  of autarky literals",
+         stats.walk.passatautarkylitsrep,
+         percent (stats.walk.passatautarkylitsrep, stats.walk.passatautarkylits));
      PRT ("  autarky-claus: %15" PRId64 "                 clauses in a autarky set",
          stats.walk.passatautarkyclauses);
+     PRT ("   after-expand: %15" PRId64 "   %10.2f %%  of autarky clauses",
+         stats.walk.passatautarkyclausesexp,
+         percent (stats.walk.passatautarkyclausesexp, stats.walk.passatautarkyclauses));
+     PRT ("   after-repair: %15" PRId64 "   %10.2f %%  of autarky clauses",
+         stats.walk.passatautarkyclausesrep,
+         percent (stats.walk.passatautarkyclausesrep, stats.walk.passatautarkyclauses));
      PRT ("  pure-lits:     %15" PRId64 "                 pure literals before the walk_passat loop",
          stats.walk.passatpureliterals);
      PRT ("  pure-claus:    %15" PRId64 "                 clauses satisfied by a pure literals",

@@ -100,6 +100,8 @@ struct Walker {
   bool increased_passat_limit = false; // walkpassat=18..21: multiply the tick limit by 3
 
   bool autarky_mode = false;
+  bool autarky_check_expansion = true; // run build_autarky after a conflicting expansion
+  bool autarky_check_repair = true;    // run build_autarky after a successful repair
   vector<int> satisfied_counter;  // satisfied_counter is initialized with 0 for every clause, is increased by one if one literals is assigned with true in the clause
   vector<int> tuc_clauses;        // tuc: touched unsatisfied clauses, a trail like broken clauses, with all clauses that are touched but not satisfied yet
                                   // if you want to find the broken clauses in tuc you could simply check the conflict_counter of the current clause
@@ -2426,17 +2428,21 @@ void Internal::walk_passat() {
   // version 25 = version 7 (classic PASSAT, up_expansion) + autarky finding
   // version 26 = version 25 + 3x tick limit
   // version 27 = dynamic barrier + 3xtl (=v19) + autarky finding
+  // version 28 = version 7 (classic PASSAT, up_expansion) + autarky check (only) after expansion
+  // version 29 = version 7 (classic PASSAT, up_expansion) + autarky check (only) after repair
   if (opts.walkpassat == 24) {
     walker.cheap_break_value = false;
-    walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 10); // 10% like v5
+    walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 10); // 10%
     walker.autarky_mode = true;
-  } else if (opts.walkpassat == 25 || opts.walkpassat == 26) {
+  } else if (opts.walkpassat == 25 || opts.walkpassat == 26 ||
+             opts.walkpassat == 28 || opts.walkpassat == 29) {
     walker.cheap_break_value = false;
-    walker.use_up_expansion = true; // classic UP-guided expansion like v7
+    walker.use_up_expansion = true;
     walker.autarky_mode = true;
-    walker.increased_passat_limit = (opts.walkpassat == 26); // v26 = v25 + 3x tick limit
+    walker.increased_passat_limit = (opts.walkpassat == 26);
+    walker.autarky_check_expansion = (opts.walkpassat == 28);
+    walker.autarky_check_repair = (opts.walkpassat == 29);
   } else if (opts.walkpassat == 27) {
-    // version 27 = version 19 (v15 dynamic barrier + improvement-tracking + 3x tick limit) + autarky
     walker.cheap_break_value = false;
     walker.dynamic_barrier = true;
     walker.passat_expansion_barrier = (walker.avg_clause_size > 3.5)
@@ -2544,6 +2550,18 @@ void Internal::walk_passat() {
       if (no_conflict)
         break;
 
+      // check for autarkies before Repair, because maybe we found a autarky
+      // if so it would make no sense to flipp on a existing autarky,
+      // because the conflict is not inside the autarky
+      int64_t autarky_ticks_before = walker.ticks;
+      int64_t autarky_lits_before = stats.walk.passatautarkylits;
+      int64_t autarky_clauses_before = stats.walk.passatautarkyclauses;
+      if (walker.autarky_mode && walker.autarky_check_expansion)
+        build_autarky (walker);
+      stats.walk.passatautarkyticksexp += walker.ticks - autarky_ticks_before;
+      stats.walk.passatautarkylitsexp += stats.walk.passatautarkylits - autarky_lits_before;
+      stats.walk.passatautarkyclausesexp += stats.walk.passatautarkyclauses - autarky_clauses_before;
+
       // update the dynamic barrier: after each run compare this runs conflicts to the previous runs conflicts
       if (walker.dynamic_barrier) {
         const size_t cur = walker.expansion_conflict_counter;
@@ -2569,10 +2587,16 @@ void Internal::walk_passat() {
       const bool repaired = probSAT_repair(walker);
       stats.walk.passatrepairticks += walker.ticks - ticks_before;
 
-      // check for autarkies
-      int64_t autarky_ticks_before = walker.ticks;
-      if (walker.autarky_mode && repaired) build_autarky (walker);
-      stats.walk.passatautarkyticks += walker.ticks - autarky_ticks_before;
+      // check for autarkies after Repair
+      // we could find autarkies if Repair luckily flipped one
+      autarky_ticks_before = walker.ticks;
+      autarky_lits_before = stats.walk.passatautarkylits;
+      autarky_clauses_before = stats.walk.passatautarkyclauses;
+      if (walker.autarky_mode && walker.autarky_check_repair && repaired)
+        build_autarky (walker);
+      stats.walk.passatautarkyticksrep += walker.ticks - autarky_ticks_before;
+      stats.walk.passatautarkylitsrep += stats.walk.passatautarkylits - autarky_lits_before;
+      stats.walk.passatautarkyclausesrep += stats.walk.passatautarkyclauses - autarky_clauses_before;
       
       // if improvement version (walkpassat=16) is used and a reapir failed, 
       // we check if the current assignment is the best assignment the walk passed through

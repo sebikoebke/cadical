@@ -162,7 +162,12 @@ struct Stats {
     int64_t passatpureliterals = 0;  // pure literals detected and fixed before the main loop
     int64_t passatpureclauses = 0;   // clauses satisfied by a fixed pure literal before the main loop
     int64_t passatpureticks = 0;     // ticks spent in passat_assign_pure_literals
-    int64_t passatautarkyticks = 0;  // ticks spent in build_autarky
+    int64_t passatautarkyticksexp = 0; // ticks spent in build_autarky called after a conflicting expansion
+    int64_t passatautarkyticksrep = 0; // ticks spent in build_autarky called after a successful repair
+    int64_t passatautarkylitsexp = 0;  // autarky literals newly frozen by the after-expansion call
+    int64_t passatautarkylitsrep = 0;  // autarky literals newly frozen by the after-repair call
+    int64_t passatautarkyclausesexp = 0; // clauses newly marked unvisitable by the after-expansion call
+    int64_t passatautarkyclausesrep = 0; // clauses newly marked unvisitable by the after-repair call
   } walk;
 
   struct {
