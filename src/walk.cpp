@@ -2440,8 +2440,8 @@ void Internal::walk_passat() {
     walker.use_up_expansion = true;
     walker.autarky_mode = true;
     walker.increased_passat_limit = (opts.walkpassat == 26);
-    walker.autarky_check_expansion = (opts.walkpassat == 28);
-    walker.autarky_check_repair = (opts.walkpassat == 29);
+    walker.autarky_check_expansion = (opts.walkpassat != 29);
+    walker.autarky_check_repair = (opts.walkpassat != 28);
   } else if (opts.walkpassat == 27) {
     walker.cheap_break_value = false;
     walker.dynamic_barrier = true;
