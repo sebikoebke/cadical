@@ -1432,9 +1432,8 @@ struct Internal {
   void write_log_file (Walker &walker, const char *label, int picked_clause,
                        int lit, unsigned real_bv, unsigned cheap_bv);
   void build_autarky(Walker &walker);
-  void write_autarky_log(Walker &walker);
+  void write_autarky_log(Walker &walker, bool pure = false);
   void passat_assign_pure_literals (Walker &walker);
-  void write_pure_log (Walker &walker);
   bool probSAT_repair (Walker &walker);
   void walk_passat ();
 

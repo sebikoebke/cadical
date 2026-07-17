@@ -807,14 +807,23 @@ void Stats::print (Internal *internal) {
          relative (stats.walk.passatactivations, stats.walk.passatexpansion),
          percent (relative (stats.walk.passatactivations, stats.walk.passatexpansion),
                   relative (stats.walk.passatactivatable, stats.walk.passat)));
-     PRT ("  exp-ticks:     %15" PRId64 "   %10.2f    %% of walk_passat ticks",
-         stats.walk.passatexpansionticks,
-         percent (stats.walk.passatexpansionticks,
-                  stats.walk.passatexpansionticks + stats.walk.passatrepairticks));
-     PRT ("  repair-ticks:  %15" PRId64 "   %10.2f    %% of walk_passat ticks",
-         stats.walk.passatrepairticks,
-         percent (stats.walk.passatrepairticks,
-                  stats.walk.passatexpansionticks + stats.walk.passatrepairticks));
+     {
+       const int64_t passattotalticks =
+           stats.walk.passatexpansionticks + stats.walk.passatrepairticks +
+           stats.walk.passatpureticks + stats.walk.passatautarkyticks;
+       PRT ("  expan-ticks:   %15" PRId64 "   %10.2f    %% of walk_passat ticks",
+           stats.walk.passatexpansionticks,
+           percent (stats.walk.passatexpansionticks, passattotalticks));
+       PRT ("  repair-ticks:  %15" PRId64 "   %10.2f    %% of walk_passat ticks",
+           stats.walk.passatrepairticks,
+           percent (stats.walk.passatrepairticks, passattotalticks));
+       PRT ("  pure-ticks:    %15" PRId64 "   %10.2f    %% of walk_passat ticks",
+           stats.walk.passatpureticks,
+           percent (stats.walk.passatpureticks, passattotalticks));
+       PRT ("  autarky-ticks: %15" PRId64 "   %10.2f    %% of walk_passat ticks",
+           stats.walk.passatautarkyticks,
+           percent (stats.walk.passatautarkyticks, passattotalticks));
+     }
      PRT ("  reflips:       %15" PRId64 "   %10.2f    %% of flips re-flip a var",
          stats.walk.passatreflips,
          percent (stats.walk.passatreflips, stats.walk.passatflips));

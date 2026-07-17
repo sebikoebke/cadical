@@ -2010,60 +2010,71 @@ void Internal::write_log_file (Walker &walker, const char *label, int picked_cla
 
 /*----------------------------------------------------------------------------*/
 
-// write a log file for the autarky set
-void Internal::write_autarky_log(Walker &walker) {
+// write a log to show the autarkies and pure literals
+void Internal::write_autarky_log(Walker &walker, bool pure) {
   if (!autarky_file)
     autarky_file = fopen ("autarky.log", "w");
   if (!autarky_file)
     return;
   FILE *f = autarky_file;
-  fprintf (f, "%zu. Autarky:\n", ++autarky_log_count);
 
-  // V(autarky): the autarky literals = trail literals that survived peeling
-  // (pure literals fixed pre-loop are reported separately, see write_pure_log)
-  fputs ("V(autarky) = {", f);
+  if (pure)
+    fprintf (f, "%zu. Pure literals (pre-loop):\n", ++pure_log_count);
+  else
+    fprintf (f, "%zu. Autarky:\n", ++autarky_log_count);
+
+  // which trail literals belong to this block
+  auto selected = [&] (int lit) {
+    return pure ? (bool) walker.pure_lits[vidx (lit)]
+                : (!walker.not_autark[vidx (lit)] && !walker.pure_lits[vidx (lit)]);           
+  };
+
+  // V: the literals of this block (pure lits, or the peeled autarky literals)
+  fprintf (f, "%s = {", pure ? "V(pure)" : "V(autarky)");
   bool first = true;
   for (const auto lit : walker.passat_trail)
-    if (!walker.not_autark[vidx (lit)] && !walker.pure_lits[vidx (lit)])
+    if (selected (lit))
       fprintf (f, "%s%d", first ? (first = false, "") : ", ", lit);
   fputs ("}\n", f);
 
-  // F(autarky): clauses satisfied by the autarky = union of occ(lit) over V,
-  // collected and de-duplicated for a clean set
+  // F: clauses satisfied by V = union of occ(lit) over V, de-duplicated
   std::vector<int> fset;
   for (const auto lit : walker.passat_trail)
-    if (!walker.not_autark[vidx (lit)] && !walker.pure_lits[vidx (lit)])
+    if (selected (lit))
       for (const auto c : walker.passat_lookup_table[vlit (lit)])
         fset.push_back (c);
   std::sort (fset.begin (), fset.end ());
   fset.erase (std::unique (fset.begin (), fset.end ()), fset.end ());
-  fputs ("F(autarky) = {", f);
+  fprintf (f, "%s = {", pure ? "F(pure)" : "F(autarky)");
   first = true;
   for (const auto c : fset)
     fprintf (f, "%sc%d", first ? (first = false, "") : ", ", c);
   fputs ("}\n\n", f);
 
   // per-literal table: for each autarky literal, one row for the literal itself
-  // (occ(lit): the clauses it satisfies) and directly below one row for the
-  // opposite polarity (occ(-lit): clauses it touches negatively, which the
-  // autarky property guarantees are satisfied by some other autarky literal)
-  fputs ("lit\t| clauses\n", f);
-  fputs ("--------------------------------------------------\n", f);
-  for (const auto lit : walker.passat_trail)
-    if (!walker.not_autark[vidx (lit)] && !walker.pure_lits[vidx (lit)]) {
-      fprintf (f, "%d\t| ", lit);
-      bool fc = true;
-      for (const auto c : walker.passat_lookup_table[vlit (lit)])
-        fprintf (f, "%s%d", fc ? (fc = false, "") : ", ", c);
-      fputs ("\n", f);
-      // opposite polarity -lit directly below
-      fprintf (f, "%d\t| ", -lit);
-      fc = true;
-      for (const auto c : walker.passat_lookup_table[vlit (-lit)])
-        fprintf (f, "%s%d", fc ? (fc = false, "") : ", ", c);
-      fputs ("\n", f);
-    }
-  fputs ("--------------------------------------------------\n\n", f);
+  // occ(lit): the clauses it satisfies and directly below one row for the
+  // opposite polarity occ(-lit): clauses it touches negatively, which the
+  // autarky property guarantees are satisfied by some other autarky literal
+  // Not meaningful for pure literals so skipped there
+  if (!pure) {
+    fputs ("lit\t| clauses\n", f);
+    fputs ("--------------------------------------------------\n", f);
+    for (const auto lit : walker.passat_trail)
+      if (selected (lit)) {
+        fprintf (f, "%d\t| ", lit);
+        bool fc = true;
+        for (const auto c : walker.passat_lookup_table[vlit (lit)])
+          fprintf (f, "%s%d", fc ? (fc = false, "") : ", ", c);
+        fputs ("\n", f);
+        // opposite polarity -lit directly below
+        fprintf (f, "%d\t| ", -lit);
+        fc = true;
+        for (const auto c : walker.passat_lookup_table[vlit (-lit)])
+          fprintf (f, "%s%d", fc ? (fc = false, "") : ", ", c);
+        fputs ("\n", f);
+      }
+    fputs ("--------------------------------------------------\n\n", f);
+  }
   fflush (f);
 }
 
@@ -2073,22 +2084,25 @@ void Internal::passat_assign_pure_literals (Walker &walker) {
   const int64_t pure_before = stats.walk.passatpureliterals;
 
   for (int i = 1; i <= max_var; i++) {
-    // only variables PASSAT could actually assign: active and still unassigned
-    if (!active (i) || val (i))
+    // only care about active and unassigned variables
+    if (!active(i) || val(i))
       continue;
 
-    const size_t occ_lit = walker.passat_lookup_table[vlit ( i)].size ();
-    const size_t occ_not_lit = walker.passat_lookup_table[vlit (-i)].size ();
+    // check if the positive polarity of variable i occur in clauses => if so occ_lit == 1
+    const bool occ_lit     = !walker.passat_lookup_table[vlit(i)].empty();
+    walker.ticks++;   // one access into the occurrence table
+    // check if the negative polarity of variable i occur in clauses => if so occ_not_lit == 1
+    const bool occ_not_lit = !walker.passat_lookup_table[vlit(-i)].empty();
+    walker.ticks++;   // one access into the occurrence table
 
-    // a variable that occurs in neither polarity is free (not pure in a clause)
-    if (occ_lit== 0 && occ_not_lit == 0)
-      continue;
-
-    // find the polarity of the pure lit
-    int pure_lit = 0;
-    if (occ_not_lit == 0){
+    // a literal is pure if the opposite polarity never occurs
+    // if both polarities are absent we found a free variable 
+    // if both polarities are present, literal cant be pure
+    int pure_lit;
+    if (occ_lit && !occ_not_lit) {
       pure_lit = i;
-    } else if (occ_lit == 0) {
+    }
+    else if (occ_not_lit && !occ_lit) {
       pure_lit = -i;
     } else {
       continue;
@@ -2100,55 +2114,25 @@ void Internal::passat_assign_pure_literals (Walker &walker) {
 
     // fix the literal
     walker.unflippable[vidx(pure_lit)] = 1;
+    walker.ticks++;
     walker.pure_lits[vidx(pure_lit)] = 1;
+    walker.ticks++;
 
     stats.walk.passatpureliterals++;
     // every clause of pure literal is satisfied and we dont need to visit them in the future
     const auto &row = walker.passat_lookup_table[vlit(pure_lit)];
+    walker.ticks += 1 + cache_lines (row.size (), sizeof (int));
     stats.walk.passatpureclauses += (int64_t) row.size ();
     if (walker.autarky_mode) {
       for (const auto c : row) {
         walker.unvisitable[c] = 1;
+        walker.ticks++;
       }
     }
   }
 
-  if (walker.show_autarky && stats.walk.passatpureliterals > pure_before) write_pure_log (walker);
-}
-
-/*----------------------------------------------------------------------------*/
-
-// write a log file for the autarky set
-void Internal::write_pure_log (Walker &walker) {
-  if (!autarky_file)
-    autarky_file = fopen ("autarky.log", "w");
-  if (!autarky_file)
-    return;
-  FILE *f = autarky_file;
-  fprintf (f, "%zu. Pure literals (pre-loop):\n", ++pure_log_count);
-
-  // V(pure): the fixed pure literals = trail literals marked pure_fixed
-  fputs ("V(pure) = {", f);
-  bool first = true;
-  for (const auto lit : walker.passat_trail)
-    if (walker.pure_lits[vidx (lit)])
-      fprintf (f, "%s%d", first ? (first = false, "") : ", ", lit);
-  fputs ("}\n", f);
-
-  // F(pure): clauses satisfied by the pure literals (union of occ(lit) over V)
-  std::vector<int> fset;
-  for (const auto lit : walker.passat_trail)
-    if (walker.pure_lits[vidx (lit)])
-      for (const auto c : walker.passat_lookup_table[vlit (lit)])
-        fset.push_back (c);
-  std::sort (fset.begin (), fset.end ());
-  fset.erase (std::unique (fset.begin (), fset.end ()), fset.end ());
-  fputs ("F(pure) = {", f);
-  first = true;
-  for (const auto c : fset)
-    fprintf (f, "%sc%d", first ? (first = false, "") : ", ", c);
-  fputs ("}\n\n", f);
-  fflush (f);
+  if (walker.show_autarky && stats.walk.passatpureliterals > pure_before)
+    write_autarky_log (walker, /*pure=*/true);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -2167,6 +2151,8 @@ void Internal::build_autarky(Walker &walker) {
   while (i < walker.autarky_worklist.size()) {
     Clause *clause = clauses[walker.autarky_worklist[i]];
     i++;
+
+    walker.ticks += cache_lines(clause->size, sizeof(int));
     for (auto lit : *clause){
       assert (val(lit) != 1 || walker.not_autark[vidx(lit)]);
 
@@ -2175,7 +2161,10 @@ void Internal::build_autarky(Walker &walker) {
 
         walker.not_autark[vidx(-lit)] = 1;
         walker.not_autark_trail.push_back(-lit);
-        for (auto c : walker.passat_lookup_table[vlit(-lit)]){
+        const auto &row = walker.passat_lookup_table[vlit(-lit)];
+        walker.ticks += 1 + cache_lines(row.size(), sizeof(int));
+        for (auto c : row){
+          walker.ticks++;
           // c is not visited yet for -lit, so satisfied_counter[c] still should be positiv
           assert(walker.satisfied_counter[c] > 0);
           // decrement the satisfied_counter because -lit cant be the reason for autarky
@@ -2185,7 +2174,7 @@ void Internal::build_autarky(Walker &walker) {
             walker.autarky_worklist.push_back(c);
           }
         }
-      } 
+      }
     }
   }
 
@@ -2196,7 +2185,9 @@ void Internal::build_autarky(Walker &walker) {
   // did the autark set actually grow since the last call of Repair (but in the same walk_passat run)
   bool autarky_grew = false;
 
+  walker.ticks += 1 + cache_lines(walker.passat_trail.size(), sizeof(int));
   for (auto lit : walker.passat_trail){
+    walker.ticks++;
     // pure literals fixed before the main loop are trivially autark, but they
     // are tracked and reported on their own, so keep them out of the autarky set
     if (walker.not_autark[vidx(lit)] != 1 && !walker.pure_lits[vidx(lit)]) {
@@ -2206,7 +2197,10 @@ void Internal::build_autarky(Walker &walker) {
         stats.walk.passatautarkylits++;
         autarky_grew = true;
       }
-      for (auto c : walker.passat_lookup_table[vlit(lit)]){
+      const auto &row = walker.passat_lookup_table[vlit(lit)];
+      walker.ticks += 1 + cache_lines(row.size(), sizeof(int));
+      for (auto c : row){
+        walker.ticks++;
         if (!walker.unvisitable[c]) {
           walker.unvisitable[c] = 1;
           stats.walk.passatautarkyclauses++;
@@ -2227,10 +2221,15 @@ void Internal::build_autarky(Walker &walker) {
 
   // Phase 3:
   // reset und undo every literal counter that are pushed on not_autark_trail
+  walker.ticks += 1 + cache_lines(walker.not_autark_trail.size(), sizeof(int));
   for (auto m : walker.not_autark_trail){
+    walker.ticks++;
     // not_autark is vidx-indexed, m is the literal we pushed => use vidx(m)
     walker.not_autark[vidx(m)] = 0;
-    for (auto n : walker.passat_lookup_table[vlit(m)]){
+    const auto &row = walker.passat_lookup_table[vlit(m)];
+    walker.ticks += 1 + cache_lines(row.size(), sizeof(int));
+    for (auto n : row){
+      walker.ticks++;
       walker.satisfied_counter[n]++;
     }
   }
@@ -2526,10 +2525,10 @@ void Internal::walk_passat() {
   if (consistent_with_assumptions){
     no_conflict = true;
 
-    // detect and fix pure literals before the main loop: a variable that occurs
-    // in only one polarity among the tracked clauses can be set true safely and
-    // stays fixed for the whole walk (see passat_assign_pure_literals).
+    // detect and fix pure literals before the main loop
+    int64_t pure_ticks_before = walker.ticks;
     passat_assign_pure_literals (walker);
+    stats.walk.passatpureticks += walker.ticks - pure_ticks_before;
 
     // for dynamic barrier (walkpassat=15): no previous run to compare against the first expansion
     bool first_run = true;
@@ -2571,7 +2570,9 @@ void Internal::walk_passat() {
       stats.walk.passatrepairticks += walker.ticks - ticks_before;
 
       // check for autarkies
+      int64_t autarky_ticks_before = walker.ticks;
       if (walker.autarky_mode && repaired) build_autarky (walker);
+      stats.walk.passatautarkyticks += walker.ticks - autarky_ticks_before;
       
       // if improvement version (walkpassat=16) is used and a reapir failed, 
       // we check if the current assignment is the best assignment the walk passed through

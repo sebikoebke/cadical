@@ -161,6 +161,8 @@ struct Stats {
     int64_t passatautarkyclauses = 0; // clauses marked unvisitable because of an autarky
     int64_t passatpureliterals = 0;  // pure literals detected and fixed before the main loop
     int64_t passatpureclauses = 0;   // clauses satisfied by a fixed pure literal before the main loop
+    int64_t passatpureticks = 0;     // ticks spent in passat_assign_pure_literals
+    int64_t passatautarkyticks = 0;  // ticks spent in build_autarky
   } walk;
 
   struct {
