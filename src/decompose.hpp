@@ -11,6 +11,7 @@ namespace CaDiCaL {
 
 #define TRAVERSED UINT_MAX // mark completely traversed
 
+struct Clause;
 struct DFS {
   unsigned idx;   // depth first search index
   unsigned min;   // minimum reachable index

@@ -1,7 +1,7 @@
 #ifndef _ema_hpp_INCLUDED
 #define _ema_hpp_INCLUDED
 
-#include <cstdint>
+#include <cassert>
 
 namespace CaDiCaL {
 
@@ -14,6 +14,7 @@ struct Internal;
 struct EMA {
 
 #ifdef LOGGING
+#include <cstdint>
   uint64_t updated;
 #endif
   double value;  // unbiased (corrected) moving average

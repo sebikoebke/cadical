@@ -57,7 +57,7 @@ bool Internal::stabilizing () {
     inc.stabilize = 1;
 
   int64_t next_delta_ticks = inc.stabilize;
-  int64_t stabphases = stats.stabphases + 1;
+  int64_t stabphases = stats.nowstabphases + 1;
   next_delta_ticks *= stabphases * stabphases;
 
   const bool next_stable = !stable;
@@ -73,7 +73,7 @@ bool Internal::stabilizing () {
   stable = !stable; // Switch!!!!!
 
   if (stable)
-    stats.stabphases++;
+    ++stats.stabphases, ++stats.nowstabphases;
 
   swap_averages ();
   report (stable ? '[' : '{');

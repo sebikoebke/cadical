@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <cstdint>
+#include <unordered_map>
 #include <vector>
 
 namespace CaDiCaL {
@@ -15,7 +16,7 @@ using namespace std;
 
 inline double relative (double a, double b) { return b ? a / b : 0; }
 inline double percent (double a, double b) { return relative (100 * a, b); }
-inline int sign (int lit) { return (lit > 0) - (lit < 0); }
+inline signed char sign (int lit) { return (lit > 0) - (lit < 0); }
 inline unsigned bign (int lit) { return 1 + (lit < 0); }
 
 /*------------------------------------------------------------------------*/
@@ -40,7 +41,7 @@ bool parse_int_str (const char *str, int &);
 
 /*------------------------------------------------------------------------*/
 
-inline bool is_power_of_two (unsigned n) { return n && !(n & (n - 1)); }
+inline bool is_power_of_two (size_t n) { return n > 0 && n && !(n & (n - 1)); }
 
 inline bool contained (int64_t c, int64_t l, int64_t u) {
   return l <= c && c <= u;
@@ -130,6 +131,13 @@ template <class T> static void reserve_at_least (vector<T> &v, size_t N) {
   v.reserve (new_size);
 }
 
+template <class K, class E>
+static K find_or_default (const std::unordered_map<K, E> &map, K key, E default_el) {
+  auto it = map.find (key);
+  if (it == map.end ())
+    return default_el;
+  return it->second;
+}
 // Clean-up class for bad_alloc error safety.
 
 template <typename T> struct DeferDeleteArray {

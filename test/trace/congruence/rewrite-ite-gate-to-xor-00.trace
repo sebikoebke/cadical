@@ -1,0 +1,35 @@
+0 init
+1 set check 1
+2 set checkproof 1
+3 set luckyearly 0
+4 add 4
+5 add 1
+6 add 2
+7 add 0
+8 add -2
+9 add -4
+10 add 0
+11 add -1
+12 add -4
+13 add -3
+14 add 0
+15 add -3
+16 add -2
+17 add 0
+18 add 4
+19 add 3
+20 add -1
+21 add 0
+22 add 4
+23 add 2
+24 add 0
+25 add -4
+26 add 1
+27 add -2
+28 add 0
+29 add 3
+30 add 2
+31 add 0
+32 phase 4
+33 phase 8
+34 solve 0

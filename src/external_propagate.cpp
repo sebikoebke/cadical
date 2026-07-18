@@ -14,6 +14,8 @@ void Internal::add_observed_var (int ilit) {
   if (idx >= (int64_t) relevanttab.size ())
     relevanttab.resize (1 + (size_t) idx, 0);
   unsigned &ref = relevanttab[idx];
+  if (flags (idx).unused())
+    declare_variable (idx);
   if (ref < UINT_MAX) {
     ref++;
     LOG ("variable %d is observed %u times", idx, ref);
@@ -30,10 +32,11 @@ void Internal::add_observed_var (int ilit) {
     REQUIRE (!conflict,
              "can not observe assigned variable during conflict analysis");
     const int assignment_level = var (ilit).level;
-    backtrack (assignment_level - 1);
+    backtrack_without_updating_phases (assignment_level - 1);
   } else if (level && fixed (ilit)) {
-    backtrack (0);
+    backtrack_without_updating_phases (0);
   }
+  activating_all_new_imported_literals ();
 }
 
 /*----------------------------------------------------------------------------*/
@@ -49,7 +52,7 @@ void Internal::remove_observed_var (int ilit) {
         !conflict,
         "can not unobserve assigned variable during conflict analysis");
     const int assignment_level = var (ilit).level;
-    backtrack (assignment_level - 1);
+    backtrack_without_updating_phases (assignment_level - 1);
   }
 
   assert (fixed (ilit) || !val (ilit));
@@ -92,13 +95,13 @@ void Internal::set_changed_val () {
       continue;
     if (var (idx).reason != external_reason)
       continue;
-    if (!changed_val) {
-      changed_val = idx;
+    if (!earliest_changed_val) {
+      earliest_changed_val = idx;
       continue;
     }
-    assert (val (changed_val));
-    if (var (idx).level < var (changed_val).level) {
-      changed_val = idx;
+    assert (val (earliest_changed_val));
+    if (var (idx).level < var (earliest_changed_val).level) {
+      earliest_changed_val = idx;
     }
   }
 }
@@ -456,7 +459,7 @@ void Internal::move_literals_to_watch () {
 
   for (int i = 0; i < 2; i++) {
     int highest_position = i;
-    int highest_literal = clause[i];
+    const int highest_literal = clause[i];
 
     int highest_level = var (highest_literal).level;
     int highest_value = val (highest_literal);
@@ -480,7 +483,6 @@ void Internal::move_literals_to_watch () {
       }
 
       highest_position = j;
-      highest_literal = other;
       highest_level = other_level;
       highest_value = other_value;
     }
@@ -823,7 +825,7 @@ void Internal::handle_external_clause (Clause *res) {
     assert (!force_no_backtrack);
     assert (level);
     // if (!opts.chrono) {
-    backtrack ();
+    backtrack_without_updating_phases ();
     // }
     return;
   }
@@ -842,13 +844,13 @@ void Internal::handle_external_clause (Clause *res) {
   if (val (pos0) < 0) { // conflicting or propagating clause
     assert (0 < l1 && l1 <= var (pos0).level);
     if (!opts.chrono) {
-      backtrack (l1);
+      backtrack_without_updating_phases (l1);
     }
     if (val (pos0) < 0) {
       conflict = res;
       if (!from_propagator) {
         // its better to backtrack instead of analyze
-        backtrack (l1 - 1);
+        backtrack_without_updating_phases (l1 - 1);
         conflict = 0;
         assert (!val (pos0) && !val (pos1));
       }
@@ -861,7 +863,7 @@ void Internal::handle_external_clause (Clause *res) {
   }
   if (val (pos1) < 0 && !val (pos0)) { // propagating clause
     if (!opts.chrono) {
-      backtrack (l1);
+      backtrack_without_updating_phases (l1);
     }
     search_assign_driving (pos0, res);
     if (from_propagator)
@@ -1003,7 +1005,7 @@ bool Internal::external_check_solution () {
   if (!unsat && conflict) {
     const int conflict_level = var (conflict->literals[0]).level;
     if (conflict_level != level) {
-      backtrack (conflict_level);
+      backtrack_without_updating_phases (conflict_level);
     }
   }
 
@@ -1052,7 +1054,7 @@ void Internal::notify_assignments () {
 
 void Internal::connect_propagator () {
   if (level)
-    backtrack ();
+    backtrack_without_updating_phases ();
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1269,15 +1271,16 @@ bool Internal::get_merged_literals (std::vector<int> &eq_class) {
 
   if (!lit_level) {
     // Collect all the variables that are merged and mapped to that ilit
-    size_t e2i_size = external->e2i.size ();
     int ivar = abs (ilit);
-    for (size_t i = 0; i < e2i_size; i++) {
-      int other = abs (external->e2i[i]);
+    for (auto id : external->e2i) {
+      int o_elit = id.second;
+      int o_ilit = id.first;
+      int other = abs (o_elit);
       if (other == ivar) {
-        if (external->e2i[i] == ilit)
-          eq_class.push_back (i);
+        if (o_elit == ilit)
+          eq_class.push_back (o_ilit);
         else
-          eq_class.push_back (-1 * i);
+          eq_class.push_back (-o_ilit);
       }
     }
 
@@ -1299,10 +1302,9 @@ void Internal::get_all_fixed_literals (std::vector<int> &fixed_lits) {
   if (!trail.size ())
     return;
 
-  int e2i_size = external->e2i.size ();
-  int ilit;
-  for (int eidx = 1; eidx < e2i_size; eidx++) {
-    ilit = external->e2i[eidx];
+  for (auto id : external->e2i) {
+    int ilit = id.second;
+    int eidx = id.first;
     if (ilit && !external->ervars[eidx]) {
       Flags &f = flags (ilit);
       if (f.status == Flags::FIXED) {

@@ -14,9 +14,12 @@ void Internal::copy_phases (vector<signed char> &dst) {
 
 void Internal::save_assigned_phases (vector<signed char> &dst) {
   START (copy);
-  for (auto i : vars) {
-    if (vals[i])
-      dst[i] = vals[i];
+  for (auto l : trail) {
+    // discussion with Armin and Florian to only save value excluding
+    // the ones that lead to the conflict to avoid the order of
+    // propagation to lead to different conflicts.
+    if (var (l).level < level)
+      dst[vidx (l)] = vals[vidx (l)];
   }
   STOP (copy);
 }

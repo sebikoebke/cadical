@@ -679,15 +679,14 @@ long Internal::condition_round (long delta) {
                 replacement = other;
             }
             watched_autarky_literal = replacement;
-
+#ifndef LOGGING
             if (replacement) {
               LOG (c, "watching autarky %d instead %d in candidate",
                    replacement, watched_autarky_literal);
-              watched_autarky_literal = replacement;
             } else {
               LOG ("failed to find an autarky replacement");
-              watched_autarky_literal = 0; // Breaks out of 4 loops!!!!!
             }
+#endif
           } // End of loop of turning autarky literals into conditionals.
         } // End of loop of all watched clauses of an unassigned literal.
         //
@@ -784,13 +783,13 @@ long Internal::condition_round (long delta) {
       // TODO find a way to shrink the autarky part or some other way to
       // avoid pushing too many literals on the extension stack.
       //
-      external->push_zero_on_extension_stack ();
+      std::vector<int> witness;
       for (const auto &lit : trail)
         if (is_autarky_literal (lit))
-          external->push_witness_literal_on_extension_stack (lit);
+          witness.push_back(lit);
       if (proof)
         proof->weaken_minus (c);
-      external->push_clause_on_extension_stack (c);
+      external->push_external_clause_and_witness_on_extension_stack (c, std::move (witness));
 
       mark_garbage (c);
 

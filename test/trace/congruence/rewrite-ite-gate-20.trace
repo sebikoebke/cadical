@@ -1,0 +1,33 @@
+0 init
+1 set check 1
+2 add 3
+3 add 1
+4 add 0
+5 add -2
+6 add -3
+7 add -4
+8 add 0
+9 add 1
+10 add 4
+11 add -2
+12 add 0
+13 add -2
+14 add -1
+15 add -4
+16 add 0
+17 add -3
+18 add -1
+19 add 0
+20 add 4
+21 add 3
+22 add -2
+23 add 0
+24 add 4
+25 add 3
+26 add 2
+27 add 0
+28 add -3
+29 add -4
+30 add 2
+31 add 0
+32 simplify 4 0

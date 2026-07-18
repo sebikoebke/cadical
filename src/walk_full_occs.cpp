@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include <cstddef>
 #include <cstdint>
 
 namespace CaDiCaL {
@@ -49,7 +50,7 @@ struct WalkerFO {
   std::vector<int>
       flips; // remember the flips compared to the last best saved model
   int best_trail_pos;
-  int64_t minimum = INT64_MAX;
+  size_t minimum = (size_t)-1;
   std::vector<signed char> best_values; // best model found so far
   double score (unsigned);              // compute score from break count
 
@@ -129,7 +130,7 @@ struct WalkerFO {
   WalkerFO (Internal *, double size, int64_t limit);
   void push_flipped (int flipped);
   void save_walker_trail (bool);
-  void save_final_minimum (int64_t old_minimum);
+  void save_final_minimum (size_t old_minimum);
   void make_clauses_along_occurrences (int lit);
   void make_clauses_along_unsatisfied (int lit);
   void make_clauses (int lit);
@@ -293,7 +294,7 @@ void WalkerFO::save_walker_trail (bool keep) {
 }
 
 // finally export the final minimum
-void WalkerFO::save_final_minimum (int64_t old_init_minimum) {
+void WalkerFO::save_final_minimum (size_t old_init_minimum) {
   assert (minimum <= old_init_minimum);
 #ifdef NDEBUG
   (void) old_init_minimum;
@@ -544,7 +545,7 @@ void WalkerFO::break_clauses (int lit) {
   // Finally add all new unsatisfied (broken) clauses.
 
 #ifdef LOGGING
-  int64_t broken = 0;
+  size_t broken = 0;
 #endif
   const WalkerFO::TOccs &ws = occs (lit);
   ticks += (1 + internal->cache_lines (ws.size (), sizeof (Clause *)));
@@ -566,7 +567,7 @@ void WalkerFO::break_clauses (int lit) {
     broken++;
 #endif
   }
-  LOG ("broken %" PRId64 " clauses by flipping %d", broken, lit);
+  LOG ("broken %zd clauses by flipping %d", broken, lit);
   internal->stats.ticks.walkflipbroken += ticks - old;
   STOP (walkflipbroken);
 }
@@ -580,7 +581,7 @@ void WalkerFO::walk_full_occs_flip_lit (int lit) {
 
   // First flip the literal value.
   //
-  const int tmp = sign (lit);
+  const signed char tmp = sign (lit);
   const int idx = abs (lit);
   internal->set_val (idx, tmp);
   assert (internal->val (lit) > 0);
@@ -598,14 +599,14 @@ void WalkerFO::walk_full_occs_flip_lit (int lit) {
 // Check whether to save the current phases as new global minimum.
 
 inline void Internal::walk_full_occs_save_minimum (WalkerFO &walker) {
-  int64_t broken = walker.broken.size ();
+  size_t broken = walker.broken.size ();
   if (broken >= walker.minimum)
     return;
   if (broken <= stats.walk.minimum) {
     stats.walk.minimum = broken;
-    VERBOSE (3, "new global minimum %" PRId64 "", broken);
+    VERBOSE (3, "new global minimum %zd", broken);
   } else {
-    VERBOSE (3, "new walk minimum %" PRId64 "", broken);
+    VERBOSE (3, "new walk minimum %zd", broken);
   }
 
   walker.minimum = broken;
@@ -640,6 +641,13 @@ inline void Internal::walk_full_occs_save_minimum (WalkerFO &walker) {
 int Internal::walk_full_occs_round (int64_t limit, bool prev) {
 
   stats.walk.count++;
+  std::vector<int> propagated;
+  bool failed = false; // Inconsistent assumptions?
+  int res = decide_and_propagate_all_assumptions (propagated);
+  if (res) {
+    failed = true;
+    return res;
+  }
 
   reset_watches ();
 
@@ -686,23 +694,21 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
   //
   WalkerFO walker (internal, average_size, limit);
 
-  bool failed = false; // Inconsistent assumptions?
-
   level = 1; // Assumed variables assigned at level 1.
 
   if (assumptions.empty ()) {
     LOG ("no assumptions so assigning all variables to decision phase");
   } else {
     LOG ("assigning assumptions to their forced phase first");
-    for (const auto lit : assumptions) {
+    std::vector<int> propagated;
+    for (auto lit : trail)
+    propagated.push_back(lit);
+
+    for (const auto lit : propagated) {
       signed char tmp = val (lit);
       if (tmp > 0)
         continue;
-      if (tmp < 0) {
-        LOG ("inconsistent assumption %d", lit);
-        failed = true;
-        break;
-      }
+      assert (tmp == 0);
       if (!active (lit))
         continue;
       tmp = sign (lit);
@@ -805,24 +811,23 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
     }
 #ifdef LOGGING
     if (!failed) {
-      int64_t broken = walker.broken.size ();
-      int64_t total = watched + broken;
-      MSG ("watching %" PRId64 " clauses %.0f%% "
-           "out of %" PRId64 " (watched and broken)",
+      size_t broken = walker.broken.size ();
+      size_t total = watched + broken;
+      MSG ("watching %" PRId64 "clauses %.0f%% "
+           "out of %zd (watched and broken)",
            watched, percent (watched, total), total);
     }
 #endif
   }
   walker.check_all ();
-  int res; // Tells caller to continue with local search.
 
   if (!failed) {
 
-    int64_t broken = walker.broken.size ();
-    int64_t initial_minimum = broken;
+    size_t broken = walker.broken.size ();
+    size_t initial_minimum = broken;
 
     PHASE ("walk", stats.walk.count,
-           "starting with %" PRId64 " unsatisfied clauses "
+           "starting with %zd unsatisfied clauses "
            "(%.0f%% out of %" PRId64 ")",
            broken, percent (broken, stats.current.irredundant),
            stats.current.irredundant);
@@ -830,7 +835,7 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
     walk_full_occs_save_minimum (walker);
     assert (stats.walk.minimum <= walker.minimum);
 
-    int64_t minimum = broken;
+    size_t minimum = broken;
 #ifndef QUIET
     int64_t flips = 0;
 #endif
@@ -847,11 +852,11 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
       walker.walk_full_occs_flip_lit (lit);
       walker.push_flipped (lit);
       broken = walker.broken.size ();
-      LOG ("now have %" PRId64 " broken clauses in total", broken);
+      LOG ("now have %zd broken clauses in total", broken);
       if (broken >= minimum)
         continue;
       minimum = broken;
-      VERBOSE (3, "new phase minimum %" PRId64 " after %" PRId64 " flips",
+      VERBOSE (3, "new phase minimum %zd after %" PRId64 " flips",
                minimum, flips);
       walk_full_occs_save_minimum (walker);
     }
@@ -860,13 +865,13 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
 #ifndef QUIET
     if (minimum == initial_minimum) {
       PHASE ("walk", internal->stats.walk.count,
-             "%sno improvement %" PRId64 "%s in %" PRId64 " flips and "
+             "%sno improvement %zd%s in %" PRId64 " flips and "
              "%" PRId64 " ticks",
              tout.bright_yellow_code (), minimum, tout.normal_code (),
              flips, walker.ticks);
     } else {
       PHASE ("walk", internal->stats.walk.count,
-             "best phase minimum %" PRId64 " in %" PRId64 " flips and "
+             "best phase minimum %zd in %" PRId64 " flips and "
              "%" PRId64 " ticks",
              minimum, flips, walker.ticks);
     }
@@ -887,7 +892,7 @@ int Internal::walk_full_occs_round (int64_t limit, bool prev) {
     }
 
     if (minimum > 0) {
-      LOG ("minimum %" PRId64 " non-zero thus potentially continue",
+      LOG ("minimum %zd non-zero thus potentially continue",
            minimum);
       res = 0;
     } else {
@@ -960,7 +965,6 @@ void Internal::walk_full_occs () {
   }
   (void) walk_full_occs_round (limit, false);
   STOP_INNER_WALK ();
-  assert (!unsat);
 }
 
 } // namespace CaDiCaL

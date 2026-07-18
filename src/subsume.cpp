@@ -134,19 +134,8 @@ inline void Internal::subsume_clause (Clause *subsuming, Clause *subsumed) {
     mark_garbage (subsumed);
     return;
   }
-  LOG ("turning redundant subsuming clause into irredundant clause");
-  subsuming->redundant = false;
-  if (proof)
-    proof->strengthen (subsuming->id);
   mark_garbage (subsumed);
-  stats.current.irredundant++;
-  stats.added.irredundant++;
-  stats.irrlits += subsuming->size;
-  assert (stats.current.redundant > 0);
-  stats.current.redundant--;
-  assert (stats.added.redundant > 0);
-  stats.added.redundant--;
-  // ... and keep 'stats.added.total'.
+  make_irredundant (subsuming);
 }
 
 /*------------------------------------------------------------------------*/
@@ -171,6 +160,48 @@ void Internal::strengthen_clause (Clause *c, int lit) {
   // bump_clause2 (c);
   LOG (c, "strengthened");
   external->check_shrunken_clause (c);
+  if (c->size == 2)
+    new_binary_since_dedup = true;
+}
+
+void Internal::strengthen_clause_and_remove_units (Clause *c, int lit) {
+  if (opts.check && is_external_forgettable (c->id))
+    mark_garbage_external_forgettable (c->id);
+  stats.strengthened++;
+  assert (c->size > 2);
+  LOG (c, "removing %d and units in", lit);
+  std::vector<int> clause;
+  int j = 0;
+  for (int i = 0; i < c->size; ) {
+    int other = c->literals[i++];
+    c->literals[j++] = other;
+    clause.push_back(other);
+    if (other == lit) {
+      --j;
+      continue;
+    }
+    if (fixed (other)) {
+      --j;
+      continue;
+    }
+  }
+  shrink_clause (c, j);
+  if (proof) {
+    LOG (lrat_chain, "strengthening clause with chain");
+    proof->otfs_strengthen_clause(c, clause, lrat_chain);
+  }
+  if (!c->redundant)
+    mark_removed (lit);
+  /*
+  auto new_end = remove (c->begin (), c->end (), lit);
+  assert (new_end + 1 == c->end ()), (void) new_end;
+  (void) shrink_clause (c, c->size - 1);
+  */
+  // bump_clause2 (c);
+  LOG (c, "strengthened");
+  external->check_shrunken_clause (c);
+  if (c->size == 2)
+    new_binary_since_dedup = true;
 }
 
 /*------------------------------------------------------------------------*/
@@ -313,7 +344,7 @@ struct subsume_less_noccs {
       return true;
     if (u && !v)
       return false;
-    const int64_t m = internal->noccs (a), n = internal->noccs (b);
+    const uint64_t m = internal->noccs (a), n = internal->noccs (b);
     if (m < n)
       return true;
     if (m > n)
@@ -474,7 +505,9 @@ bool Internal::subsume_round () {
     //
     if (c->size > 2 && c->subsume) {
       c->subsume = false;
+      check_last_irredundant();
       const int tmp = try_to_subsume_clause (c, shrunken);
+      check_last_irredundant();
       if (tmp > 0) {
         subsumed++;
         continue;
@@ -491,7 +524,7 @@ bool Internal::subsume_round () {
     // occurrences computed before and stored in 'noccs'.
     //
     int minlit = 0;
-    int64_t minoccs = 0;
+    uint64_t minoccs = 0;
     size_t minsize = 0;
     bool subsume = true;
     bool binary = (c->size == 2 && !c->redundant);
@@ -503,7 +536,7 @@ bool Internal::subsume_round () {
       const size_t size = binary ? bins (lit).size () : occs (lit).size ();
       if (minlit && minsize <= size)
         continue;
-      const int64_t tmp = noccs (lit);
+      const uint64_t tmp = noccs (lit);
       if (minlit && minsize == size && tmp <= minoccs)
         continue;
       minlit = lit, minsize = size, minoccs = tmp;
@@ -525,7 +558,7 @@ bool Internal::subsume_round () {
         continue;
 
       LOG (c,
-           "watching %d with %zd current and total %" PRId64 " occurrences",
+           "watching %d with %zd current and total %" PRIu64 " occurrences",
            minlit, minsize, minoccs);
 
       occs (minlit).push_back (c);
@@ -549,7 +582,7 @@ bool Internal::subsume_round () {
         continue;
 
       LOG (c,
-           "watching %d with %zd current binary and total %" PRId64
+           "watching %d with %zd current binary and total %" PRIu64
            " occurrences",
            minlit, minsize, minoccs);
 
@@ -626,7 +659,9 @@ void Internal::subsume () {
 
   if (opts.subsume) {
     reset_watches ();
+    check_last_irredundant();
     subsume_round ();
+    check_last_irredundant();
     init_watches ();
     connect_watches ();
     if (!unsat && !propagate ()) {
@@ -635,7 +670,9 @@ void Internal::subsume () {
     }
   }
 
+  check_last_irredundant();
   transred ();
+  check_last_irredundant();
   if (external_prop) {
     assert (!level);
     private_steps = false;

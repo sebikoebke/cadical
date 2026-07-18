@@ -64,14 +64,29 @@ run () {
 
 #--------------------------------------------------------------------------#
 
-traces="`ls ../test/trace/*.trace|sed -e 's,.*/,,' -e 's,\.trace$,,'`"
+alltraces="`ls ../test/trace/*.trace ../test/trace/congruence/*.trace |sed -e 's,.*/,,' -e 's,\.trace$,,'`"
+allnumtraces="`echo $alltraces|wc -w`"
+
+traces="`ls ../test/trace/*.trace |sed -e 's,.*/,,' -e 's,\.trace$,,'`"
 numtraces="`echo $traces|wc -w`"
-msg "found $numtraces traces"
+
+msg "found $numtraces normal/$allnumtraces traces"
 
 for trace in $traces ignore
 do
   [ $trace = ignore ] && continue
   run $trace
+done
+
+congruencetraces="`ls ../test/trace/congruence/*.trace |sed -e 's,.*/,,' -e 's,\.trace$,,'`"
+numcongtraces="`echo $traces|wc -w`"
+
+msg "found $numcongtraces congruence/$allnumtraces traces"
+
+for trace in $congruencetraces ignore
+do
+  [ $trace = ignore ] && continue
+  run congruence/$trace
 done
 
 #--------------------------------------------------------------------------#

@@ -31,7 +31,11 @@ struct CheckerClause {
   CheckerClause *next; // collision chain link for hash table
   uint64_t hash;       // previously computed full 64-bit hash
   unsigned size;       // zero if this is a garbage clause
-  int literals[2];     // otherwise 'literals' of length 'size'
+#ifndef NFLEXIBLE
+  int literals[];  // otherwise 'literals' of length 'size'
+#else
+  int literals[2];
+#endif
 };
 
 struct CheckerWatch {

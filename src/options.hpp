@@ -1,6 +1,10 @@
 #ifndef _options_hpp_INCLUDED
 #define _options_hpp_INCLUDED
 
+#include <cassert>
+#include <cstddef>
+#include <string>
+
 /*------------------------------------------------------------------------*/
 
 // In order to add a new option, simply add a new line below. Make sure that
@@ -22,9 +26,13 @@
 /*      NAME         DEFAULT, LO, HI,O,P,R, USAGE */ \
 \
 OPTION( arena,             1,  0,  1,0,0,1, "allocate clauses in arena") \
-OPTION( arenacompact,      1,  0,  1,0,0,1, "keep clauses compact") \
+OPTION( arenacompact,      1,  0,  1,0,0,1, "keep irredundant clauses at the beginning") \
 OPTION( arenasort,         1,  0,  1,0,0,1, "sort clauses in arena") \
 OPTION( arenatype,         3,  1,  3,0,0,1, "1=clause, 2=var, 3=queue") \
+OPTION( autarkies,         0,  0,  1,0,0,1, "search for autarkies") \
+OPTION( autarkyafter,      1,  0,  1,0,0,1, "run autarkies also after rephasing") \
+OPTION( autarkydelay,      1,  0,  1,0,0,1, "delay autarkies if not useful") \
+OPTION( autarkynonincr,    0,  0,  1,0,0,1, "compact autarky reconstruction. Non compatible with incremental") \
 OPTION( backbone,          1,  0,  2,0,0,1, "binary clause backbone") \
 OPTION( backboneeffort,   20,  0,1e5,0,0,1, "binary effort in per mile") \
 OPTION( backbonemaxrounds,1e3, 0,1e5,0,0,1, "backbone rounds limit") \
@@ -64,6 +72,7 @@ OPTION( conditionmineff,   0,  0,2e9,1,0,1, "minimum condition efficiency") \
 OPTION( congruence,        1,  0,  1,0,1,1, "congruence closure") \
 OPTION( congruenceand,     1,  0,  1,0,0,1, "extract AND gates") \
 OPTION( congruenceandarity,1e6,2,5e7,0,0,1, "AND gate arity limit") \
+OPTION( congruenceanddummy,1,  0,  1,0,1,1, "check for dummy AND out of binary clauses") \
 OPTION( congruencebinaries,1,  0,  1,0,0,1, "extract binary and strengthen ternary clauses") \
 OPTION( congruenceite,     1,  0,  1,0,0,1, "extract ITE gates") \
 OPTION( congruencexor,     1,  0,  1,0,0,1, "extract XOR gates") \
@@ -92,6 +101,7 @@ OPTION( elimdefcores,      1,  1,100,0,0,1, "number of unsat cores") \
 OPTION( elimdefticks,    2e5,  0,2e9,1,0,1, "kitten ticks limit") \
 OPTION( elimeffort,      1e3,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( elimequivs,        1,  0,  1,0,0,1, "find equivalence gates") \
+OPTION( elimfactor,        1,  0,  1,0,0,1, "eliminate extension variables introduced by factor") \
 OPTION( elimint,         2e3,  1,2e9,0,0,1, "elimination interval") \
 OPTION( elimites,          1,  0,  1,0,0,1, "find if-then-else gates") \
 OPTION( elimlimited,       1,  0,  1,0,0,1, "limit resolutions") \
@@ -116,17 +126,28 @@ OPTION( exteagerreasons,   1,  0,  1,0,0,1, "eagerly ask for all reasons (0: onl
 OPTION( exteagerrecalc,    1,  0,  1,0,0,1, "after eagerly asking for reasons recalculate all levels (0: trust the external tool)") \
 OPTION( externallrat,      0,  0,  1,0,0,1, "external lrat") \
 OPTION( factor,            1,  0,  1,0,1,1, "bounded variable addition") \
-OPTION( factorcandrounds,  2,  0,2e9,0,0,1, "candidates reduction rounds") \
+OPTION( factorbound,       1,  0, 10,0,0,1, "required reduction of clauses") \
+OPTION( factorboundelim,   0,  0,  1,0,0,1, "add maximal elimbound to factorbound (instead of current)") \
+OPTION( factorbumpheap,    1,  0,  2,0,0,1, "score extension variables in heap [0: low as in kissat (do nothing), 1: based on definition, 2: high]") \
+OPTION( factorbumpqueue,   1,  0,  2,0,0,1, "score extension variables in queue [0: low as in kissat, 1: based on definition, 2: high (do nothing)]") \
+OPTION( factorcandrounds,  2,  0,2e9,0,0,1, "candidates reduction rounds (is skipped with factorxor)") \
 OPTION( factorcheck,       1,  0,  2,0,0,1, "API checks that variables have been declared (1 = only with factor on, 2 = always)") \
 OPTION( factordelay,       4,  0, 12,0,0,1, "delay bounded variable addition between eliminations") \
-OPTION( factoreffort,     50,  0,1e6,0,0,1, "relative effort per mille") \
+OPTION( factoreffort,     75,  0,1e6,0,0,1, "relative effort per mille") \
+OPTION( factorelim,        1,  0,  1,0,0,1, "immediately mark factored variables as elimination candidates (0=delay)") \
 OPTION( factoriniticks,  300,  1,1e6,0,0,1, "initial effort in millions") \
-OPTION( factorsize,        5,  2,2e9,0,0,1, "clause size limit") \
+OPTION( factorredundant,   2,  0,  3,0,0,1, "apply factor to redundant clauses (1=binary, 2=all, 3=only)") \
+OPTION( factorschedule,    0,  0,  3,0,0,1, "schedule (0=occs, 1=queue, 2=heap, 3=idx)") \
+OPTION( factorsize,       20,  2,2e9,0,0,1, "clause size limit") \
 OPTION( factorthresh,      7,  0,100,1,0,1, "delay if ticks smaller thresh*clauses") \
-OPTION( factorunbump,      1,  0,  1,0,1,1, "extension variable with lowest importance [1: as in kissat]") \
+OPTION( factorxor,         1,  0,  2,0,0,1, "factor eliminated xor (and ite) gates (needs factorsize > 2)") \
+OPTION( factorxorite,      1,  0,  2,0,0,1, "factor eliminated ite gates (2 = no xors)") \
+OPTION( factorxorrand,     1,  0,  1,0,0,1, "random tiebreak for factor xorx") \
+OPTION( factorxorsave,     1,  0,  1,0,0,1, "factor save work by only considering literals once") \
 OPTION( fastelim,          1,  0,  1,0,1,1, "fast BVE during preprocessing") \
 OPTION( fastelimbound,     8,  1,1e3,1,0,1, "fast BVE bound during preprocessing") \
 OPTION( fastelimclslim,  1e2,  2,2e9,2,0,1, "fast BVE resolvent size limit") \
+OPTION( fastelimfactor,    1,  0,  1,0,0,1, "eliminate extension variables introduced by factor") \
 OPTION( fastelimocclim,  100,  1,2e9,2,0,1, "fast BVE occurence limit during preprocessing") \
 OPTION( fastelimrounds,    4,  1,512,1,0,1, "number of fastelim rounds") \
 OPTION( flush,             0,  0,  1,0,1,1, "flush redundant clauses") \
@@ -153,9 +174,12 @@ OPTION( lucky,             1,  0,  1,0,0,1, "lucky phases") \
 OPTION( luckyassumptions,  1,  0,  1,0,0,1, "lucky phases with assumptions") \
 OPTION( luckyearly,        1,  0,  1,0,0,1, "lucky phases before preprocessing") \
 OPTION( luckylate,         1,  0,  1,0,0,1, "lucky phases after preprocessing") \
+OPTION( luckyrandom,       0,  0,  1,0,0,1, "use lucky random") \
+OPTION( luckyrounds,       10, 1,100,0,0,1, "maximum number of lucky round") \
 OPTION( minimize,          1,  0,  1,0,0,1, "minimize learned clauses") \
 OPTION( minimizedepth,   1e3,  0,1e3,0,0,1, "minimization depth") \
 OPTION( minimizeticks,     1,  0,  1,0,0,1, "increment ticks in minimization") \
+OPTION( modelalllits,      0,  0,  1,0,0,1, "print all literals (including unsed) in the model") \
 OPTION( otfs,              1,  0,  1,0,0,1, "on-the-fly self subsumption") \
 OPTION( phase,             1,  0,  1,0,0,1, "initial phase") \
 OPTION( preprocessinit,  2e6,  0,2e9,2,0,1, "initial preprocessing base limit" ) \
@@ -167,7 +191,7 @@ OPTION( probethresh,       0,  0,100,1,0,1, "delay if ticks smaller thresh*claus
 OPTION( profile,           2,  0,  4,0,0,0, "profiling level") \
 QUTOPT( quiet,             0,  0,  1,0,0,0, "disable all messages") \
 OPTION( radixsortlim,     32,  0,2e9,0,0,1, "radix sort limit") \
-OPTION( randec,            0,  0,  1,0,0,1, "random decisions") \
+OPTION( randec,            1,  0,  1,0,0,1, "random decisions") \
 OPTION( randecfocused,     1,  0,  1,0,0,1, "random decisions in focused mode") \
 OPTION( randecinit,       1e3, 2,2e9,0,0,1, "inital random decision interval") \
 OPTION( randecint,       500,  0,2e9,0,0,1, "random conflict length") \
@@ -197,7 +221,6 @@ OPTION( restartmarginstable ,25,0,25,0,0,1, "stable slow fast margin in percent"
 OPTION( restartreusetrail, 1,  0,  1,0,0,1, "enable trail reuse") \
 OPTION( restoreall,        0,  0,  2,0,0,1, "restore all clauses (2=really)") \
 OPTION( restoreflush,      0,  0,  1,0,0,1, "remove satisfied clauses") \
-OPTION( reverse,           0,  0,  1,0,0,1, "reverse variable ordering") \
 OPTION( score,             1,  0,  1,0,0,1, "use EVSIDS scores") \
 OPTION( scorefactor,     950,500,1e3,0,0,1, "score factor per mille") \
 OPTION( seed,              0,  0,2e9,0,0,1, "random seed") \
@@ -250,14 +273,18 @@ OPTION( transred,          1,  0,  1,0,1,1, "transitive reduction of BIG") \
 OPTION( transredeffort,  1e2,  1,1e5,1,0,1, "relative efficiency per mille") \
 OPTION( transredmaxeff,  1e8,  0,2e9,1,0,1, "maximum efficiency") \
 OPTION( transredmineff,    0,  0,2e9,1,0,1, "minimum efficiency") \
-QUTOPT( verbose,           0,  0,  3,0,0,0, "more verbose messages") \
+OPTION( varindexorder,     1,  0,  1,0,0,1, "use literals name given as (DIMACS) input") \
+OPTION( varkeepname,       1,  0,  1,0,0,1, "attempt to use the same internal and external name (debug purpose only)") \
+OPTION( varprioritizefirst,1,  0,  1,0,0,1, "reverse variable ordering") \
+OPTION( varprioritizeswap, 0,  0,  1,0,0,1, "reverse VMTF variable ordering (reverse of varindexorder)") \
+QUTOPT( verbose,           0,  0,  4,0,0,0, "more verbose messages") \
 OPTION( veripb,            0,  0,  4,0,0,1, "odd=check-deletions, >2 drat") \
 OPTION( vivify,            1,  0,  1,0,1,1, "vivification") \
-OPTION( vivifycalctier,    0,  0,  1,0,0,1, "recalculate tier limits") \
+OPTION( vivifycalctier,    1,  0,  1,0,0,1, "use tier limits") \
 OPTION( vivifydemote,      0,  0,  1,0,1,1, "demote irredundant or delete directly") \
 OPTION( vivifyeffort,     50,  0,1e5,1,0,1, "overall efficiency per mille") \
 OPTION( vivifyflush,       1,  0,  1,1,0,1,  "flush subsumed before vivification rounds") \
-OPTION( vivifyinst,        1,  0,  1,0,0,1, "instantiate last literal when vivify") \
+OPTION( vivifyinst,        0,  0,  1,0,0,1, "instantiate last literal when vivify") \
 OPTION( vivifyirred,       1,  0,  1,0,0,1, "vivification of irredundant clauses") \
 OPTION( vivifyirredeff,    3,  1,100,1,0,1, "irredundant efficiency per mille") \
 OPTION( vivifyonce,        0,  0,  2,0,0,1, "vivify once: 1=red, 2=red+irr") \
@@ -271,13 +298,15 @@ OPTION( vivifytier2eff,    2,  1,100,1,0,1, "relative tier2 effort") \
 OPTION( vivifytier3,       1,  0,  1,0,0,1, "vivification tier3") \
 OPTION( vivifytier3eff,    1,  1,100,1,0,1, "relative tier3 effort") \
 OPTION( walk,              1,  0,  1,0,0,1, "enable random walks") \
+OPTION( walkddfwstrat,      0, 0,  4,1,0,1, "ddfw weight strategy [0=yalin-itl,1=yalin=ite,2=yalin-ith,3=ddfw,4=tassat") \
 OPTION( walkeffort,       80,  1,1e5,1,0,1, "relative efficiency per mille") \
-OPTION( walkfullocc,      0,   0,  1,1,0,1, "use Kissat's full occurrences instead of the single watched") \
+OPTION( walkfullocc,       0,   0,  2,1,0,1, "0 = single watched, 1 = Kissat watched, 2 = ddfw") \
 OPTION( walkmaxeff,      1e7,  0,2e9,1,0,1, "maximum efficiency (in 1e3 ticks)") \
 OPTION( walkmineff,        0,  0,1e7,1,0,1, "minimum efficiency") \
+OPTION( walkmineffinit,  1e3,  0,1e7,1,0,1, "minimum efficiency of initial local search") \
 OPTION( walknonstable,     1,  0,  1,0,0,1, "walk in non-stabilizing phase") \
 OPTION( walkpassat,        0,  0, 32,1,0,1, "PASSAT: 0=off; 1-7 exact break (s=10, s=100, s=unlim, s=1pct, s=10pct, s=50pct, up_expansion), 8-14 cheap break, 15 dynamic barrier 1pct<->10pct + improvement-tracking, 16 s=0.1pct + improvement-tracking, 17 v5+improv, 18 v5+3x tick limit, 19 v15+3xtl, 20 v16+3xtl, 21 v17+3xtl, 22 v5+anti-stagnation, 23 v22+3xtl, 24 v5+autarky, 25 v7+autarky, 26 v25+3xtl, 27 v19+autarky, 28 v7+ autarky-check only after expansion, 29 v7 autarky-check only after repair, 30 v22 + autarky-check only after expansion, 31 v22 + autarky-check only after repair, 32 v22 + autarky-check after expansion and after repair") \
-OPTION( walkredundant,     0,  0,  1,0,0,1, "walk redundant clauses too") \
+OPTION( walkredundant,     0,  0,  2,0,0,1, "walk redundant clauses too [0 = none, 1 = binary nonyhyper, 2=all]") \
 OPTION( warmup,            1,  0,  1,0,0,1, "warmup before walk using propagation") \
 
 // Note, keep an empty line right before this line because of the last '\'!
@@ -347,7 +376,7 @@ class Options {
   static void initialize_from_environment (int &val, const char *name,
                                            const int L, const int H);
 
-  friend Config;
+  friend struct Config;
 
   void reset_default_values ();
   void disable_preprocessing ();
@@ -419,7 +448,7 @@ public:
   // 'true' is returned and the string will be set to the name of the
   // option.  Additionally the parsed value is set (last argument).
   //
-  static bool parse_long_option (const char *, string &, int &);
+  static bool parse_long_option (const char *, std::string &, int &);
 
   // Iterating options.
 

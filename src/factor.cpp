@@ -1,4 +1,6 @@
+#include "cover.hpp"
 #include "internal.hpp"
+#include "message.hpp"
 
 namespace CaDiCaL {
 
@@ -7,21 +9,41 @@ namespace CaDiCaL {
 #define NOUNTED 4
 
 inline bool factor_occs_size::operator() (unsigned a, unsigned b) {
-  size_t s = internal->occs (internal->u2i (a)).size ();
-  size_t t = internal->occs (internal->u2i (b)).size ();
-  if (s > t)
-    return true;
-  if (s < t)
-    return false;
+  const int comp = internal->opts.factorschedule;
+  if (comp == 0) {
+    size_t s = internal->occs (internal->u2i (a)).size ();
+    size_t t = internal->occs (internal->u2i (b)).size ();
+    if (s > t)
+      return true;
+    if (s < t)
+      return false;
+  } else if (comp == 1) {
+    auto s = internal->score (internal->u2i (a));
+    auto t = internal->score (internal->u2i (b));
+    if (s > t)
+      return true;
+    if (s < t)
+      return false;
+  } else if (comp == 2) {
+    size_t s = internal->bumped (internal->u2i (a));
+    size_t t = internal->bumped (internal->u2i (b));
+    if (s > t)
+      return true;
+    if (s < t)
+      return false;
+  }
+  // else (comp == 3) and default if any value is the same.
   return a > b;
 }
 
 // do full occurence list as in elim.cpp but filter out useless clauses
-void Internal::factor_mode () {
+void Internal::factor_mode (bool redundant_only) {
   reset_watches ();
 
   assert (!watching ());
   init_occs ();
+  if (opts.factorxor && opts.factorsize > 2)
+    init_noccs ();
 
   const int size_limit = opts.factorsize;
 
@@ -40,7 +62,12 @@ void Internal::factor_mode () {
     ticks++;
     if (c->garbage)
       continue;
-    if (c->redundant && c->size > 2)
+    if (redundant_only && !c->redundant)
+      continue;
+    if (!redundant_only && !opts.factorredundant && c->redundant)
+      continue;
+    if (!redundant_only && opts.factorredundant == 1 && c->redundant &&
+        c->size > 2)
       continue;
     if (c->size > size_limit)
       continue;
@@ -61,10 +88,11 @@ void Internal::factor_mode () {
   if (size_limit == 2)
     return;
 
-  // iterate counts of larger clauses rounds often
+  // iterate counts of larger clauses rounds often.
+  // longer clauses can always be useful with XORs.
   const unsigned rounds = opts.factorcandrounds;
   unsigned candidates_before = 0;
-  for (unsigned round = 1; round <= rounds; round++) {
+  for (unsigned round = 1; !opts.factorxor && round <= rounds; round++) {
     LOG ("factor round %d", round);
     if (candidates.size () == candidates_before)
       break;
@@ -101,11 +129,17 @@ void Internal::factor_mode () {
   for (const auto &c : candidates)
     for (const auto &lit : *c)
       occs (lit).push_back (c);
+
+  PHASE ("factor", stats.factor,
+         "initialized %zd clauses using %" PRId64 " ticks",
+         candidates.size (), ticks);
 }
 
 // go back to two watch scheme
 void Internal::reset_factor_mode () {
   reset_occs ();
+  if (opts.factorxor && opts.factorsize > 2)
+    reset_noccs ();
   init_watches ();
   connect_watches ();
 }
@@ -115,9 +149,13 @@ Factoring::Factoring (Internal *i, int64_t l)
   const unsigned max_var = internal->max_var;
   const unsigned max_lit = 2 * (max_var + 1);
   initial = max_var;
-  bound = internal->lim.elimbound;
+  bound = internal->opts.factorbound - 1;
+  if (internal->opts.factorboundelim)
+    bound += internal->opts.elimboundmax;
+  else
+    bound += internal->lim.elimbound;
   enlarge_zero (count, max_lit);
-  quotients.first = quotients.last = 0;
+  quotients.first = quotients.last = quotients.xorites = 0;
 }
 
 Factoring::~Factoring () {
@@ -174,7 +212,12 @@ void Internal::release_quotients (Factoring &factoring) {
     unmarkfact (factor, FACTORS);
     delete q;
   }
-  factoring.quotients.first = factoring.quotients.last = 0;
+  if (factoring.quotients.xorites) {
+    // these are not marked.
+    delete factoring.quotients.xorites;
+  }
+  factoring.quotients.first = factoring.quotients.last =
+      factoring.quotients.xorites = 0;
 }
 
 size_t Internal::first_factor (Factoring &factoring, int factor) {
@@ -210,8 +253,239 @@ void Internal::clear_flauses (vector<Clause *> &flauses) {
   flauses.clear ();
 }
 
+// Compute an xor or ite quotient. Use noccs to count the number of matches
+// for each second potential literal. Reset by using a vector.
+Quotient *Internal::xorite_quotient (Factoring &factoring, int first_factor,
+                                     int *reduction_ptr) {
+  LOG ("xorite for %d", first_factor);
+  // fast skip if the maximum number of matched clauses is to low
+  // factoring.bound is at least -1
+#if 0 // sanity check that noccs are used correctly
+  for (auto &lit : lits) {
+    assert (!noccs (lit));
+  }
+#endif
+  const size_t min_match_limit = 5 + factoring.bound;
+  if (occs (first_factor).size () < min_match_limit ||
+      occs (-first_factor).size () < min_match_limit)
+    return 0;
+  if (val (first_factor))
+    return 0;
+  // init quotient.
+  Quotient *res = new Quotient (first_factor);
+  // these are set to 0 for sanity (but not used).
+  res->next = 0;
+  res->prev = 0;
+  res->matched = 0;
+  res->bid = 0;
+  res->id = 0;
+  vector<int> seconds;
+  vector<int> thirds;
+  vector<int> pairs;
+  // match clause c (containing first_factor) with
+  // a clause d (containing -first_factor).
+  // The two clauses should coincide except on one literal.
+  const int64_t limit = factoring.limit;
+  int64_t ticks = stats.ticks.factor;
+  ticks += cache_lines (occs (first_factor).size (), sizeof (Clause *));
+  for (auto *c : occs (first_factor)) {
+    ticks++;
+    if (c->garbage)
+      continue;
+    if (c->size < 3)
+      continue;
+    if (ticks > limit)
+      break;
+    for (auto &lit : *c) {
+      markfact (lit, NOUNTED);
+    }
+    ticks += cache_lines (occs (-first_factor).size (), sizeof (Clause *));
+    for (auto *d : occs (-first_factor)) {
+      ticks++;
+      if (d->garbage)
+        continue;
+      if (d->size != c->size)
+        continue;
+      if (ticks > limit)
+        break;
+      bool matched = true;
+      int other = 0;
+      for (auto &lit : *d) {
+        // match with c.
+        if (lit == -first_factor)
+          continue;
+        if (getfact (lit, NOUNTED))
+          continue;
+        if (other) {
+          matched = false;
+          break;
+        }
+        other = lit;
+      }
+      if (!matched)
+        continue;
+      if (!other) // Technically self-subsuming but continue
+        continue;
+      if (!noccs (abs (other))++) {
+        thirds.push_back (abs (other));
+      }
+      pairs.push_back (0);
+      pairs.push_back (other);
+      res->qlauses.push_back (c);
+      res->qlauses.push_back (d);
+      LOG (c, "xorite factor matched first");
+      LOG (d, "xorite factor matched second");
+      // also continue...
+    }
+    for (auto &lit : *c) {
+      unmarkfact (lit, NOUNTED);
+    }
+  }
+  {
+    // drop candidates that did not have enough matches.
+    const auto end = thirds.end ();
+    auto begin = thirds.begin ();
+    auto p = begin;
+    auto q = begin;
+    while (p != end) {
+      const auto &lit = *q++ = *p++;
+      const auto tmp = noccs (lit);
+      noccs (lit) = 0;
+      if (tmp < min_match_limit) {
+        q--;
+        LOG ("dropping candidate third %d with %" PRIu64 " matches", lit,
+             tmp);
+      }
+      LOG ("keeping candidate third %d with %" PRIu64 " matches", lit, tmp);
+    }
+    thirds.resize (q - begin);
+  }
+  // find highest pair count (using noccs).
+  size_t matches = 0;
+  int best_second = 0;
+  int best_third = 0;
+  for (auto &third : thirds) {
+    if (res->qlauses.size () < 2 * min_match_limit)
+      break;
+    ticks += cache_lines (res->qlauses.size (), sizeof (Clause *));
+    for (size_t idx = 0; 2 * idx < res->qlauses.size (); idx++) {
+      int pair = pairs[2 * idx + 1];
+      if (pair != third && pair != -third)
+        continue;
+      Clause *c = res->qlauses[2 * idx];
+      Clause *d = res->qlauses[2 * idx + 1];
+      for (auto &lit : *d) {
+        markfact (lit, NOUNTED);
+      }
+      int other = 0;
+      for (auto &lit : *c) {
+        if (lit == first_factor)
+          continue;
+        if (getfact (lit, NOUNTED))
+          continue;
+        assert (!other);
+        other = lit;
+      }
+      assert (other);
+      assert (pairs.size () > 2 * idx && !pairs[2 * idx]);
+      pairs[2 * idx] = other;
+      for (auto &lit : *d) {
+        unmarkfact (lit, NOUNTED);
+      }
+      LOG ("factor pair (%d, %d)", other, pair);
+      if (pair == -third)
+        other = -other;
+      if (!noccs (other)++)
+        seconds.push_back (other);
+    }
+    // noccs (other) contains count for (third, other) and (-third, -other).
+    // seconds may contain both other and -other.
+    for (auto &other : seconds) {
+      const uint64_t tmp = noccs (other);
+      noccs (other) = 0;
+      if (opts.factorxorite == 0 && other != -third)
+        continue;
+      if (opts.factorxorite == 2 && other == -third)
+        continue;
+      if (tmp > matches) {
+        matches = tmp;
+        best_second = other;
+        best_third = third;
+      } else if (!opts.factorxorrand && tmp == matches && other != -third) {
+        matches = tmp;
+        best_second = other;
+        best_third = third;
+      } else if (opts.factorxorrand && tmp == matches) {
+        Random random (internal->opts.seed);
+        random += stats.factor + other;
+        if (random.generate_bool ()) {
+          matches = tmp;
+          best_second = other;
+          best_third = third;
+        }
+      }
+    }
+  }
+
+  stats.ticks.factor = ticks;
+  // Remove all clauses except for the best.
+  // Ensure that no clause is kept multiple times (due to duplicated
+  // matching clause) with the "swept" flag.
+  // Unfortunately this can lead to fewer matches.
+  auto begin = res->qlauses.begin ();
+  auto p = res->qlauses.begin ();
+  auto q = res->qlauses.begin ();
+  auto end = res->qlauses.end ();
+  size_t idx = 0;
+  while (p != end) {
+    Clause *c = *q++ = *p++;
+    Clause *d = *q++ = *p++;
+    int second = pairs[idx++];
+    int third = pairs[idx++];
+    bool parity = false;
+    if (second == best_second && third == best_third)
+      parity = true;
+    else if (second == -best_second && third == -best_third)
+      parity = false;
+    else {
+      q -= 2;
+      continue;
+    }
+    if (c->swept || d->swept) {
+      q -= 2;
+      LOG ("factor decrement matches due to duplicate clause");
+      assert (matches);
+      matches -= 1;
+      continue;
+    }
+    // remember wether we matched on second or third for later.
+    res->matches.push_back (parity);
+    c->swept = true;
+    d->swept = true;
+    // keep and continue.
+  }
+  res->qlauses.resize (q - begin);
+  res->second = best_second;
+  res->third = best_third;
+  for (auto c : res->qlauses) {
+    assert (c->swept);
+    c->swept = false;
+  }
+#if 0 // sanity check that noccs are used correctly
+  for (auto &lit : lits) {
+    assert (!noccs (lit));
+  }
+#endif
+
+  assert (res->qlauses.size () == 2 * matches);
+  *reduction_ptr = matches - 4;
+  assert (!factoring.quotients.xorites);
+  factoring.quotients.xorites = res;
+  return res;
+}
+
 Quotient *Internal::best_quotient (Factoring &factoring,
-                                   size_t *best_reduction_ptr) {
+                                   int *best_reduction_ptr) {
   size_t factors = 1, best_reduction = 0;
   Quotient *best = 0;
   for (Quotient *q = factoring.quotients.first; q; q = q->next) {
@@ -592,11 +866,13 @@ bool Internal::self_subsuming_factor (Quotient *q) {
 
 // this is a pure binary clauses containing fresh and one other literal
 // it is added for all applicable quotients.
-void Internal::add_factored_divider (Quotient *q, int fresh) {
+void Internal::add_factored_divider (Factoring &factoring, Quotient *q,
+                                     int fresh) {
   const int factor = q->factor;
   LOG ("factored %d divider %d", factor, fresh);
   clause.push_back (fresh);
   clause.push_back (factor);
+  factoring.fresh.back ().push_back (vidx (factor));
   new_factor_clause (fresh);
   clause.clear ();
   if (lrat)
@@ -665,6 +941,157 @@ void Internal::add_factored_quotient (Quotient *q, int not_fresh) {
   }
 }
 
+// this adds first the ITE definition (fresh = if factor then second else
+// third) and then for each pair in qlauses the resulting unfactored clause.
+// XOR is just the special case where second = -third.
+void Internal::add_factor_xorite (Quotient *q, int fresh) {
+  const int factor = q->factor;
+  const int second = q->second;
+  const int third = q->third;
+  LOG ("factored ite %d = if %d then %d else %d", fresh, factor, second,
+       third);
+  assert (clause.empty ());
+  assert (lrat_chain.empty ());
+  {
+    clause.push_back (fresh);
+    clause.push_back (factor);
+    clause.push_back (second);
+    new_factor_clause (fresh);
+    if (lrat)
+      mini_chain.push_back (clause_id);
+    clause.clear ();
+  }
+  {
+    clause.push_back (fresh);
+    clause.push_back (-factor);
+    clause.push_back (third);
+    new_factor_clause (fresh);
+    if (lrat) {
+      mini_chain.push_back (clause_id);
+      // add the last two clauses
+      lrat_chain.push_back (-clause_id);
+      lrat_chain.push_back (-clause_id + 1);
+    }
+    clause.clear ();
+  }
+  {
+    clause.push_back (-fresh);
+    clause.push_back (factor);
+    clause.push_back (-second);
+    // but don't clear as lrat is the same.
+    new_factor_clause (-fresh);
+    if (lrat)
+      mini_chain.push_back (clause_id);
+    clause.clear ();
+  }
+  {
+    clause.push_back (-fresh);
+    clause.push_back (-factor);
+    clause.push_back (-third);
+    new_factor_clause (-fresh);
+    if (lrat) {
+      mini_chain.push_back (clause_id);
+      lrat_chain.clear ();
+    }
+    clause.clear ();
+  }
+  // mini_chain contains the relevant ids.
+  // add simplified clauses.
+  for (size_t idx = 0; 2 * idx < q->qlauses.size (); idx++) {
+    Clause *c = q->qlauses[2 * idx];
+    Clause *d = q->qlauses[2 * idx + 1];
+    // resolve tells us wether we matched on second or third.
+    size_t resolve = q->matches[idx];
+    int64_t first_tmp_id = ++clause_id;
+    int64_t second_tmp_id = ++clause_id;
+    if (proof) {
+      for (auto &lit : *c) {
+        if (lit == second || lit == -second)
+          continue;
+        clause.push_back (lit);
+      }
+      if (!resolve)
+        clause.push_back (fresh);
+      else
+        clause.push_back (-fresh);
+      if (lrat) {
+        lrat_chain.push_back (c->id);
+        lrat_chain.push_back (mini_chain[resolve * 2]);
+      }
+      proof->add_derived_clause (first_tmp_id, true, clause, lrat_chain);
+      lrat_chain.clear ();
+      clause.clear ();
+      for (auto &lit : *d) {
+        if (lit == third || lit == -third)
+          continue;
+        clause.push_back (lit);
+      }
+      if (!resolve)
+        clause.push_back (fresh);
+      else
+        clause.push_back (-fresh);
+      if (lrat) {
+        lrat_chain.push_back (d->id);
+        lrat_chain.push_back (mini_chain[resolve * 2 + 1]);
+      }
+      proof->add_derived_clause (second_tmp_id, true, clause, lrat_chain);
+      lrat_chain.clear ();
+      clause.clear ();
+    }
+    // ite-clause could contain -second and -third.
+    for (auto &lit : *c) {
+      if (lit == factor)
+        continue;
+      else if (lit == -second) {
+        assert (!resolve);
+        continue;
+      } else if (lit == second) {
+        assert (resolve);
+        continue;
+      }
+      clause.push_back (lit);
+    }
+    if (!resolve)
+      clause.push_back (fresh);
+    else
+      clause.push_back (-fresh);
+    if (lrat) {
+      lrat_chain.push_back (first_tmp_id);
+      lrat_chain.push_back (second_tmp_id);
+    }
+    new_factor_clause (0);
+    lrat_chain.clear ();
+    clause.clear ();
+    if (proof) {
+      // ite-clause could contain -second and -third.
+      for (auto &lit : *c) {
+        if (lit == second || lit == -second)
+          continue;
+        clause.push_back (lit);
+      }
+      if (!resolve)
+        clause.push_back (fresh);
+      else
+        clause.push_back (-fresh);
+      proof->delete_clause (first_tmp_id, true, clause);
+      clause.clear ();
+      // ite-clause could contain second and third.
+      for (auto &lit : *d) {
+        if (lit == third || lit == -third)
+          continue;
+        clause.push_back (lit);
+      }
+      if (!resolve)
+        clause.push_back (fresh);
+      else
+        clause.push_back (-fresh);
+      proof->delete_clause (second_tmp_id, true, clause);
+      clause.clear ();
+    }
+  }
+  mini_chain.clear ();
+}
+
 // remove deleted clauses once factored.
 void Internal::eagerly_remove_from_occurences (Clause *c) {
   for (const auto &lit : *c) {
@@ -691,10 +1118,13 @@ void Internal::delete_unfactored (Quotient *q) {
     mark_garbage (c);
     stats.literals_unfactored += c->size;
     stats.clauses_unfactored++;
+    if (c->redundant)
+      stats.clauses_unfactored_redundant++;
   }
 }
 
 // update the priority queue for scheduling
+// NOTE: this temporarily breaks the heap invariant.
 void Internal::update_factored (Factoring &factoring, Quotient *q) {
   const int factor = q->factor;
   update_factor_candidate (factoring, factor);
@@ -718,12 +1148,15 @@ bool Internal::apply_factoring (Factoring &factoring, Quotient *q) {
     return true;
   }
   const int fresh = get_new_extension_variable ();
+  assert (!watching ());
   if (!fresh)
     return false;
   stats.factored++;
-  factoring.fresh.push_back (fresh);
+  stats.factored_and++;
+  factoring.fresh.emplace_back ();
+  factoring.fresh.back ().push_back (fresh);
   for (Quotient *p = q; p; p = p->prev)
-    add_factored_divider (p, fresh);
+    add_factored_divider (factoring, p, fresh);
   const int not_fresh = -fresh;
   blocked_clause (q, not_fresh);
   add_factored_quotient (q, not_fresh);
@@ -731,6 +1164,29 @@ bool Internal::apply_factoring (Factoring &factoring, Quotient *q) {
     delete_unfactored (p);
   for (Quotient *p = q; p; p = p->prev)
     update_factored (factoring, p);
+  assert (fresh > 0);
+  resize_factoring (factoring, fresh);
+  return true;
+}
+
+// XOR factoring.
+bool Internal::apply_xorite_factoring (Factoring &factoring, Quotient *q) {
+  const int fresh = get_new_extension_variable ();
+  if (!fresh)
+    return false;
+  factoring.fresh.emplace_back ();
+  factoring.fresh.back ().push_back (fresh);
+  factoring.fresh.back ().push_back (vidx (q->second));
+  stats.factored++;
+  if (q->second == -q->third)
+    stats.factored_xor++;
+  else {
+    stats.factored_ite++;
+    factoring.fresh.back ().push_back (vidx (q->third));
+  }
+  add_factor_xorite (q, fresh);
+  delete_unfactored (q);
+  update_factored (factoring, q);
   assert (fresh > 0);
   resize_factoring (factoring, fresh);
   return true;
@@ -768,56 +1224,149 @@ void Internal::schedule_factorization (Factoring &factoring) {
 
 void Internal::adjust_scores_and_phases_of_fresh_variables (
     Factoring &factoring) {
-  if (!opts.factorunbump) {
-    factoring.fresh.clear ();
-    return;
-  }
+  activating_all_new_imported_literals ();
   if (factoring.fresh.empty ())
     return;
 
-#if 0 // the scores are very low anyway
-  for (auto lit : factoring.fresh) {
-    assert (lit > 0 && internal->max_var);
-    const double old_score = internal->stab[lit];
-    // make the scores a little different from each other with the newest having the highest score
-    const double new_score = 1.0 / (double)(internal->max_var - lit);
-    if (old_score == new_score)
-      continue;
-    if (!scores.contains (lit))
-      continue;
-    LOG ("unbumping %s", LOGLIT(lit));
-    internal->stab[lit] = new_score;
-    scores.update (lit);
-  }
-#endif
+  // mark variables as elim candidates.
+  if (opts.factorelim == 1) {
+    for (auto def : factoring.fresh) {
+      const auto &lit = def[0];
+      mark_elim (lit);
+    }
+  } // else if (opts.factorelim == 0)
 
-  for (auto lit : factoring.fresh) {
-    LOG ("dequeuing %s", LOGLIT (lit));
-    queue.dequeue (links, lit);
-  }
+  if (opts.factorbumpheap == 1) {
+    const double delta = 1.0 / (double) (internal->max_var);
+    for (auto def : factoring.fresh) {
+      const auto &lit = def[0];
+      assert (lit > 0 && internal->max_var);
+      const double old_score = score (lit);
+      // COVER (!scores.contains (lit));
+      if (!scores.contains (lit))
+        continue;
+      double new_score = old_score;
+      for (const auto &other : def) {
+        if (other == lit)
+          continue;
+        if (score (other) > new_score)
+          new_score = score (other);
+      }
+      new_score += delta;
+      LOG ("factor heap bumping %s=%lf (old=%lf)", LOGLIT (lit), new_score,
+           old_score);
+      score (lit) = new_score;
+      scores.update (lit);
+    }
+  } else if (opts.factorbumpheap == 2) {
+    double new_score = score_inc;
+    for (auto idx : vars) {
+      const double tmp = score (idx);
+      if (tmp > new_score)
+        new_score = tmp;
+    }
+    for (auto def : factoring.fresh) {
+      const auto &lit = def[0];
+      assert (lit > 0 && internal->max_var);
+      // COVER (!scores.contains (lit));
+      if (!scores.contains (lit))
+        continue;
+      score (lit) = new_score;
+      scores.update (lit);
+    }
+  } // else if (opts.factorbumpheap == 0)
 
-  for (auto lit : factoring.fresh) {
-    LOG ("dequeuing %s", LOGLIT (lit));
-    queue.bury (links, lit);
-  }
+  if (opts.factorbumpqueue == 0) {
+    for (auto def : factoring.fresh) {
+      const auto lit = def[0];
+      if (fixed (lit))
+        continue;
+      LOG ("dequeuing %s", LOGLIT (lit));
+      queue.dequeue (links, lit);
+    }
 
-  // fix the scores with negative numbers
-  int lit = queue.first;
-  queue.bumped = 0;
-  while (lit) {
-    btab[lit] = ++queue.bumped;
-    lit = links[lit].next;
-  }
-  stats.bumped = queue.bumped;
-  update_queue_unassigned (queue.last);
+    for (auto def : factoring.fresh) {
+      const auto &lit = def[0];
+      if (fixed (lit))
+        continue;
+      LOG ("enqueuing %s at bottom", LOGLIT (lit));
+      queue.bury (links, lit);
+    }
 
+    // fix the scores with negative numbers
+    int lit = queue.first;
+    queue.bumped = 0;
+    while (lit) {
+      bumped (lit) = ++queue.bumped;
+      lit = links[lit].next;
+    }
+    stats.bumped = queue.bumped;
+    update_queue_unassigned (queue.last);
+
+  } else if (opts.factorbumpqueue == 1) {
+    vector<int> replace;
+    for (auto def : factoring.fresh) {
+      const auto &lit = def[0];
+      if (fixed (lit))
+        continue;
+      LOG ("dequeuing %s", LOGLIT (lit));
+      queue.dequeue (links, lit);
+      int after = 0;
+      int64_t score = 0;
+      for (const auto &other : def) {
+        if (other == lit)
+          continue;
+        // opts.reverse can lead to negative scores.
+        if (!after || bumped (other) > score) {
+          after = other;
+          score = bumped (other);
+        }
+      }
+      replace.push_back (after);
+    }
+    size_t i = 0;
+    for (auto def : factoring.fresh) {
+      const auto &lit = def[0];
+      if (fixed (lit))
+        continue;
+      const auto &other = replace[i++];
+      if (fixed (lit))
+        continue;
+      if (!other) {
+        // this cover hit only after refining the semantics of
+        // importing variables:
+        // COVER (true);
+        LOG ("enqueuing %s at bottom", LOGLIT (lit));
+        queue.bury (links, lit);
+      } else if (!scores.contains (other)) {
+        // This cover got triggered on the cluster:
+        // COVER (!scores.contains (other));
+        LOG ("enqueuing %s at bottom", LOGLIT (lit));
+        queue.bury (links, lit);
+      } else {
+        LOG ("enqueuing %s after %s", LOGLIT (lit), LOGLIT (other));
+        queue.insert_after (links, lit, other);
+      }
+    }
+
+    // fix the scores with negative numbers
+    int lit = queue.first;
+    queue.bumped = 0;
+    while (lit) {
+      bumped (lit) = ++queue.bumped;
+      lit = links[lit].next;
+    }
+    stats.bumped = queue.bumped;
+    update_queue_unassigned (queue.last);
+
+  } // else if (opts.factorbumpqueue == 2)
 #ifndef NDEBUG
   for (auto v : vars)
-    assert (val (v) || scores.contains (v));
-  lit = queue.first;
+    assert (!flags (v).active () || val (v) || scores.contains (v));
+  int lit = queue.first;
   int next_lit = links[lit].next;
   while (next_lit) {
-    assert (btab[lit] < btab[next_lit]);
+    assert (bumped (lit) < bumped (next_lit));
     const int tmp = links[next_lit].next;
     assert (!tmp || links[tmp].prev == next_lit);
     lit = next_lit;
@@ -827,7 +1376,7 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
   lit = queue.last;
   next_lit = links[lit].prev;
   while (next_lit) {
-    assert (btab[lit] > btab[next_lit]);
+    assert (bumped (lit) > bumped (next_lit));
     const int tmp = links[next_lit].prev;
     assert (!tmp || links[tmp].next == next_lit);
     lit = next_lit;
@@ -836,6 +1385,7 @@ void Internal::adjust_scores_and_phases_of_fresh_variables (
   assert (queue.first);
   assert (queue.last);
 #endif
+
   factoring.fresh.clear ();
 }
 
@@ -851,7 +1401,7 @@ bool Internal::run_factorization (int64_t limit) {
 
   while (!unsat && !done && !factoring.schedule.empty ()) {
     const unsigned ufirst = factoring.schedule.pop_front ();
-    LOG ("next factor candidate %d", ufirst);
+    VERBOSE (3, "next factor candidate %d", ufirst);
     const int first = u2i (ufirst);
     const int first_idx = vidx (first);
     if (!active (first_idx))
@@ -872,8 +1422,9 @@ bool Internal::run_factorization (int64_t limit) {
       continue;
     f.factor &= ~bit;
     const size_t first_count = first_factor (factoring, first);
+    // extract XOR matches after the "normal" factors in this loop.
     if (first_count > 1) {
-      for (;;) {
+      for (; opts.factorxor < 2;) {
         unsigned next_count;
         const int next = next_factor (factoring, &next_count);
         if (next == 0)
@@ -883,10 +1434,34 @@ bool Internal::run_factorization (int64_t limit) {
           break;
         factorize_next (factoring, next, next_count);
       }
-      size_t reduction;
+      // only initialize to remove non-initialized warning later.
+      int reduction = 0;
+      // This is the best AND-gate factor (classical BVA).
       Quotient *q = best_quotient (factoring, &reduction);
-      if (q && (int) reduction > factoring.bound) {
-        if (apply_factoring (factoring, q)) {
+      // only try XOR/ITE factoring once per variable
+      // (as opposed to once per literal)
+      if (opts.factorxor && opts.factorsize > 2 &&
+          (!opts.factorxorsave || (f.factor & (1u << (first > 0))))) {
+        // Get an XOR quotient which is better then the best
+        // classical quotient (or 0).
+        int xorite_reduction = 0;
+        Quotient *p = xorite_quotient (factoring, first, &xorite_reduction);
+        LOG ("best xorite quotient with %d reduction in clauses",
+             xorite_reduction);
+        // need 4 clauses for xor or ite definition.
+        // prefer XOR over AND gates.
+        if (p && xorite_reduction >= reduction) {
+          q = p;
+          reduction = xorite_reduction;
+        }
+      }
+      if (q && reduction > factoring.bound) {
+        // q->second tells us wether we are doing XOR or AND factors.
+        if (!q->second && apply_factoring (factoring, q)) {
+#ifndef QUIET
+          factored++;
+#endif
+        } else if (q->second && apply_xorite_factoring (factoring, q)) {
 #ifndef QUIET
           factored++;
 #endif
@@ -911,6 +1486,8 @@ bool Internal::run_factorization (int64_t limit) {
   return completed;
 }
 
+// TODO: bump variable based on what definition is introduced.
+// i.e., use the variables...
 int Internal::get_new_extension_variable () {
   const int current_max_external = external->max_var;
   const int new_external = current_max_external + 1;
@@ -921,10 +1498,14 @@ int Internal::get_new_extension_variable () {
     reset_watches ();
   // it does not enlarge otab, however, so we do this manually
   init_occs ();
+
+  if (opts.factorxor && opts.factorsize > 2)
+    init_noccs ();
   assert (vlit (new_internal));
   return new_internal;
 }
 
+// TODO: redundant mode (+ flag for elim).
 bool Internal::factor () {
   if (unsat)
     return false;
@@ -932,7 +1513,6 @@ bool Internal::factor () {
     return false;
   if (!opts.factor)
     return false;
-
   int v_active = active ();
   if (!v_active)
     return false;
@@ -940,7 +1520,7 @@ bool Internal::factor () {
   size_t eliminations = stats.elimrounds;
   size_t delay = opts.factordelay;
   size_t delay_limit = eliminations + delay;
-  if (log_active > delay_limit) {
+  if (delay && log_active > delay_limit) {
     VERBOSE (3,
              "factorization delayed as %zu = log10 (%u)"
              "> eliminations + delay = %zu + %zu = %zu",
@@ -958,9 +1538,10 @@ bool Internal::factor () {
     return false;
   }
   assert (!level);
+  const bool is_preprocessing = !stats.factor;
 
   SET_EFFORT_LIMIT (limit, factor, stats.factor);
-  if (!stats.factor)
+  if (preprocessing)
     limit += opts.factoriniticks * 1e6;
 
   mark_duplicated_binary_clauses_as_garbage ();
@@ -977,7 +1558,8 @@ bool Internal::factor () {
   before.clauses = stats.current.irredundant;
 #endif
 
-  factor_mode ();
+  // TODO: redundant mode sometimes?
+  factor_mode (!is_preprocessing && opts.factorredundant == 3);
   bool completed = run_factorization (limit);
   reset_factor_mode ();
 

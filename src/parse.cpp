@@ -415,7 +415,7 @@ const char *Parser::parse_solution_non_profiled () {
     if (ch != 'v')
       PER ("expected 'v' at start-of-line");
     if ((ch = parse_char ()) != ' ')
-      PER ("expected ' ' after 'v'");
+      PER ("expected ' ' after 'v', got '%c' instead", ch);
     int lit = 0;
     ch = parse_char ();
     do {

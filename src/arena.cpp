@@ -2,9 +2,8 @@
 
 namespace CaDiCaL {
 
-Arena::Arena (Internal *i) {
-  memset ((void *) this, 0, sizeof *this);
-  internal = i;
+Arena::Arena (Internal *i) : internal(i) {
+  from.start = from.top = from.end = to.start = to.end = to.top = nullptr;
 }
 
 Arena::~Arena () {

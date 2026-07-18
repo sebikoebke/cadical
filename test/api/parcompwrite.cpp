@@ -122,11 +122,15 @@ public:
   }
   const char *name () override { return "cadical-file"; }
   void writing () override {
+    if (file)
+      delete file;
     file = File::write (internal, path ());
     if (!file)
       fprintf (stderr, "error: 'File::write' failed\n"), exit (1);
   }
   void reading () override {
+    if (file)
+      delete file;
     file = File::read (internal, path ());
     if (!file)
       fprintf (stderr, "error: File::read failed\n"), exit (1);

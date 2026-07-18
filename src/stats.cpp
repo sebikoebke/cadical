@@ -10,7 +10,6 @@ Stats::Stats () {
   time.real = absolute_real_time ();
   time.process = absolute_process_time ();
   walk.minimum = LONG_MAX;
-  used.resize (2);
   used[0].resize (127);
   used[1].resize (127);
 }
@@ -52,7 +51,7 @@ void Stats::print (Internal *internal) {
   propagations += stats.propagations.transred;
   propagations += stats.propagations.vivify;
 
-  int64_t vivified = stats.vivifysubs + stats.vivifystrs;
+  int64_t vivified = stats.vivifysubs + stats.vivifystrs + stats.vivifyimplied;
   int64_t searchticks = stats.ticks.search[0] + stats.ticks.search[1];
   int64_t inprobeticks = stats.ticks.vivify + stats.ticks.probe +
                          stats.ticks.factor + stats.ticks.ternary +
@@ -64,6 +63,16 @@ void Stats::print (Internal *internal) {
 
   SECTION ("statistics");
 
+  if (all || stats.autarkies.successful) {
+    PRT ("autarkies:       %15" PRId64
+         "   %10.2f %%  of vars",
+         stats.autarkies.eliminated,
+         percent (stats.autarkies.eliminated, stats.vars));
+    PRT ("  autartried:    %15" PRId64 "   %10.2f    per interval",
+         stats.autarkies.tries, relative (stats.conflicts, stats.autarkies.tries));
+    PRT ("  autarrounds:   %15" PRId64 "   %10.2f    per tried",
+         stats.autarkies.successful, relative (stats.autarkies.successful, stats.autarkies.tries));
+  }
   if (all || stats.blocked) {
     PRT ("blocked:         %15" PRId64
          "   %10.2f %%  of irredundant clauses",
@@ -111,10 +120,10 @@ void Stats::print (Internal *internal) {
          percent (stats.backbone.units, stats.backbone.phases));
   }
   if (all || stats.deduplicatedinit) {
-    PRT ("dedup-init-rnds:  %15" PRId64 "   %10.2f %%  of interval",
+    PRT ("dedup-init-rnds: %15" PRId64 "   %10.2f %%  of interval",
          stats.deduplicatedinitrounds,
          percent (stats.deduplicatedinitrounds, stats.conflicts));
-    PRT ("dedup-init:       %15" PRId64 "   %10.2f %%  of subsumed",
+    PRT ("dedup-init:      %15" PRId64 "   %10.2f %%  of subsumed",
          stats.deduplicatedinit,
          percent (stats.deduplicatedinit, stats.deduplicatedinit));
   }
@@ -266,6 +275,15 @@ void Stats::print (Internal *internal) {
   if (all || stats.factored) {
     PRT ("factored:        %15" PRId64 "   %10.2f %%  of variables",
          stats.factored, percent (stats.factored, internal->max_var));
+    PRT ("  ands:          %15" PRId64 "   %10.2f %%  of factored",
+         stats.factored_and, percent (stats.factored_and, stats.factored));
+    PRT ("  xors:          %15" PRId64 "   %10.2f %%  of factored",
+         stats.factored_xor, percent (stats.factored_xor, stats.factored));
+    PRT ("  ites:          %15" PRId64 "   %10.2f %%  of factored",
+         stats.factored_ite, percent (stats.factored_ite, stats.factored));
+    PRT ("  eliminated:    %15" PRId64 "   %10.2f %%  of factored",
+         stats.factored_eliminated,
+         percent (stats.factored_eliminated, stats.factored));
     PRT ("  factor:        %15" PRId64 "   %10.2f    conflict interval",
          stats.factor, relative (stats.conflicts, stats.factor));
     PRT ("  cls factored:  %15" PRId64 "   %10.2f    per factored",
@@ -276,6 +294,10 @@ void Stats::print (Internal *internal) {
     PRT ("  cls unfactored:%15" PRId64 "   %10.2f    per factored",
          stats.clauses_unfactored,
          relative (stats.clauses_unfactored, factored));
+    PRT ("  cls redundant: %15" PRId64 "   %10.2f %%  of unfactored",
+         stats.clauses_unfactored_redundant,
+         percent (stats.clauses_unfactored_redundant,
+                  stats.clauses_unfactored));
     PRT ("  lits unfactored:%14" PRId64 "   %10.2f    per factored",
          stats.literals_unfactored,
          relative (stats.literals_unfactored, factored));
@@ -373,6 +395,9 @@ void Stats::print (Internal *internal) {
     PRT ("  negativehorn   %15" PRId64 "   %10.2f %%  of tried",
          stats.lucky.horn.negative,
          percent (stats.lucky.horn.negative, stats.lucky.tried));
+    PRT ("  units:         %15" PRId64 "   %10.2f  of tried",
+         stats.lucky.units,
+         relative (stats.lucky.units, stats.lucky.tried));
   }
   PRT ("  extendbytes:   %15zd   %10.2f    bytes and MB", extendbytes,
        extendbytes / (double) (1l << 20));
@@ -777,13 +802,19 @@ void Stats::print (Internal *internal) {
            stats.walk.flips, relative (stats.walk.flips, stats.walk.count));
     if (stats.walk.minimum < LONG_MAX)
       PRT ("  minimum:       %15" PRId64 "   %10.2f %%  clauses",
-           stats.walk.minimum,
+           (int64_t)stats.walk.minimum,
            percent (stats.walk.minimum, stats.added.irredundant));
     PRT ("  broken:        %15" PRId64 "   %10.2f    per flip",
          stats.walk.broken, relative (stats.walk.broken, stats.walk.flips));
     PRT ("  improved:      %15" PRId64 "   %10.2f    per walk",
          stats.walk.improved,
          relative (stats.walk.improved, stats.walk.count));
+    PRT ("  wrv-flip:      %15" PRId64 "   %10.2f %% flip",
+         stats.walk.weight_reducing_var, percent (stats.walk.weight_reducing_var, stats.walk.flips));
+    PRT ("  side-flip:     %15" PRId64 "   %10.2f %% flip",
+         stats.walk.sideways, percent (stats.walk.sideways, stats.walk.flips));
+    PRT ("  wght-transfer: %15" PRId64 "   %10.2f %% flip",
+         stats.walk.weight_transfer, percent (stats.walk.weight_transfer, stats.walk.flips));
   }
   if (all || stats.walk.passat) {
     PRT ("walked_passat:   %15" PRId64 "   %10.2f    interval",
@@ -929,6 +960,9 @@ void Stats::print (Internal *internal) {
     PRT ("   subsumed:     %15" PRId64 "   %10.2f%%  per round",
          stats.congruence.subsumed,
          relative (stats.congruence.subsumed, stats.congruence.rounds));
+    PRT ("   dummy-ands:   %15" PRId64 "   %10.2f%%  per round",
+         stats.congruence.congruent_dummy_ands,
+         relative (stats.congruence.congruent_dummy_ands, stats.congruence.rounds));
   }
 
   LINE ();
@@ -1000,7 +1034,7 @@ void LratChecker::print_stats () {
        stats.original, percent (stats.original, stats.added));
   MSG ("derived:         %15" PRId64 "   %10.2f %%  of all clauses",
        stats.derived, percent (stats.derived, stats.added));
-  MSG ("rat:         %15" PRId64 "   %10.2f %%  of derived clauses",
+  MSG ("rat:             %15" PRId64 "   %10.2f %%  of derived clauses",
        stats.rat, percent (stats.rat, stats.derived));
   MSG ("deleted:         %15" PRId64 "   %10.2f %%  of all clauses",
        stats.deleted, percent (stats.deleted, stats.added));

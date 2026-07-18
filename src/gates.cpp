@@ -671,7 +671,7 @@ void Internal::find_xor_gate (Eliminator &eliminator, int pivot) {
         const unsigned bit = 1u << j;
         int lit = lits[j];
         if ((prev & bit) != (signs & bit))
-          lits[j] = lit = -lit;
+          lits[j] = -lit;
       }
       Clause *e = find_clause (lits);
       if (!e)

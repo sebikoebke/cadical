@@ -117,6 +117,7 @@ using namespace std;
 
 struct Coveror;
 struct External;
+struct Walker_DDFW;
 struct WalkerFO;
 struct Walker;
 class Tracer;
@@ -157,6 +158,7 @@ struct Internal {
     VIVIFY = (1 << 16),
     WALK = (1 << 17),
     BACKBONE = (1 << 18),
+    AUTARKY = (1 << 19),
   };
 
   bool in_mode (Mode m) const { return (mode & m) != 0; }
@@ -214,6 +216,8 @@ struct Internal {
       probehbr_chains;          // only used if opts.probehbr=false
   bool lrat;                    // generate LRAT internally
   bool frat;                    // finalize non-deleted clauses in proof
+  bool new_binary_since_dedup;  // new binary clause has been learned since
+                                // last decompose round
   int level;                    // decision level ('control.size () - 1')
   Phases phases;                // saved, target and best phases
   signed char *vals;            // assignment [-max_var,max_var]
@@ -234,7 +238,7 @@ struct Internal {
   vector<Occs> otab;            // table of occurrences for all literals
   vector<Occs> rtab;            // table of redundant occurrences
   vector<int> ptab;             // table for caching probing attempts
-  vector<int64_t> ntab;         // number of one-sided occurrences table
+  vector<uint64_t> ntab;        // number of one-sided occurrences table
   vector<Bins> big;             // binary implication graph
   vector<Watches> wtab;         // table of watches for all literals
   Clause *conflict;             // set in 'propagation', reset in 'analyze'
@@ -245,7 +249,13 @@ struct Internal {
   bool force_no_backtrack;      // for new clauses with external propagator
   bool from_propagator;         // differentiate new clauses...
   bool ext_clause_forgettable;  // Is new clause from propagator forgettable
-  int changed_val;              // used for ILB
+  bool unsat_constraint;        // constraint used for unsatisfiability?
+  bool marked_failed;           // are the failed assumptions marked?
+  bool sweep_incomplete;        // sweep
+  int earliest_changed_val;  // earliest literal whose value was changed but
+                             // was not notified yet. Only relevant for ILB
+                             // (otherwise, we backtrack, so no
+                             // renotification is needed).
   size_t notified;           // next trail position to notify external prop
   Clause *probe_reason;      // set during probing
   size_t propagated;         // next trail position to propagate
@@ -258,8 +268,6 @@ struct Internal {
   vector<int> clause;        // simplified in parsing & learning
   vector<int> assumptions;   // assumed literals
   vector<int> constraint;    // literals of the constraint
-  bool unsat_constraint;     // constraint used for unsatisfiability?
-  bool marked_failed;        // are the failed assumptions marked?
   vector<int> original;      // original added literals
   vector<int> levels;        // decision levels in learned clause
   vector<int> analyzed;      // analyzed literals in 'analyze'
@@ -268,12 +276,11 @@ struct Internal {
   vector<int> minimized;     // removable or poison in 'minimize'
   vector<int> shrinkable;    // removable or poison in 'shrink'
   Reap reap;                 // radix heap for shrink
-  bool factorcheckdone =
-      0; // boolean indicated that we have done the resize 1
 
   vector<int> sweep_schedule; // remember sweep varibles to reschedule
-  bool sweep_incomplete;      // sweep
   uint64_t randomized_deciding;
+  vector<int>
+      imports; // impported literals (ordered by order of appearance)
 
   kitten *citten;
 
@@ -289,7 +296,7 @@ struct Internal {
   Last last;                // statistics at last occurrence
   Inc inc;                  // increments on limits
 
-  Delay delaying_vivify_irredundant;
+  Delay delaying_vivify_irredundant, delay_autarky;
   Delay delaying_sweep;
 
   Proof *proof; // abstraction layer between solver and tracers
@@ -301,6 +308,7 @@ struct Internal {
 
   Options opts; // run-time options
   Stats stats;  // statistics
+  Clause *last_irredundant;
 #ifndef QUIET
   Profiles profiles;         // time profiles for various functions
   bool force_phase_messages; // force 'phase (...)' messages
@@ -332,15 +340,16 @@ struct Internal {
   ~Internal ();
 
   /*----------------------------------------------------------------------*/
+  // Enlarge the external to internal data structures up to the index
+  // without activating any literal.
+  void reserve_vars (int new_max_var);
 
-  // Internal delegates and helpers for corresponding functions in
-  // 'External' and 'Solver'.  The 'init_vars' function initializes
-  // variables up to and including the requested variable index.
-  //
-  void init_vars (int new_max_var);
+  void activating_all_new_imported_literals ();
+  void declare_variable (int);
 
   void init_enqueue (int idx);
   void init_queue (int old_max_var, int new_max_var);
+  void check_queue ();
 
   void init_scores (int old_max_var, int new_max_var);
 
@@ -366,6 +375,7 @@ struct Internal {
 #ifndef NDEBUG
     int tmp = max_var;
     tmp -= stats.unused;
+    tmp -= stats.declared;
     tmp -= stats.now.fixed;
     tmp -= stats.now.eliminated;
     tmp -= stats.now.substituted;
@@ -413,7 +423,8 @@ struct Internal {
 
   int u2i (unsigned u) {
     assert (u > 1);
-    int res = u / 2;
+    assert (u <= INT32_MAX);
+    int res = (int) u / 2;
     assert (res <= max_var);
     if (u & 1)
       res = -res;
@@ -421,7 +432,8 @@ struct Internal {
   }
 
   int citten2lit (unsigned ulit) {
-    int res = (ulit / 2) + 1;
+    assert (ulit <= INT32_MAX);
+    int res = (int) (ulit / 2) + 1;
     assert (res <= max_var);
     if (ulit & 1)
       res = -res;
@@ -462,10 +474,20 @@ struct Internal {
 
   bool occurring () const { return !otab.empty (); }
   bool watching () const { return !wtab.empty (); }
+  // Size of the trail as an int
+  //
+  // The trail containts at most every variable at most once from 1 to
+  // INT32_MAX. Therefore the size is at most INT32_MAX. This is already
+  // used implicitely in the code (like var (lit).trail). With the assertion
+  // we document the invariant.
+  int get_trail_size () const {
+    assert (trail.size () <= INT32_MAX);
+    return static_cast<int> (trail.size ());
+  }
 
   Bins &bins (int lit) { return big[vlit (lit)]; }
   Occs &occs (int lit) { return otab[vlit (lit)]; }
-  int64_t &noccs (int lit) { return ntab[vlit (lit)]; }
+  uint64_t &noccs (int lit) { return ntab[vlit (lit)]; }
   Watches &watches (int lit) { return wtab[vlit (lit)]; }
 
   // Variable bumping through exponential VSIDS (EVSIDS) as in MiniSAT.
@@ -675,6 +697,7 @@ struct Internal {
   // Mark (active) variables as eliminated, substituted, pure or fixed,
   // which turns them into inactive variables.
   //
+  void mark_declared (int);
   void mark_eliminated (int);
   void mark_substituted (int);
   void mark_active (int);
@@ -687,6 +710,7 @@ struct Internal {
   Clause *new_clause (bool red, int glue = 0);
   void promote_clause (Clause *, int new_glue);
   void promote_clause_glue_only (Clause *, int new_glue);
+  void make_irredundant (Clause *);
   size_t shrink_clause (Clause *, int new_size);
   void minimize_sort_clause ();
   void shrink_and_minimize_clause ();
@@ -886,15 +910,19 @@ struct Internal {
   //
   int unlucky (int res);
   int lucky_decide_assumptions ();
+  void lucky_search_assign (int lit, Clause *reason);
   bool lucky_propagate_discrepency (int);
+  void lucky_assume_decision (int);
   int trivially_false_satisfiable ();
   int trivially_true_satisfiable ();
+  template <class Iterator>
+  int lucky_fixed_test (Iterator begin, Iterator end, signed char pol,
+                        std::string str);
   int forward_false_satisfiable ();
   int forward_true_satisfiable ();
   int backward_false_satisfiable ();
   int backward_true_satisfiable ();
-  int positive_horn_satisfiable ();
-  int negative_horn_satisfiable ();
+  int random_lucky_assignment (signed char pol);
 
   // Asynchronous terminating check.
   //
@@ -964,6 +992,7 @@ struct Internal {
   // Regular forward subsumption checking in 'subsume.cpp'.
   //
   void strengthen_clause (Clause *, int);
+  void strengthen_clause_and_remove_units (Clause *, int);
   void subsume_clause (Clause *subsuming, Clause *subsumed);
   int subsume_check (Clause *subsuming, Clause *subsumed);
   int try_to_subsume_clause (Clause *, vector<Clause *> &shrunken);
@@ -997,7 +1026,7 @@ struct Internal {
   bool vivify_instantiate (
       const std::vector<int> &, Clause *,
       std::vector<std::tuple<int, Clause *, bool>> &lrat_stack,
-      int64_t &ticks);
+      int64_t &ticks, bool removed_units);
   void vivify_analyze_redundant (Vivifier &, Clause *start, bool &);
   void vivify_build_lrat (int, Clause *,
                           std::vector<std::tuple<int, Clause *, bool>> &);
@@ -1122,6 +1151,7 @@ struct Internal {
     stats.mark.elim++;
     f.elim = true;
   }
+
   void mark_block (int lit) {
     Flags &f = flags (lit);
     const unsigned bit = bign (lit);
@@ -1316,7 +1346,7 @@ struct Internal {
   bool sweep_extract_fixed (Sweeper &sweeper, int lit);
 
   // factor
-  void factor_mode ();
+  void factor_mode (bool);
   void reset_factor_mode ();
   double tied_next_factor_score (int);
   Quotient *new_quotient (Factoring &, int);
@@ -1324,24 +1354,30 @@ struct Internal {
   size_t first_factor (Factoring &, int);
   void clear_nounted (vector<int> &);
   void clear_flauses (vector<Clause *> &);
-  Quotient *best_quotient (Factoring &, size_t *);
+  Quotient *best_quotient (Factoring &, int *);
+  Quotient *xorite_quotient (Factoring &, int, int *);
   int next_factor (Factoring &, unsigned *);
   void factorize_next (Factoring &, int, unsigned);
   void resize_factoring (Factoring &factoring, int lit);
   void flush_unmatched_clauses (Quotient *);
   void add_self_subsuming_factor (Quotient *, Quotient *);
   bool self_subsuming_factor (Quotient *);
-  void add_factored_divider (Quotient *, int);
+  void add_factored_divider (Factoring &, Quotient *, int);
   void blocked_clause (Quotient *q, int);
   void add_factored_quotient (Quotient *, int not_fresh);
+  void add_factor_xorite (Quotient *, int);
   void eagerly_remove_from_occurences (Clause *c);
   void delete_unfactored (Quotient *q);
   void update_factored (Factoring &factoring, Quotient *q);
   bool apply_factoring (Factoring &factoring, Quotient *q);
+  bool apply_xorite_factoring (Factoring &factoring, Quotient *q);
   void update_factor_candidate (Factoring &, int);
   void schedule_factorization (Factoring &);
   bool run_factorization (int64_t limit);
   bool factor ();
+  // returns a new fresh variable, enlarges all data structures required for
+  // importing clauses, but not all. Does not add that literal to the
+  // decision queue! You need to activate all new literals later.
   int get_new_extension_variable ();
   Clause *new_factor_clause (int);
   void adjust_scores_and_phases_of_fresh_variables (Factoring &);
@@ -1443,11 +1479,27 @@ struct Internal {
   void make_clauses_along_occurrences (WalkerFO &walker, int lit);
   void make_clauses_along_unsatisfied (WalkerFO &walker, int lit);
 
+  int walk_ddfw_round (int64_t limit, bool prev);
+  void walk_ddfw ();
+  void walk_ddfw_save_minimum (Walker_DDFW &);
+  void make_clauses_along_occurrences (Walker_DDFW &walker, int lit);
+  void make_clauses_along_unsatisfied (Walker_DDFW &walker, int lit);
+
   // Warmup
   inline void warmup_assign (int lit, Clause *reason);
   void warmup_propagate_beyond_conflict ();
-  int warmup_decide ();
+  int warmup_decide_assumptions (); // only assumptions and constraints
+  void warmup_decide ();            // rest of the decisions
+  // Warmup is an attempt to combine the strength of the user propagator
+  // with SLS: we import the assignment one-by-one and propagate after each
+  // assignment. This attempts to avoid the (exponentially unlikeley) chance
+  // to find propagation chains.
   int warmup ();
+  // set and propagate all assumptions. Afterwards set the valued to the
+  // vector passed as argument and backtracks, unless it has derived UNSAT.
+  // This version does not care about the user propagator and cannot derive
+  // sat if there is an external propagator.
+  int decide_and_propagate_all_assumptions (std::vector<int> &set_lit);
 
   // Detect strongly connected components in the binary implication graph
   // (BIG) and equivalent literal substitution (ELS) in 'decompose.cpp'.
@@ -1500,6 +1552,18 @@ struct Internal {
   //
   void phase (int lit);
   void unphase (int lit);
+
+  // autarky detection
+  int determine_autarky (std::vector<signed char> &, std::vector<int> &);
+  unsigned autarky_propagate_clause (Clause *c,
+                                     std::vector<signed char> &autarky_val,
+                                     std::vector<int> &work);
+  unsigned autarky_propagate_binary (Clause *c, std::vector<signed char> &autarky_val, std::vector<int> &work, int lit2);
+  unsigned autarky_propagate_unassigned (std::vector<signed char> &autarky_val, std::vector<int> &work, int lit);
+  unsigned autarky_propagate_unassigned_binary (std::vector<signed char> &autarky_val, std::vector<int> &work, int lit);
+  unsigned autarky_propagate (std::vector<signed char> &autarky_val, std::vector<int> &work);
+  void autarky_apply (const std::vector<signed char> &, const std::vector<int>&);
+  bool autarky (char c);
 
   // Globally blocked clause elimination.
   //
@@ -1575,8 +1639,8 @@ struct Internal {
   //
   int already_solved ();
   int restore_clauses ();
-  bool preprocess_round (int round);
-  void preprocess_quickly (bool always);
+  bool preprocess_round (int round, bool &);
+  void preprocess_quickly (bool always, bool &);
   int preprocess (bool always);
   int local_search_round (int round);
   int local_search ();
@@ -1608,6 +1672,9 @@ struct Internal {
   double update_profiles (); // Returns 'time ()'.
   void print_profile ();
 #endif
+
+  void check_last_irredundant ();
+  void update_last_irredundant (Clause *);
 
   // Get the value of an internal literal: -1=false, 0=unassigned, 1=true.
   // We use a redundant table for both negative and positive literals.  This
@@ -1684,6 +1751,10 @@ struct Internal {
   }
   void melt (int lit) {
     int idx = vidx (lit);
+    if ((size_t) idx < frozentab.size ()) {
+      LOG ("variable %d completely molten", idx);
+      return;
+    }
     unsigned &ref = frozentab[idx];
     if (ref < UINT_MAX) {
       if (!--ref) {
@@ -1871,7 +1942,7 @@ inline int External::fixed (int elit) const {
   int eidx = abs (elit);
   if (eidx > max_var)
     return 0;
-  int ilit = e2i[eidx];
+  int ilit = internal_lit (eidx);
   if (!ilit)
     return 0;
   if (elit < 0)

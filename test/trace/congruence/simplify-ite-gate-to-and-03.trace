@@ -1,0 +1,56 @@
+0 init
+1 set check 1
+2 set varkeepname 0
+3 add -2
+4 add -5
+5 add -3
+6 add 0
+7 add 1
+8 add 5
+9 add 2
+10 add 0
+11 phase 3
+12 phase 5
+13 phase -6
+14 phase -11
+15 phase 1
+16 phase -2
+17 phase 3
+18 phase -4
+19 phase -6
+20 phase 7
+21 phase 8
+22 phase -9
+23 add -5
+24 add -1
+25 add 0
+26 add 5
+27 add 1
+28 add 0
+29 add -3
+30 add 1
+31 add 0
+32 add -5
+33 add -1
+34 add 2
+35 add 0
+36 add 5
+37 add -3
+38 add 0
+39 add 3
+40 add -5
+41 add -1
+42 add 0
+43 add -2
+44 add 5
+45 add 3
+46 add 0
+47 constrain -5
+48 constrain -3
+49 constrain 4
+50 constrain -1
+51 constrain -6
+52 constrain 0
+53 phase 1
+54 phase -2
+55 simplify 9 0

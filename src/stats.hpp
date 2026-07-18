@@ -112,6 +112,8 @@ struct Stats {
     struct {
       int64_t positive = 0, negative = 0;
     } horn;
+    int64_t random = 0;
+    int64_t units = 0;
   } lucky;
 
   struct {
@@ -125,6 +127,12 @@ struct Stats {
   } rephased;
 
   struct {
+    int64_t tries;   // number of attempts to find an autarky
+    int64_t eliminated;// number of eliminated literals
+    int64_t successful; // number of successful autarky rounds
+  } autarkies;
+
+  struct {
     int64_t decision = 0;
     int64_t dummydecision = 0;
     int64_t conflicts = 0;
@@ -136,7 +144,7 @@ struct Stats {
     int64_t count = 0;  // count == how often walk() was cald
     int64_t broken = 0;
     int64_t flips = 0;
-    int64_t minimum = 0;
+    size_t minimum = 0;
     int64_t improved = 0;
     int64_t passat = 0;           // passat == how often walk_passat() was cald
     int64_t passatflips = 0;      // number of flips done in walk_passat (probSAT_repair)
@@ -168,6 +176,9 @@ struct Stats {
     int64_t passatautarkylitsrep = 0;  // autarky literals newly frozen by the after-repair call
     int64_t passatautarkyclausesexp = 0; // clauses newly marked unvisitable by the after-expansion call
     int64_t passatautarkyclausesrep = 0; // clauses newly marked unvisitable by the after-repair call
+    int64_t weight_reducing_var = 0;
+    int64_t sideways = 0;
+    int64_t weight_transfer = 0;
   } walk;
 
   struct {
@@ -182,6 +193,7 @@ struct Stats {
   int64_t restartlevels = 0; // levels at restart
   int64_t restartstable = 0; // actual number of happened restarts
   int64_t stabphases = 0;    // number of stabilization phases
+  int64_t nowstabphases = 0;     // number of stabilization since last incremental call
   int64_t stabconflicts =
       0;                    // number of search conflicts during stabilizing
   int64_t rescored = 0;     // number of times scores were rescored
@@ -234,11 +246,16 @@ struct Stats {
 
   int64_t factor = 0;
   int64_t factored = 0;
+  int64_t factored_and = 0;
+  int64_t factored_xor = 0;
+  int64_t factored_ite = 0;
+  int64_t factored_eliminated = 0;
   int64_t factor_added = 0;
   int64_t variables_extension = 0;
   int64_t variables_original = 0;
   int64_t literals_factored = 0;
   int64_t clauses_unfactored = 0;
+  int64_t clauses_unfactored_redundant = 0;
   int64_t literals_unfactored = 0;
 
   int64_t elimotfstr =
@@ -391,6 +408,7 @@ struct Stats {
   } otfs;
 
   int64_t unused = 0;   // number of unused variables
+  int64_t declared = 0; // number of declared variables
   int64_t active = 0;   // number of active variables
   int64_t inactive = 0; // number of inactive variables
 
@@ -401,8 +419,8 @@ struct Stats {
         0; // number of phases of random decision
   } randec;
 
-  std::vector<uint64_t> bump_used = {0, 0};
-  std::vector<std::vector<uint64_t>> used; // used clauses in focused mode
+  uint64_t bump_used[2] = {0, 0};
+  std::vector<uint64_t> used[2] = {{}, {}}; // used clauses in focused mode
 
   struct {
     int64_t gates = 0;
@@ -427,6 +445,7 @@ struct Stats {
     int64_t subsumed = 0;
     int64_t trivial_ite = 0;
     int64_t unary_ites = 0;
+    int64_t congruent_dummy_ands = 0;
   } congruence;
 
   struct {
@@ -437,6 +456,7 @@ struct Stats {
   } backbone;
 
   Stats ();
+  ~Stats () = default;
 
   void print (Internal *);
 };

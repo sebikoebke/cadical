@@ -1,0 +1,36 @@
+0 init
+1 set check 1
+2 add 4
+3 add -1
+4 add -3
+5 add 0
+6 add -3
+7 add 1
+8 add 4
+9 add 0
+10 add 3
+11 add 4
+12 add -2
+13 add 0
+14 add -4
+15 add -1
+16 add 3
+17 add 0
+18 add -4
+19 add -3
+20 add -2
+21 add 0
+22 add 5
+23 add 3
+24 add 2
+25 add 0
+26 add 2
+27 add -3
+28 add -5
+29 add 0
+30 add 3
+31 add 1
+32 add -4
+33 add 0
+34 connect mock-propagator
+35 solve 0

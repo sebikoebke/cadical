@@ -1,0 +1,884 @@
+0 init
+1 set walk 0
+2 set check 1
+3 set block 1
+4 set congruencexorcounts 2
+5 set decomposerounds 8
+6 set elimmaxeff 0
+7 set ematrailslow 1
+8 set inprobeint 3
+9 set randec 0
+10 set rephaseint 1
+11 set restart 1
+12 set score 1
+13 set subsumelimited 0
+14 set transredeffort 1
+15 set vivifytier1eff 1
+16 implied
+17 add 4
+18 add 7
+19 add 8
+20 add 0
+21 add -2
+22 add -4
+23 add 6
+24 add 0
+25 add -7
+26 add -8
+27 add -6
+28 add 0
+29 add -8
+30 add -4
+31 add -2
+32 add 0
+33 add 2
+34 add -6
+35 add 5
+36 add 0
+37 add 6
+38 add 1
+39 add 8
+40 add 0
+41 add 3
+42 add 1
+43 add 2
+44 add 0
+45 add -6
+46 add 4
+47 add -3
+48 add 2
+49 add 1
+50 add 5
+51 add 7
+52 add 8
+53 add 0
+54 add 1
+55 add 7
+56 add 2
+57 add 0
+58 add 2
+59 add -4
+60 add 6
+61 add 0
+62 add -8
+63 add -3
+64 add -2
+65 add 0
+66 declare_one_more_variable
+67 add -7
+68 add 2
+69 add -5
+70 add 0
+71 add 7
+72 add 1
+73 add -5
+74 add 0
+75 add -2
+76 add -8
+77 add -7
+78 add 0
+79 add -8
+80 add 4
+81 add 7
+82 add 0
+83 vars
+84 add -4
+85 add -3
+86 add -1
+87 add 0
+88 add -3
+89 add 8
+90 add 6
+91 add 0
+92 add -7
+93 add 8
+94 add -1
+95 add 5
+96 add 0
+97 add 7
+98 add -4
+99 add -2
+100 add 0
+101 add -3
+102 add -6
+103 add 4
+104 add 0
+105 add 2
+106 add 4
+107 add -3
+108 add 0
+109 add -8
+110 add 5
+111 add -1
+112 add 0
+113 add -2
+114 add 8
+115 add 7
+116 add 0
+117 add 8
+118 add -7
+119 add -3
+120 add -2
+121 add 6
+122 add -1
+123 add -4
+124 add -5
+125 add 0
+126 add 8
+127 add -2
+128 add -4
+129 add 5
+130 add 0
+131 add 7
+132 add 6
+133 add -1
+134 add 0
+135 add 5
+136 add -4
+137 add -2
+138 add 0
+139 add -5
+140 add 3
+141 add -2
+142 add 0
+143 add -3
+144 add 2
+145 add 4
+146 add 0
+147 connect mock-propagator
+148 freeze -1
+149 freeze 2
+150 freeze 3
+151 freeze 4
+152 freeze -5
+153 freeze 6
+154 freeze -7
+155 limit terminate 2
+156 limit preprocessing 7
+157 phase 2
+158 solve 0
+159 val -1 1
+160 val -2 0
+161 val -3 0
+162 val 4 0
+163 val 6 1
+164 val -7 1
+165 val -8 1
+166 failed 1 0
+167 failed 4 0
+168 failed -5 0
+169 failed 6 0
+170 failed -7 0
+171 failed 8 0
+172 frozen 1 0
+173 frozen -5 0
+174 frozen 8 0
+175 add -6
+176 add -5
+177 add 8
+178 add 7
+179 add 0
+180 add -6
+181 add 8
+182 add -5
+183 add 7
+184 add 0
+185 add -5
+186 add -8
+187 add -7
+188 add 6
+189 add 0
+190 add -7
+191 add -6
+192 add 8
+193 add 5
+194 add 0
+195 add -8
+196 add 7
+197 add -5
+198 add -6
+199 add 0
+200 add 8
+201 add 7
+202 add 6
+203 add -5
+204 add 0
+205 add -6
+206 add 8
+207 add 5
+208 add 7
+209 add 0
+210 add 6
+211 add 5
+212 add 8
+213 add 7
+214 add 0
+215 add -8
+216 add -7
+217 add 5
+218 add 6
+219 add 0
+220 add 7
+221 add -5
+222 add 8
+223 add -6
+224 add 0
+225 add 5
+226 add 7
+227 add -8
+228 add -6
+229 add 0
+230 add 8
+231 add 6
+232 add -5
+233 add -7
+234 add 0
+235 add -7
+236 add 6
+237 add 5
+238 add 8
+239 add 0
+240 add 6
+241 add 8
+242 add -7
+243 add 5
+244 add 0
+245 add -8
+246 add -6
+247 add -5
+248 add 7
+249 add 0
+250 add -8
+251 add -6
+252 add 7
+253 add 5
+254 add 0
+255 add 7
+256 add 6
+257 add -5
+258 add 8
+259 add 0
+260 add -8
+261 add -7
+262 add -6
+263 add -5
+264 add 0
+265 add 6
+266 add -8
+267 add -5
+268 add 7
+269 add 0
+270 add 5
+271 add -6
+272 add 8
+273 add 7
+274 add 0
+275 add -6
+276 add 8
+277 add 7
+278 add 5
+279 add 0
+280 add 8
+281 add -7
+282 add -6
+283 add 5
+284 add 0
+285 add 5
+286 add -8
+287 add -6
+288 add -7
+289 add 0
+290 add 8
+291 add 6
+292 add 5
+293 add -7
+294 add 0
+295 add 7
+296 add 8
+297 add 5
+298 add -6
+299 add 0
+300 add -6
+301 add -7
+302 add -5
+303 add 8
+304 add 0
+305 add 6
+306 add -5
+307 add 8
+308 add -7
+309 add 0
+310 add 5
+311 add 8
+312 add -6
+313 add -7
+314 add 0
+315 add 8
+316 add 6
+317 add -5
+318 add 7
+319 add 0
+320 disconnect mock-propagator
+321 assume 2
+322 freeze -4
+323 freeze -6
+324 freeze -8
+325 limit terminate 1332
+326 phase 2
+327 phase -3
+328 phase -6
+329 solve 0
+330 val -2 0
+331 val -4 1
+332 val -7 1
+333 val -8 0
+334 flippable -1 0
+335 flippable 2 0
+336 flippable -3 0
+337 flippable -4 0
+338 flippable 7 0
+339 flippable -10 0
+340 failed -2 0
+341 failed -6 0
+342 failed -7 0
+343 failed -8 0
+344 conclude
+345 add -3
+346 add -9
+347 add 6
+348 add 0
+349 add -4
+350 add -7
+351 add 6
+352 add 0
+353 add -9
+354 add -5
+355 add -6
+356 add 0
+357 add -5
+358 add -4
+359 add -8
+360 add 0
+361 add -8
+362 add -4
+363 add 9
+364 add 0
+365 add -7
+366 add 9
+367 add -4
+368 add 0
+369 add -4
+370 add 3
+371 add 7
+372 add 0
+373 add -7
+374 add -4
+375 add -9
+376 add 0
+377 add -4
+378 add 8
+379 add 9
+380 add 0
+381 add -6
+382 add 7
+383 add 4
+384 add 0
+385 add 6
+386 add 9
+387 add 8
+388 add 0
+389 add -8
+390 add -6
+391 add -5
+392 add 0
+393 declare_more_variables 7
+394 add 8
+395 add 7
+396 add 3
+397 add 0
+398 add -6
+399 add 9
+400 add 4
+401 add 0
+402 add -6
+403 add 3
+404 add 9
+405 add 0
+406 add 7
+407 add -9
+408 add -5
+409 add 0
+410 add 7
+411 add 9
+412 add -6
+413 add 0
+414 add 4
+415 add -9
+416 add 5
+417 add 0
+418 add -7
+419 add 9
+420 add -4
+421 add 0
+422 add -3
+423 add 5
+424 add -6
+425 add 0
+426 add -4
+427 add -7
+428 add -6
+429 add 0
+430 add 7
+431 add 5
+432 add -3
+433 add 0
+434 add -9
+435 add 4
+436 add -5
+437 add 0
+438 add 6
+439 add -9
+440 add -7
+441 add 0
+442 implied
+443 add -8
+444 add 6
+445 add 9
+446 add 0
+447 connect mock-propagator
+448 observe -8
+449 observe 0
+450 observe 11
+451 freeze 1
+452 freeze -2
+453 freeze -3
+454 freeze 4
+455 freeze 5
+456 freeze -6
+457 freeze 7
+458 freeze 8
+459 freeze -9
+460 limit preprocessing 4
+461 phase -1
+462 phase -3
+463 phase -5
+464 phase 6
+465 phase 7
+466 phase -8
+467 phase -9
+468 solve 0
+469 lemma 8
+470 lemma 11
+471 lemma 0
+472 lemma 11
+473 lemma -8
+474 lemma 0
+475 lemma 8
+476 lemma -11
+477 lemma 0
+478 lemma 8
+479 lemma 11
+480 lemma 0
+481 lemma -11
+482 lemma 8
+483 lemma 0
+484 lemma -11
+485 lemma 8
+486 lemma 0
+487 lemma 11
+488 lemma 8
+489 lemma 0
+490 lemma 8
+491 lemma -11
+492 lemma 0
+493 lemma -11
+494 lemma -8
+495 lemma 0
+496 lemma 11
+497 lemma 8
+498 lemma 0
+499 lemma -8
+500 lemma 11
+501 lemma 0
+502 lemma -8
+503 lemma -11
+504 lemma 0
+505 lemma 11
+506 lemma 8
+507 lemma 0
+508 lemma 11
+509 lemma -8
+510 lemma 0
+511 lemma -8
+512 lemma 11
+513 lemma 0
+514 lemma -11
+515 lemma -8
+516 lemma 0
+517 lemma -8
+518 lemma -11
+519 lemma 0
+520 lemma 11
+521 lemma -8
+522 lemma 0
+523 lemma -8
+524 lemma -11
+525 lemma 0
+526 lemma -11
+527 lemma 8
+528 lemma 0
+529 lemma 11
+530 lemma 8
+531 lemma 0
+532 lemma -8
+533 lemma 11
+534 lemma 0
+535 lemma 11
+536 lemma 8
+537 lemma 0
+538 lemma 11
+539 lemma 8
+540 lemma 0
+541 lemma 11
+542 lemma -8
+543 lemma 0
+544 lemma 11
+545 lemma 8
+546 lemma 0
+547 lemma -8
+548 lemma -11
+549 lemma 0
+550 lemma 8
+551 lemma -11
+552 lemma 0
+553 lemma -8
+554 lemma 11
+555 lemma 0
+556 lemma -8
+557 lemma 11
+558 lemma 0
+559 lemma 11
+560 lemma 8
+561 lemma 0
+562 lemma 11
+563 lemma 8
+564 lemma 0
+565 lemma -8
+566 lemma -11
+567 lemma 0
+568 lemma -8
+569 lemma 11
+570 lemma 0
+571 lemma -8
+572 lemma 11
+573 lemma 0
+574 lemma 11
+575 lemma -8
+576 lemma 0
+577 lemma -11
+578 lemma 8
+579 lemma 0
+580 val -1 0
+581 val -2 0
+582 val 3 1
+583 val 8 0
+584 val 9 1
+585 frozen -3 0
+586 frozen 4 0
+587 frozen 5 0
+588 frozen 8 0
+589 frozen -9 0
+590 active
+591 add -12
+592 add -11
+593 add 8
+594 add 0
+595 add 9
+596 add 12
+597 add -10
+598 add 0
+599 add 10
+600 add 12
+601 add 11
+602 add 0
+603 add 11
+604 add 10
+605 add -9
+606 add 0
+607 add 11
+608 add 9
+609 add -7
+610 add 0
+611 add -12
+612 add 10
+613 add 9
+614 add 0
+615 add -11
+616 add -10
+617 add -12
+618 add 0
+619 add -8
+620 add 12
+621 add -9
+622 add 0
+623 add 11
+624 add -9
+625 add 7
+626 add 0
+627 add 7
+628 add -12
+629 add 9
+630 add 8
+631 add 0
+632 add 10
+633 add 7
+634 add 9
+635 add 0
+636 add 10
+637 add -11
+638 add -9
+639 add 0
+640 add 7
+641 add 9
+642 add -8
+643 add 0
+644 redundant
+645 add -10
+646 add -7
+647 add 11
+648 add 0
+649 add -9
+650 add 12
+651 add 8
+652 add 0
+653 add 12
+654 add 10
+655 add -8
+656 add 11
+657 add 9
+658 add 7
+659 add 0
+660 add 12
+661 add -7
+662 add 10
+663 add 0
+664 add 10
+665 add -7
+666 add 8
+667 add 0
+668 add 10
+669 add -12
+670 add 9
+671 add 0
+672 implied
+673 add 7
+674 add 11
+675 add 9
+676 add 0
+677 add 9
+678 add 10
+679 add -11
+680 add 0
+681 assume 6
+682 assume -9
+683 assume -1
+684 assume 11
+685 assume 10
+686 freeze 2
+687 freeze 4
+688 freeze 5
+689 freeze 8
+690 freeze -10
+691 limit preprocessing 3
+692 solve 0
+693 lemma 8
+694 lemma 11
+695 lemma 0
+696 lemma -11
+697 lemma 8
+698 lemma 0
+699 lemma 11
+700 lemma -8
+701 lemma 0
+702 lemma -11
+703 lemma 8
+704 lemma 0
+705 lemma 11
+706 lemma -8
+707 lemma 0
+708 lemma 8
+709 lemma -11
+710 lemma 0
+711 lemma -11
+712 lemma 8
+713 lemma 0
+714 lemma -11
+715 lemma 8
+716 lemma 0
+717 lemma -11
+718 lemma 8
+719 lemma -11
+720 lemma 0
+721 lemma -11
+722 lemma -8
+723 lemma 0
+724 lemma 8
+725 lemma -11
+726 lemma 0
+727 lemma -8
+728 lemma 11
+729 lemma 0
+730 lemma 8
+731 lemma 11
+732 lemma 0
+733 lemma -11
+734 lemma -8
+735 lemma 0
+736 lemma 8
+737 lemma -11
+738 lemma 0
+739 lemma -11
+740 lemma -8
+741 lemma 0
+742 lemma 11
+743 lemma 8
+744 lemma 11
+745 lemma 0
+746 lemma -11
+747 lemma 8
+748 lemma 0
+749 lemma -11
+750 lemma -8
+751 lemma 0
+752 lemma -8
+753 lemma 11
+754 lemma 0
+755 lemma 8
+756 lemma 11
+757 lemma 0
+758 lemma 11
+759 lemma 8
+760 lemma 0
+761 lemma -11
+762 lemma -8
+763 lemma 0
+764 lemma 11
+765 lemma -8
+766 lemma 0
+767 lemma 8
+768 lemma 11
+769 lemma 0
+770 lemma -8
+771 lemma 11
+772 lemma 0
+773 lemma -11
+774 lemma -8
+775 lemma 0
+776 lemma -11
+777 lemma -8
+778 lemma 0
+779 lemma -11
+780 lemma 8
+781 lemma 0
+782 lemma 8
+783 lemma -11
+784 lemma 0
+785 lemma -11
+786 lemma 8
+787 lemma 0
+788 lemma -8
+789 lemma 11
+790 lemma 0
+791 lemma 11
+792 lemma -8
+793 lemma 0
+794 lemma 8
+795 lemma 11
+796 lemma 0
+797 lemma 11
+798 lemma 8
+799 lemma 0
+800 lemma -8
+801 lemma 11
+802 lemma 0
+803 lemma 11
+804 lemma 8
+805 lemma 0
+806 lemma -11
+807 lemma 8
+808 lemma 0
+809 lemma -8
+810 lemma -11
+811 lemma 0
+812 lemma 8
+813 lemma 11
+814 lemma 0
+815 lemma -8
+816 lemma -11
+817 lemma 0
+818 lemma -8
+819 lemma -11
+820 lemma 0
+821 lemma -8
+822 lemma 11
+823 lemma 0
+824 lemma 11
+825 lemma 8
+826 lemma 0
+827 lemma -8
+828 lemma 11
+829 lemma 0
+830 lemma 8
+831 lemma -11
+832 lemma 0
+833 lemma 8
+834 lemma -11
+835 lemma 0
+836 lemma -11
+837 lemma -8
+838 lemma 0
+839 lemma 8
+840 lemma 11
+841 lemma 0
+842 lemma -11
+843 lemma 8
+844 lemma 0
+845 lemma 11
+846 lemma -8
+847 lemma 0
+848 lemma 8
+849 lemma -11
+850 lemma 11
+851 lemma 0
+852 lemma 8
+853 lemma -11
+854 lemma 0
+855 lemma 11
+856 lemma -8
+857 lemma 0
+858 lemma 11
+859 lemma -8
+860 lemma 11
+861 lemma 0
+862 val 1 1
+863 val 2 0
+864 val -3 1
+865 val -6 0
+866 val -7 1
+867 val 8 0
+868 val 9 1
+869 val 10 1
+870 val 12 0
+871 val -19 1
+872 failed 1 0
+873 failed -2 0
+874 failed -3 0
+875 failed 4 0
+876 failed 5 0
+877 failed -6 0
+878 failed -7 0
+879 failed 8 0
+880 failed 9 0
+881 failed 10 0
+882 failed 11 0
+883 reset

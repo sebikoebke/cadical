@@ -38,8 +38,15 @@ inline CheckerWatcher &Checker::watcher (int lit) {
 CheckerClause *Checker::new_clause () {
   const size_t size = simplified.size ();
   assert (size > 1), assert (size <= UINT_MAX);
-  const size_t bytes = sizeof (CheckerClause) + (size - 2) * sizeof (int);
-  CheckerClause *res = (CheckerClause *) new char[bytes];
+
+  const size_t header_bytes = sizeof (CheckerClause);
+  const size_t actual_literal_bytes = size * sizeof (int);
+  size_t combined_bytes = header_bytes + actual_literal_bytes;
+#ifdef NFLEXIBLE
+  const size_t faked_literals_bytes = sizeof ((CheckerClause *) 0)->literals;
+  combined_bytes -= faked_literals_bytes;
+#endif
+  CheckerClause *res = (CheckerClause *) new char[combined_bytes];
   DeferDeleteArray<char> delete_res ((char *) res);
   res->next = 0;
   res->hash = last_hash;
@@ -469,18 +476,18 @@ bool Checker::check_blocked () {
       for (int *i = c->literals; i < c->literals + c->size; i++) {
         const int lit = *i;
         if (val (lit) > 0) {
-          LOG (c->literals, c->size, "satisfied clause");
           count = 2;
           break;
         }
         if (mark (lit)) {
           count++;
-          LOG (c->literals, c->size, "clause");
           first = lit;
         }
       }
-      if (count == 1)
+      if (count == 1) {
         not_blocked.push_back (first);
+        LOG (c->literals, c->size, "CHECKER non-blocked %d clause", first);
+      }
     }
   }
   for (const auto &lit : not_blocked) {

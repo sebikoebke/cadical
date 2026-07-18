@@ -38,7 +38,7 @@ struct Limit {
 
   // How often rephased during (1) or out (0) of stabilization.
   //
-  int64_t rephased[2];
+  int64_t rephased[2] = {0,0};
 
   // Current elimination bound per eliminated variable.
   //
@@ -146,7 +146,9 @@ struct Inc {
       REFERENCE = opts.preprocessinit; \
     } \
     const double EFFORT = (double) opts.NAME##effort * 1e-3; \
-    const int64_t DELTA = EFFORT * REFERENCE; \
+    int64_t DELTA = EFFORT * REFERENCE; \
+    if (!DELTA) \
+      DELTA = 1; \
     const int64_t THRESH = opts.NAME##thresh * clauses.size (); \
     if (THRESHHOLD && DELTA < THRESH) { \
       VERBOSE (2, \
@@ -159,7 +161,7 @@ struct Inc {
     const int64_t NEW_LIMIT = OLD_LIMIT + DELTA; \
     LIMIT = NEW_LIMIT; \
     VERBOSE (2, \
-             "new ticks limit %" PRId64 "= %" PRId64 " + %f * %" PRId64, \
+             "new ticks limit %" PRId64 " = %" PRId64 " + %f * %" PRId64, \
              NEW_LIMIT, OLD_LIMIT, EFFORT, REFERENCE); \
   } while (0)
 

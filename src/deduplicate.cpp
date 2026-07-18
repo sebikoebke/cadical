@@ -25,6 +25,10 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
     return;
   if (terminated_asynchronously ())
     return;
+#ifndef NDEBUG
+  if (!new_binary_since_dedup)
+    return;
+#endif
 
   START_SIMPLIFIER (deduplicate, DEDUP);
   stats.deduplications++;
@@ -164,6 +168,8 @@ void Internal::mark_duplicated_binary_clauses_as_garbage () {
       }
     }
   }
+  assert (new_binary_since_dedup || !(subsumed + units));
+  new_binary_since_dedup = false;
   STOP_SIMPLIFIER (deduplicate, DEDUP);
 
   report ('2', !opts.reportall && !(subsumed + units));
@@ -245,7 +251,14 @@ void Internal::deduplicate_all_clauses () {
       LOG (prev, "subsuming");
       assert (!c->garbage);
       assert (!prev->garbage);
-      assert (c->redundant || !prev->redundant);
+      // Defensive code that I did not manage to trigger with an assertion (I
+      // only manage to have identical redundant/irredundant clauses). But the
+      // scheduling of deduplication is not final (it currently only triggers in
+      // the first solving before anything else), so I prefer supporting this
+      // case here.
+      if (!c->redundant && prev->redundant) {
+        make_irredundant (prev);
+      }
       mark_garbage (c);
       delete_clause (c);
       subsumed++;
@@ -253,6 +266,9 @@ void Internal::deduplicate_all_clauses () {
     } else
       prev = c;
   }
+
+  assert (!subsumed || j != mid);
+  assert (j <= i);
 
   for (; i != clauses.end (); ++i) {
     Clause *c = *i;

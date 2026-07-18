@@ -1,0 +1,71 @@
+0 init
+1 configure default
+2 set elimclslim 2
+3 set preprocessinit 0
+4 set preprocesslight 0
+5 set subsumeclslim 0
+6 add -3
+7 add 1
+8 add -2
+9 add 0
+10 add -5
+11 add 2
+12 add 1
+13 add -3
+14 add 0
+15 add -3
+16 add 2
+17 add -1
+18 add 0
+19 add -1
+20 add 2
+21 add 5
+22 add 3
+23 add 0
+24 add -5
+25 add -2
+26 add 3
+27 add 0
+28 add 5
+29 add 1
+30 add 2
+31 add 0
+32 add -1
+33 add -3
+34 add -5
+35 add 2
+36 add 0
+37 add -5
+38 add -1
+39 add 2
+40 add 0
+41 add 3
+42 add 2
+43 add 1
+44 add 0
+45 add 5
+46 add 3
+47 add 2
+48 add 1
+49 add 0
+50 add -5
+51 add 3
+52 add 0
+53 add -5
+54 add -3
+55 add -2
+56 add 0
+57 add 2
+58 add 3
+59 add -1
+60 add 0
+61 add -3
+62 add 5
+63 add -2
+64 add 0
+65 constrain -2
+66 constrain -4
+67 constrain -5
+68 constrain -3
+69 constrain 0
+70 simplify 3 0

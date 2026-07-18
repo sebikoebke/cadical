@@ -1,3 +1,62 @@
+Version 3.0.X
+-------------
+
+User Facing Changes:
+
+- Major rework of literal import, making it lazy everywhere. Unused variables
+  are not created anymore.
+
+- For models, CaDiCaL now outputs only the literals that are present
+  in the problem. Use `modelalllits` to get all literals.
+
+- Improved walk with assumptions (literals propagated by the assumptions cannot
+  be flipped anymore). This means that lucky will now run if you have
+  assumptions. For many short calls, this can be prohibitive. Use
+  `--no-luckyassumptions`.
+
+- Fixed accidental deactivation of local search initially (off by
+  default, activation with `-L`), due to a ticks limit of 0. Only noticeable if
+  you run the solver with `-L1`.
+
+- By default, all solver techniques support LRAT resolution checking
+  (enabling easy interpolation). Exceptions are `factor` which requires
+  LRAT with extended resolution (and therefore no interpolation) and
+  `cover`, `instantiate` and `vivifyinst` which all require less strict
+  LRAT checking where the antecedents subsume the learned clause.
+
+New and Improved Techniques:
+
+- Stronger congruence algorithm by taking more binary clauses into
+  account, to produce a few more units.
+
+- Improved performance of congruence closure thanks to a new hash
+  table instead of relying on the C++ standard one.
+
+- Improved BVA, now includes XOR and ITE factorization and considers
+  learned clauses.
+
+- New DDFW algorithm for walking.
+
+- Equivalent literals substitution (`decompose`) now also works on frozen
+  literals: those literals are replaced (but are kept via binary clauses).
+
+- Major rework of literal import:
+
+   + The option `reverse` was renamed `varprioritizefirst`.
+
+   + The function `resize ()` does not declare the variables anymore, it only
+     reserves the space (to make allocations more efficient). The variables are
+     only declared if you use them (either by adding them or by some other API
+     operation like observe ()). This means that the behavior does not change
+     anymore by calling resize with more variables than expected.
+
+   + Variable names do not have to kept anymore internally. There are 2 options
+     controlling the behavior: (i) `varindexorder` uses the order given by the
+     input with potentially a different name and (ii) `varkeepname` attempts to
+     keep the names given by the input (mostly useful for debugging). The order
+     of decision is controlled by `varprioritizefirst` (first imported variable
+     = first decision).
+
 Version 3.0.0
 -------------
 

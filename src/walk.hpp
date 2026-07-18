@@ -75,7 +75,7 @@ struct ClauseOrBinary {
   clause_or_binary_raw tagged;
   ClauseOrBinary () : binary (false) { tagged.clause = nullptr; }
   ClauseOrBinary (Clause *c) : binary (false) { tagged.clause = c; }
-  ClauseOrBinary (TaggedBinary &&c) : binary (true) { tagged.b = c; }
+  ClauseOrBinary (TaggedBinary &&c) noexcept : binary (true) { tagged.b = c; }
   bool is_binary () const { return binary; }
   Clause *clause () const {
     assert (!binary);

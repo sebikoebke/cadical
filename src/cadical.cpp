@@ -268,24 +268,45 @@ void App::print_usage (bool all) {
 // Pretty print competition format witness with 'v' lines.
 
 void App::print_witness (FILE *file) {
-  int c = 0, i = 0, tmp;
-  do {
-    if (!c)
-      fputc ('v', file), c = 1;
-    if (i++ == max_var)
-      tmp = 0;
-    else if (solver->external->ervars[i])
-      continue;
-    else
-      tmp = solver->val (i) < 0 ? -i : i;
-    char str[32];
-    snprintf (str, sizeof str, " %d", tmp);
-    int l = strlen (str);
-    if (c + l > 78)
-      fputs ("\nv", file), c = 1;
-    fputs (str, file);
-    c += l;
-  } while (tmp);
+  int c = 0, tmp = 0;
+  if (solver->internal->opts.modelalllits) {
+    for (auto elit = 1; elit <= solver->external->max_var; ++elit) {
+      if (!c)
+        fputc ('v', file), c = 1;
+      if (solver->external->ervars[elit])
+        continue;
+      else
+        tmp = solver->val (elit) < 0 ? -elit : elit;
+      char str[32];
+      snprintf (str, sizeof str, " %d", tmp);
+      int l = strlen (str);
+      if (c + l > 78)
+        fputs ("\nv", file), c = 1;
+      fputs (str, file);
+      c += l;
+
+    }
+  } else {
+    for (auto /*[elit, ilit] C++17*/ eilit : solver->external->e2i) {
+      const int elit = eilit.first;
+      const int ilit = eilit.second;
+      if (!c)
+        fputc ('v', file), c = 1;
+      if (!ilit)
+        continue;
+      if (solver->external->ervars[elit])
+        continue;
+      else
+        tmp = solver->val (elit) < 0 ? -elit : elit;
+      char str[32];
+      snprintf (str, sizeof str, " %d", tmp);
+      int l = strlen (str);
+      if (c + l > 78)
+        fputs ("\nv", file), c = 1;
+      fputs (str, file);
+      c += l;
+    }
+  }
   if (c)
     fputc ('\n', file);
 }
@@ -529,7 +550,7 @@ int App::main (int argc, char **argv) {
     else if (!strcmp (argv[i], "-f") || !strcmp (argv[i], "--force") ||
              !strcmp (argv[i], "--force=1") ||
              !strcmp (argv[i], "--force=true"))
-      force_strict_parsing = 0, force_writing = true;
+      force_strict_parsing = 0, force_writing = true, solver->set ("factorcheck", 0);
     else if (!strcmp (argv[i], "--strict") ||
              !strcmp (argv[i], "--strict=1") ||
              !strcmp (argv[i], "--strict=true"))
@@ -899,6 +920,7 @@ int App::main (int argc, char **argv) {
     solver->message ("writing result to '%s'", write_result_path);
   }
 
+  assert (write_result_file);
   if (res == 10) {
     if (status)
       fputs ("s SATISFIABLE\n", write_result_file);
@@ -915,12 +937,14 @@ int App::main (int argc, char **argv) {
   solver->resources ();
   solver->section ("shutting down");
   solver->message ("exit %d", res);
-  if (!res && timesup)
+  if (!res && timesup && !get ("quiet")) {
     fputs ("c Timeout reached! 😅 This instance is a real thinker.\n"
            "c 🚧 🚧 🚧 Please consider contributing it to the page\n"
            "c https://mysolvertimesout.org/#sat in order to improve\n"
            "c automated reasoning. 🚧 🚧 🚧\n",
            write_result_file);
+    fflush (write_result_file);
+  }
   if (less_pipe) {
     close (1);
     pclose (less_pipe);
@@ -962,7 +986,7 @@ void App::init () {
 
 /*------------------------------------------------------------------------*/
 
-App::App () : solver (0) {} // Only partially initialize the app.
+App::App () : solver (0), time_limit(-1), force_strict_parsing (false), force_writing(false), max_var (0), timesup (false) {} // Only partially initialize the app.
 
 App::~App () {
   if (!solver)

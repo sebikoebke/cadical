@@ -524,7 +524,7 @@ public:
   //   require (INCONCLUSIVE)
   //   ensure (INCONCLUSIVE)
   //
-  void implied (std::vector<int> &implicants);
+  void implied (std::vector<int> &implicates);
 
   //------------------------------------------------------------------------
   // This function determines a good splitting literal.  The result can be
@@ -575,6 +575,8 @@ public:
   // original formula such that both solvers have the same models.
   // Assumptions are not copied.  Options however are copied as well as
   // flags which remember the current state of variables in preprocessing.
+  // No user propagator information is copied (so neither the user
+  // propagator nor any observed status).
   //
   //   require (READY)          // for 'this'
   //   ensure (READY)           // for 'this'
@@ -602,7 +604,7 @@ public:
   //   require (VALID | SOLVING)
   //   ensure (VALID | SOLVING)
   //
-  int vars ();
+  int vars () const;
 
   // Increase the maximum variable index explicitly.  This function makes
   // sure that at least 'min_max_var' variables are initialized.  Since it
@@ -612,6 +614,10 @@ public:
   //   require (READY)
   //   ensure (STEADY)
   //
+  // or
+  //
+  //   require (SOLVING)
+  //   ensure (SOLVING)
   void resize (int min_max_var);
 
   // Increase the maximum variable index by a number of new variables.
@@ -625,6 +631,10 @@ public:
   //   require (READY)
   //   ensure (STEADY)
   //
+  // or
+  //
+  //   require (SOLVING)
+  //   ensure (SOLVING)
   int declare_more_variables (int number_of_additional_new_vars);
 
   // Returns the next fresh variable that was not used internally.

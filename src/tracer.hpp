@@ -37,11 +37,11 @@ public:
   // Includes ID and whether the clause is redundant or irredundant
   // If antecedents are derived they will be included here.
   // If witness != 0 it is a RAT clause.
-  // Arguments: ID, redundant, clause, witness, antecedents
+  // Arguments: ID, redundant, witness, clause, antecedents
   //
-  virtual void add_derived_clause (int64_t, bool, int,
-                                   const std::vector<int> &,
-                                   const std::vector<int64_t> &) {}
+  virtual void add_derived_clause (int64_t /*clause_id*/, bool /*redundant*/, int /*witness*/,
+                                   const std::vector<int> & /*clause*/,
+                                   const std::vector<int64_t> &/*antecedents*/) {}
 
   // Notify the observer that a clause is deleted.
   // Includes ID and redundant/irredundant

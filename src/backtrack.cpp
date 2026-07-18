@@ -15,6 +15,9 @@ inline void Internal::unassign (int lit) {
   LOG ("unassign %d @ %d", lit, var (idx).level);
   num_assigned--;
 
+  if (flags (idx).declared ())
+    return;
+
   // In the standard EVSIDS variable decision heuristic of MiniSAT, we need
   // to push variables which become unassigned back to the heap.
   //
@@ -57,13 +60,13 @@ void Internal::update_target_and_best () {
   }
 
   if (no_conflict_until > target_assigned) {
-    copy_phases (phases.target);
+    save_assigned_phases (phases.target);
     target_assigned = no_conflict_until;
     LOG ("new target trail level %zu", target_assigned);
   }
 
   if (no_conflict_until > best_assigned) {
-    copy_phases (phases.best);
+    save_assigned_phases (phases.best);
     best_assigned = no_conflict_until;
     LOG ("new best trail level %zu", best_assigned);
   }
@@ -76,6 +79,11 @@ void Internal::update_target_and_best () {
 
 /*------------------------------------------------------------------------*/
 
+// backtrack to the given level (by default 0), updating the target and the best
+// level if required. The function also handles out-of-order literals correcty
+// by reassigning them (but you do have to repropagate afterwards!)
+//
+// For inprocessing use the version that does not update the phases.
 void Internal::backtrack (int new_level) {
   assert (new_level <= level);
   if (new_level == level)
@@ -84,6 +92,13 @@ void Internal::backtrack (int new_level) {
   update_target_and_best ();
   backtrack_without_updating_phases (new_level);
 }
+
+// backtrack to the given level (by default 0), withour updating the target and
+// the best level if required. The function also handles out-of-order literals
+// correcty by reassigning them (but you do have to repropagate afterwards!) if
+// you did out-of-order.
+//
+// Use `backtrack` to also save the phases. This one is mostly for inprocessing.
 
 void Internal::backtrack_without_updating_phases (int new_level) {
 
@@ -165,10 +180,10 @@ void Internal::backtrack_without_updating_phases (int new_level) {
 
   control.resize (new_level + 1);
   level = new_level;
-  if (changed_val) {
+  if (earliest_changed_val) {
     assert (opts.ilb);
-    if (!val (changed_val)) {
-      changed_val = 0;
+    if (!val (earliest_changed_val)) {
+      earliest_changed_val = 0;
     }
   }
   assert (num_assigned == trail.size ());

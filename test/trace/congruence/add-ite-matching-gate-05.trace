@@ -1,0 +1,49 @@
+0 init
+1 set check 1
+2 configure sat
+3 set elimboundmax -1
+4 set sweepvars 0
+5 assume -2
+6 phase 1
+7 phase 4
+8 phase -7
+9 solve 0
+10 add -4
+11 add 2
+12 add 1
+13 add 0
+14 add 2
+15 add 1
+16 add 4
+17 add 0
+18 add -4
+19 add 2
+20 add -1
+21 add 0
+22 add 4
+23 add -1
+24 add 2
+25 add 0
+26 add -2
+27 add -1
+28 add 3
+29 add 0
+30 phase 1
+31 phase -3
+32 simplify 7 0
+33 add -2
+34 add 3
+35 add 1
+36 add 0
+37 add 1
+38 add -3
+39 add -2
+40 add 0
+41 add -2
+42 add -1
+43 add -3
+44 add 0
+45 phase 1
+46 phase -2
+47 phase 3
+48 simplify 4 0

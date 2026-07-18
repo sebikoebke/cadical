@@ -1,0 +1,50 @@
+0 init
+1 set check 1
+2 set congruencexor 0
+3 add 2
+4 add -1
+5 add -4
+6 add 0
+7 add -2
+8 add -4
+9 add 1
+10 add 0
+11 phase -1
+12 phase 2
+13 phase -3
+14 phase 4
+15 phase -5
+16 phase 6
+17 add -3
+18 add -4
+19 add 2
+20 add 0
+21 add -2
+22 add -3
+23 add -4
+24 add 0
+25 add 4
+26 add -2
+27 add -3
+28 add 0
+29 add 4
+30 add 2
+31 add -3
+32 add 0
+33 add 2
+34 add 3
+35 add -4
+36 add 0
+37 add -2
+38 add 4
+39 add 3
+40 add 0
+41 add 2
+42 add 4
+43 add 3
+44 add 0
+45 phase -1
+46 phase -2
+47 phase 3
+48 phase -4
+49 simplify 3 0

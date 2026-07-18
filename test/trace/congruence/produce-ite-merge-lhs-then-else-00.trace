@@ -1,0 +1,38 @@
+0 init
+1 set congruencebinaries 0
+2 add -2
+3 add 1
+4 add 0
+5 add 4
+6 add -3
+7 add -2
+8 add 0
+9 add 2
+10 add -3
+11 add -4
+12 add 0
+13 phase 1
+14 phase 3
+15 add 3
+16 add -5
+17 add -2
+18 add 0
+19 add 4
+20 add 2
+21 add 0
+22 add -4
+23 add -2
+24 add 0
+25 add -4
+26 add -5
+27 add 0
+28 add -2
+29 add 3
+30 add 0
+31 add 2
+32 add 5
+33 add 3
+34 add 0
+35 phase 3
+36 phase 5
+37 simplify 5 0

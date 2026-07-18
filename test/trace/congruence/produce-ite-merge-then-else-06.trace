@@ -1,0 +1,46 @@
+0 init
+1 set check 1
+2 set congruencexor 0
+3 set luckyearly 0
+4 add 3
+5 add 2
+6 add 1
+7 add 0
+8 add 3
+9 add 2
+10 add -1
+11 add 0
+12 add 3
+13 add -2
+14 add -1
+15 add 0
+16 add 2
+17 add -3
+18 add 1
+19 add 0
+20 add -2
+21 add -3
+22 add -1
+23 add 0
+24 add -3
+25 add 2
+26 add -1
+27 add 0
+28 add -3
+29 add -2
+30 add 1
+31 add 0
+32 phase -1
+33 phase 2
+34 phase -3
+35 add -1
+36 add -4
+37 add 3
+38 add 0
+39 add 3
+40 add 1
+41 add 4
+42 add 0
+43 phase -5
+44 phase 6
+45 solve 0

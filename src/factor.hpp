@@ -15,9 +15,11 @@ struct factor_occs_size {
 };
 
 struct Quotient {
-  Quotient (int f) : factor (f) {}
+  Quotient (int f) : factor (f), second (0), third (0) {}
   ~Quotient () {}
   int factor;
+  int second; // xor
+  int third;  // ite
   size_t id;
   int64_t bid; // for LRAT
   Quotient *prev, *next;
@@ -39,13 +41,15 @@ struct Factoring {
 
   int initial;
   int bound;
+  bool redundant;
   vector<unsigned> count;
-  vector<int> fresh;
+  vector<vector<int>> fresh;
   vector<int> counted;
   vector<int> nounted;
   vector<Clause *> flauses;
   struct {
     Quotient *first, *last;
+    Quotient *xorites;
   } quotients;
 };
 

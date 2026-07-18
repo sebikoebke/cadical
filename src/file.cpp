@@ -122,11 +122,11 @@ bool File::piping () {
 // we double check and fall back to reading the file as is, if the signature
 // does not match after issuing a warning.
 
-static int xzsig[] = {0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00, 0x00, EOF};
-static int bz2sig[] = {0x42, 0x5A, 0x68, EOF};
-static int gzsig[] = {0x1F, 0x8B, EOF};
-static int sig7z[] = {0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C, EOF};
-static int lzmasig[] = {0x5D, EOF};
+static const int xzsig[] = {0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00, 0x00, EOF};
+static const int bz2sig[] = {0x42, 0x5A, 0x68, EOF};
+static const int gzsig[] = {0x1F, 0x8B, EOF};
+static const int sig7z[] = {0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C, EOF};
+static const int lzmasig[] = {0x5D, EOF};
 
 bool File::match (Internal *internal, const char *path, const int *sig) {
   assert (path);

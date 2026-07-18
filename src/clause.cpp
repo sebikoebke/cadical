@@ -62,7 +62,8 @@ inline void Internal::mark_added (int lit, int size, bool redundant) {
     mark_ternary (lit);
   if (!redundant)
     mark_block (lit);
-  if ((!redundant || size == 2))
+  if (size <= opts.factorsize && (opts.factorredundant > 1 || !redundant ||
+                                  (opts.factorredundant == 1 && size == 2)))
     mark_factor (lit);
 }
 
@@ -132,6 +133,8 @@ Clause *Internal::new_clause (bool red, int glue) {
     stats.current.irredundant++;
     stats.added.irredundant++;
   }
+  if (size == 2)
+    new_binary_since_dedup = true;
 
   clauses.push_back (c);
   clause_delete.release ();
@@ -140,6 +143,8 @@ Clause *Internal::new_clause (bool red, int glue) {
   if (likely_to_be_kept_clause (c))
     mark_added (c);
 
+  if (!c->redundant)
+    update_last_irredundant(c);
   return c;
 }
 
@@ -238,6 +243,27 @@ size_t Internal::shrink_clause (Clause *c, int new_size) {
     mark_added (c);
 
   return res;
+}
+
+// Makes a redundant clause irredundant and update the statistics
+void Internal::make_irredundant (Clause *subsuming) {
+  check_last_irredundant();
+  assert (subsuming->redundant);
+  assert (!subsuming->garbage);
+  LOG ("turning redundant subsuming clause into irredundant clause");
+  subsuming->redundant = false;
+  if (proof)
+    proof->strengthen (subsuming->id);
+  stats.current.irredundant++;
+  stats.added.irredundant++;
+  stats.irrlits += subsuming->size;
+  assert (stats.current.redundant > 0);
+  stats.current.redundant--;
+  assert (stats.added.redundant > 0);
+  stats.added.redundant--;
+  update_last_irredundant(subsuming);
+  check_last_irredundant();
+  // ... and keep 'stats.added.total'.
 }
 
 // This is the 'raw' deallocation of a clause.  If the clause is in the
@@ -349,7 +375,7 @@ void Internal::assign_original_unit (int64_t id, int lit) {
   assert (!flags (idx).eliminated ());
   Var &v = var (idx);
   v.level = 0;
-  v.trail = (int) trail.size ();
+  v.trail = get_trail_size ();
   v.reason = 0;
   const signed char tmp = sign (lit);
   set_val (idx, tmp);
@@ -363,11 +389,6 @@ void Internal::assign_original_unit (int64_t id, int lit) {
   mark_fixed (lit);
   if (level)
     return;
-  if (propagate ())
-    return;
-  assert (conflict);
-  LOG ("propagation of original unit results in conflict");
-  learn_empty_clause ();
 }
 
 // New clause added through the API, e.g., while parsing a DIMACS file.
@@ -380,14 +401,14 @@ void Internal::assign_original_unit (int64_t id, int lit) {
 void Internal::add_new_original_clause (int64_t id) {
 
   if (!from_propagator && level && !opts.ilb) {
-    backtrack ();
-  } else if (changed_val) {
-    assert (val (changed_val));
-    int new_level = var (changed_val).level - 1;
+    backtrack_without_updating_phases ();
+  } else if (earliest_changed_val) {
+    assert (val (earliest_changed_val));
+    int new_level = var (earliest_changed_val).level - 1;
     assert (new_level >= 0);
-    backtrack (new_level);
+    backtrack_without_updating_phases (new_level);
   }
-  assert (!changed_val);
+  assert (!earliest_changed_val);
   LOG (original, "original clause");
   assert (clause.empty ());
   bool skip = false;
@@ -414,6 +435,7 @@ void Internal::add_new_original_clause (int64_t id) {
           if (lrat) {
             int elit = externalize (lit);
             unsigned eidx = (elit > 0) + 2u * (unsigned) abs (elit);
+            // the external units are handled somewhere else
             if (!external->ext_units[eidx]) {
               int64_t uid = unit_id (-lit);
               lrat_chain.push_back (uid);
@@ -504,7 +526,7 @@ void Internal::add_new_original_clause (int64_t id) {
         const int lit = clause[0];
         assert (!val (lit) || var (lit).level);
         if (val (lit) < 0)
-          backtrack (var (lit).level - 1);
+          backtrack_without_updating_phases (var (lit).level - 1);
         assert (val (lit) >= 0);
         handle_external_clause (0);
         assign_original_unit (new_id, lit);

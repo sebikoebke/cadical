@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "cadical.hpp"
+
 namespace CaDiCaL {
 
 // Factors out common functions for parsing of DIMACS and solution files.
@@ -38,13 +40,13 @@ class Parser {
   const char *parse_solution_non_profiled ();
 
   bool *parse_inccnf_too;
-  vector<int> *cubes;
+  std::vector<int> *cubes;
 
 public:
   // Parse a DIMACS CNF or ICNF file.
   //
   // Return zero if successful. Otherwise parse error.
-  Parser (Solver *s, File *f, bool *i, vector<int> *c)
+  Parser (Solver *s, File *f, bool *i, std::vector<int> *c)
       : solver (s), internal (s->internal), external (s->external),
         file (f), parse_inccnf_too (i), cubes (c) {}
 

@@ -1,4 +1,5 @@
 #include "internal.hpp"
+#include <cstring>
 
 namespace CaDiCaL {
 
@@ -24,8 +25,8 @@ W  backtracked after local search improved phases
 b  blocked clause elimination
 G  before garbage collection
 C  after garbage collection
-/  compacted internal literals and remapped external to internal
-c  covered clause elimination
+K  covered clause elimination ('Kovered Klause')
+c  clausal congruence closure
 d  decomposed binary implication graph and substituted equivalent literals
 2  removed duplicated binary clauses
 e  bounded variable elimination round
@@ -56,8 +57,10 @@ s  subsumed clause removal round
 t  transition reduction of binary implication graph
 u  vivified tier1 clauses
 v  vivified tier2 clauses
-x  vivified tier3 clauses
-w  vivified irredundant clauses
+w  vivified tier3 clauses
+x  vivified irredundant clauses
+=  sweeping to find equivalences using Kitten
+f  factor (BVA)
 
 The order of the list follows the occurrences of 'report' in the source
 files, i.e., obtained from "grep 'report (' *.cpp".   Note that some of the
@@ -94,6 +97,7 @@ Report::Report (const char *h, int precision, int min, double value)
     snprintf (fmt, sizeof fmt, "%%.%df", precision);
   snprintf (buffer, sizeof buffer, fmt, value);
   const int width = strlen (buffer);
+  assert (width < 32);
   if (precision < 0)
     strcat (buffer, "%");
   if (width >= min)
@@ -164,6 +168,17 @@ static const int num_reports = // as compile time constant
 
 /*------------------------------------------------------------------------*/
 
+// Here is the idea behind the colors:
+//
+//    - red: rephasing
+//
+// - green: problem transformation (or scheduled with it like subsume). In
+// bold: change of the number of variables.
+//
+//    - blue: other inprocessing. Bold blue: finding equivalences
+//
+//    - cyan: binary clauses reducing (deduplication, transitive reduction)
+//
 void Internal::report (char type, int verbose) {
   if (!opts.report)
     return;
@@ -192,6 +207,7 @@ void Internal::report (char type, int verbose) {
     fputc ('\n', stdout);
     int pos = 4;
     for (int i = 0; i < n; i++) {
+      assert (strlen (reports[i].buffer) <= 32);
       int len = strlen (reports[i].buffer);
       reports[i].pos = pos + (len + 1) / 2;
       pos += len + 1;
@@ -227,9 +243,11 @@ void Internal::report (char type, int verbose) {
     break;
   case 's':
   case 'b':
-  case 'c':
+  case 'k':
+  case 'K':
     tout.green (false);
     break;
+  case 'f':
   case 'e':
     tout.green (true);
     break;
@@ -240,14 +258,14 @@ void Internal::report (char type, int verbose) {
   case 'v':
   case 'w':
   case 'x':
-  case 'f':
-  case '=':
     tout.blue (false);
     break;
+  case 'd':
   case 't':
     tout.cyan (false);
     break;
-  case 'd':
+  case '=':
+  case 'c':
     tout.blue (true);
     break;
   case 'z':
@@ -256,13 +274,6 @@ void Internal::report (char type, int verbose) {
     break;
   case '-':
     tout.normal ();
-    break;
-  case '/':
-    tout.yellow (true);
-    break;
-  case 'a':
-  case 'n':
-    tout.red (false);
     break;
   case '0':
   case '1':
@@ -277,12 +288,18 @@ void Internal::report (char type, int verbose) {
     break;
   case '(':
   case ')':
-    tout.bold ();
-    tout.yellow ();
     break;
   case '{':
   case '}':
     tout.normal ();
+    break;
+  case 'B':
+  case 'W':
+  case 'O':
+  case '#':
+  case 'I':
+  case 'F':
+    tout.red ();
     break;
   default:
     break;
@@ -298,7 +315,8 @@ void Internal::report (char type, int verbose) {
     fputc (' ', stdout);
     fputs (reports[i].buffer, stdout);
   }
-  if (stable || type == 'L' || type == 'P' || type == ']')
+  if (stable || type == 'L' || type == 'P' || type == ']' || type == ')' ||
+      preprocessing)
     tout.normal ();
   fputc ('\n', stdout);
   fflush (stdout);

@@ -1,0 +1,36 @@
+0 init
+1 set check 1
+2 add 3
+3 add 2
+4 add -1
+5 add 0
+6 add -2
+7 add 1
+8 add 0
+9 add 2
+10 add 1
+11 add -3
+12 add 0
+13 add 1
+14 add 3
+15 add 0
+16 add -1
+17 add -2
+18 add 0
+19 add -2
+20 add -1
+21 add -3
+22 add 0
+23 add -2
+24 add 3
+25 add 1
+26 add 0
+27 phase -2
+28 phase -1
+29 phase -2
+30 phase -3
+31 phase 4
+32 phase 5
+33 phase 6
+34 phase 7
+35 simplify 7 0

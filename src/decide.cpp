@@ -98,6 +98,8 @@ int Internal::next_random_decision () {
     */
     if (val (idx))
       continue;
+    if (flags (idx).unused ())
+      continue;
     return idx;
   }
   assert (false);
@@ -191,15 +193,17 @@ void Internal::new_trail_level (int lit) {
 /*------------------------------------------------------------------------*/
 
 bool Internal::satisfied () {
+  check_var_stats ();
+  LOG ("checking satisfied");
   if ((size_t) level < assumptions.size () + (!!constraint.size ()))
     return false;
-  if (num_assigned < (size_t) max_var)
+  if (num_assigned + stats.unused < (size_t) max_var)
     return false;
-  assert (num_assigned == (size_t) max_var);
+  assert (num_assigned + stats.unused == (size_t) max_var);
   if (propagated < trail.size ())
     return false;
   size_t assigned = num_assigned;
-  return (assigned == (size_t) max_var);
+  return (assigned + stats.unused == (size_t) max_var);
 }
 
 bool Internal::better_decision (int lit, int other) {
@@ -217,6 +221,11 @@ bool Internal::better_decision (int lit, int other) {
 int Internal::decide () {
   assert (!satisfied ());
   START (decide);
+  // during interaction with the user propagator, new variables can be added
+  // (for example by observed).
+  if (!imports.empty ())
+    activating_all_new_imported_literals ();
+  check_queue ();
   int res = 0;
   if ((size_t) level < assumptions.size ()) {
     const int lit = assumptions[level];
@@ -320,7 +329,7 @@ int Internal::decide () {
 #endif
 
   } else {
-
+    check_queue ();
     int decision = ask_decision ();
     if ((size_t) level < assumptions.size () ||
         ((size_t) level == assumptions.size () && constraint.size ())) {
@@ -336,12 +345,14 @@ int Internal::decide () {
         const bool target = (opts.target > 1 || (stable && opts.target));
         decision = decide_phase (idx, target);
       }
+      assert (!flags (decision).unused ());
       search_assume_decision (decision);
     }
   }
   if (res)
     marked_failed = false;
   STOP (decide);
+  check_var_stats ();
   return res;
 }
 } // namespace CaDiCaL

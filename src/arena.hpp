@@ -1,6 +1,9 @@
 #ifndef _arena_hpp_INCLUDED
 #define _arena_hpp_INCLUDED
 
+#include <cassert>
+#include <cstring>
+
 namespace CaDiCaL {
 
 // This memory allocation arena provides fixed size pre-allocated memory for

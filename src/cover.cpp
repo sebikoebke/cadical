@@ -381,6 +381,9 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
       LOG (c, "covered tautological");
       assert (clause.empty ());
       LOG (coveror.extend, "extension = ");
+      std::vector<int> weakened_clause; // TODO seems to the same as clause%
+      std::vector<int> witness;
+      int64_t weakened_id = 0;
       for (const auto &other : coveror.extend) {
         if (!prev) {
           // are we finishing a clause?
@@ -394,7 +397,8 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
                 --j;
                 LOG ("adding lit %d not needed for ATA", lit);
                 clause.push_back (lit);
-                external->push_clause_literal_on_extension_stack (lit);
+                weakened_clause.push_back(lit);
+                //external->push_clause_literal_on_extension_stack (lit);
               }
             }
           }
@@ -407,16 +411,18 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
             lrat_chain.clear ();
           }
           last_id = ++clause_id;
-          external->push_zero_on_extension_stack ();
-          external->push_witness_literal_on_extension_stack (other);
-          external->push_zero_on_extension_stack ();
-          external->push_id_on_extension_stack (last_id);
-          external->push_zero_on_extension_stack ();
+          if (already_pushed)
+            external->push_external_clause_and_witness_on_extension_stack(weakened_clause, witness, weakened_id);
+          witness.clear ();
+          assert (other);
+          witness.push_back (other);
+          weakened_clause.clear ();
+          weakened_id = last_id;
           clause.clear ();
           already_pushed = true;
         }
         if (other) {
-          external->push_clause_literal_on_extension_stack (other);
+          weakened_clause.push_back (other);
           clause.push_back (other);
           LOG (clause, "current clause is");
         }
@@ -433,7 +439,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
             --j;
             LOG ("adding lit %d not needed for ATA", lit);
             clause.push_back (lit);
-            external->push_clause_literal_on_extension_stack (lit);
+            weakened_clause.push_back (lit);
           }
         }
         if (lrat)
@@ -443,6 +449,7 @@ bool Internal::cover_clause (Clause *c, Coveror &coveror) {
         lrat_chain.clear ();
       }
       clause.clear ();
+      external->push_external_clause_and_witness_on_extension_stack(weakened_clause, witness, weakened_id);
 
       mark_garbage (c);
     }
@@ -696,7 +703,7 @@ bool Internal::cover () {
   int64_t covered = cover_round ();
 
   STOP_SIMPLIFIER (cover, COVER);
-  report ('c', !opts.reportall && !covered);
+  report ('K', !opts.reportall && !covered);
 
   return covered;
 }

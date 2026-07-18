@@ -1,6 +1,9 @@
 #ifndef _terminal_hpp_INCLUDED
 #define _terminal_hpp_INCLUDED
 
+#include <cassert>
+#include <cstdio>
+
 namespace CaDiCaL {
 
 class Terminal {

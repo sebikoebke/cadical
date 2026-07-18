@@ -13,13 +13,14 @@ struct Clause;
 
 enum class Vivify_Mode { TIER1, TIER2, TIER3, IRREDUNDANT };
 
-#define COUNTREF_COUNTS 2
+constexpr int COUNTREF_COUNTS = 2;
 
 struct vivify_ref {
   bool vivify;
   std::size_t size;
-  uint64_t count[COUNTREF_COUNTS];
+  std::array<uint64_t, COUNTREF_COUNTS> count = {0};
   Clause *clause;
+  vivify_ref () : vivify (false), size (0), clause (nullptr) {}
 };
 
 // In the vivifier structure, we put the schedules in an array in order to
@@ -28,19 +29,19 @@ struct vivify_ref {
 struct Vivifier {
   std::vector<vivify_ref> refs_schedule;
   std::array<std::vector<Clause *>, 4> schedules;
-  std::vector<Clause *> &schedule_tier1, &schedule_tier2, &schedule_tier3,
-      &schedule_irred;
   std::vector<int> sorted;
   Vivify_Mode tier;
-  char tag;
-  int tier1_limit;
-  int tier2_limit;
-  int64_t ticks;
+  char tag = '\0';
+  int tier1_limit = 0;
+  int tier2_limit = 0;
+  int64_t ticks = 0;
   std::vector<std::tuple<int, Clause *, bool>> lrat_stack;
   Vivifier (Vivify_Mode mode_tier)
-      : schedule_tier1 (schedules[0]), schedule_tier2 (schedules[1]),
-        schedule_tier3 (schedules[2]), schedule_irred (schedules[3]),
-        tier (mode_tier) {}
+      : tier (mode_tier) {}
+  std::vector<Clause *> &schedule_tier1 () {return schedules [0];}
+  std::vector<Clause *> &schedule_tier2 () {return schedules [1];}
+  std::vector<Clause *> &schedule_tier3 () {return schedules [2];}
+  std::vector<Clause *> &schedule_irred () {return schedules [3];}
 
   void erase () { erase_vector (sorted); }
 };

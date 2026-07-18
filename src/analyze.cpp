@@ -4,11 +4,21 @@ namespace CaDiCaL {
 
 /*------------------------------------------------------------------------*/
 
-// Code for conflict analysis, i.e., to generate the first UIP clause.  The
-// main function is 'analyze' below.  It further uses 'minimize' to minimize
-// the first UIP clause, which is in 'minimize.cpp'.  An important side
-// effect of conflict analysis is to update the decision queue by bumping
-// variables.  Similarly analyzed clauses are bumped to mark them as active.
+// Code for conflict analysis, i.e., to generate the first UIP clause.
+// The main function is 'analyze' below.  It further uses 'minimize'
+// to minimize the first UIP clause, which is in 'minimize.cpp' or
+// uses 'shrink' to shrink it, which is in 'shrink.cpp' (see [Fleury
+// and Biere, SAT'21]).  An important side effect of conflict analysis
+// is to update the decision queue by bumping variables.  Similarly
+// analyzed clauses are bumped to mark them as active.
+
+// We also implement on-the-fly self-subsumption [Han and Somenzi,
+// SAT'09] and [Hamadi, Jabour, and Sais, ICTAI'09]: a technique to
+// strengthen clauses during the conflict analysis (sometimes the
+// conflict clause can be used to strengthen-resolve the clause to be
+// resolved with during the conflict analysis). It breaks similar
+// invariants to chronological backtracking. It is not very useful,
+// but a nice-to-have technique.
 
 /*------------------------------------------------------------------------*/
 
@@ -676,7 +686,7 @@ inline int Internal::determine_actual_backtrack_level (int jump) {
     int best_idx = 0, best_pos = 0;
 
     if (use_scores ()) {
-      for (size_t i = control[jump + 1].trail; i < trail.size (); i++) {
+      for (int i = control[jump + 1].trail; i <  get_trail_size (); i++) {
         const int idx = abs (trail[i]);
         if (best_idx && !score_smaller (this) (best_idx, idx))
           continue;
@@ -685,7 +695,7 @@ inline int Internal::determine_actual_backtrack_level (int jump) {
       }
       LOG ("best variable score %g", score (best_idx));
     } else {
-      for (size_t i = control[jump + 1].trail; i < trail.size (); i++) {
+      for (int i = control[jump + 1].trail; i <  get_trail_size (); i++) {
         const int idx = abs (trail[i]);
         if (best_idx && bumped (best_idx) >= bumped (idx))
           continue;
@@ -795,6 +805,7 @@ Clause *Internal::on_the_fly_strengthen (Clause *new_conflict, int uip) {
   LOG (new_conflict, "removing all units in");
 
   assert (lits[0] == uip || lits[1] == uip);
+  assert (new_size >= 2);
   const int other = lits[0] ^ lits[1] ^ uip;
   lits[0] = other;
   lits[1] = lits[--new_size];
@@ -878,19 +889,8 @@ inline void Internal::otfs_subsume_clause (Clause *subsuming,
     mark_garbage (subsumed);
     return;
   }
-  LOG ("turning redundant subsuming clause into irredundant clause");
-  subsuming->redundant = false;
-  if (proof)
-    proof->strengthen (subsuming->id);
-  mark_garbage (subsumed);
-  stats.current.irredundant++;
-  stats.added.irredundant++;
-  stats.irrlits += subsuming->size;
-  assert (stats.current.redundant > 0);
-  stats.current.redundant--;
-  assert (stats.added.redundant > 0);
-  stats.added.redundant--;
-  // ... and keep 'stats.added.total'.
+  make_irredundant (subsuming);
+  update_last_irredundant (subsuming);
 }
 
 /*------------------------------------------------------------------------*/
@@ -912,6 +912,9 @@ void Internal::otfs_strengthen_clause (Clause *c, int lit, int new_size,
   c->used = max_used;
   LOG (c, "strengthened");
   external->check_shrunken_clause (c);
+
+  if (c->size == 2)
+    new_binary_since_dedup = true;
 }
 
 /*------------------------------------------------------------------------*/
@@ -1049,7 +1052,7 @@ void Internal::analyze () {
   assert (lrat_chain.empty ());
 
   const auto &t = &trail;
-  int i = t->size ();      // Start at end-of-trail.
+  int i = (int)t->size ();      // Start at end-of-trail.
   int open = 0;            // Seen but not processed on this level.
   int uip = 0;             // The first UIP literal.
   int resolvent_size = 0;  // without the uip
@@ -1328,7 +1331,7 @@ void Internal::lazy_external_propagator_out_of_order_clause (int &uip) {
     clause.clear ();
   } else {
     int jump;
-    const int glue = clause.size () - 1;
+    const int glue = (int)clause.size () - 1;
     conflict = new_driving_clause (glue, jump);
     UPDATE_AVERAGE (averages.current.level, jump);
     backtrack (jump);

@@ -1,0 +1,59 @@
+0 init
+1 set check 1
+2 set elim 0
+3 set varkeepname 0
+4 add -10
+5 add 20
+6 add 0
+7 add 21
+8 add 10
+9 add 0
+10 add -15
+11 add -20
+12 add 0
+13 add 15
+14 add -21
+15 add 0
+16 add -7
+17 add 10
+18 add 0
+19 phase 1
+20 phase -2
+21 phase 3
+22 phase 6
+23 phase -7
+24 phase 8
+25 phase -9
+26 phase -10
+27 phase 11
+28 phase 12
+29 phase 13
+30 phase 14
+31 phase 15
+32 phase 16
+33 phase -17
+34 phase -18
+35 phase -19
+36 phase 20
+37 phase 21
+38 phase 22
+39 phase 23
+40 phase -24
+41 phase -25
+42 simplify 9 0
+43 phase -3
+44 phase 5
+45 phase -7
+46 phase 14
+47 phase 15
+48 phase 17
+49 phase -19
+50 phase 27
+51 phase -33
+52 phase -37
+53 phase -40
+54 phase 41
+55 phase 45
+56 phase -51
+57 phase -56
+58 simplify 1 0

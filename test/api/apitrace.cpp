@@ -71,10 +71,10 @@ int main () {
     setenv ("CADICAL_API_TRACE", path ("environment2").c_str (), 1);
     {
       Solver solver;
-      solver.set ("factor", 0);
-      solver.set ("factorcheck", 0);
-      solver.add (-1);
-      solver.add (-2);
+      int var1 = solver.declare_one_more_variable();
+      int var2 = solver.declare_one_more_variable();
+      solver.add (-var1);
+      solver.add (-var2);
       solver.add (0);
       solver.solve ();
     }

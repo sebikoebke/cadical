@@ -2,6 +2,7 @@
 #define _elim_hpp_INCLUDED
 
 #include "heap.hpp" // Alphabetically after 'elim.hpp'.
+#include <queue>
 
 namespace CaDiCaL {
 
@@ -25,6 +26,8 @@ struct proof_clause {
 };
 
 enum GateType { NO = 0, EQUI = 1, AND = 2, ITE = 3, XOR = 4, DEF = 5 };
+
+struct Clause;
 
 struct Eliminator {
 

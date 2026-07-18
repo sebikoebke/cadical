@@ -1,6 +1,7 @@
 #ifndef _random_hpp_INCLUDED
 #define _random_hpp_INCLUDED
 
+#include <cassert>
 #include <cstdint>
 
 // Random number generator.
@@ -38,7 +39,7 @@ public:
 
   uint32_t generate () {
     next ();
-    return state >> 32;
+    return static_cast<uint32_t> (state >> 32);
   }
   int generate_int () { return (int) generate (); }
   bool generate_bool () { return generate () < 2147483648u; }

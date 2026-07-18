@@ -1,0 +1,146 @@
+0 init
+1 set check 1
+1 set checkproof 1
+2 set bump 0
+3 set congruencebinaries 0
+4 set elimboundmax -1
+5 set elimint 1
+6 set elimmineff 0
+7 set elimocclim 0
+8 set inprobeint 1
+9 set instantiate 1
+10 set instantiateclslim 4
+11 set instantiateocclim 2
+12 set lucky 0
+13 set phase 0
+14 set preprocessinit 0
+15 set reduceinit 1
+16 set subsumeclslim 0
+17 set varprioritizefirst 1
+18 add 1
+19 add 9
+20 add 8
+21 add 0
+22 add 1
+23 add 7
+24 add -2
+25 add 0
+26 add 2
+27 add 6
+28 add 0
+29 add -4
+30 add -1
+31 add 0
+32 add 10
+33 add 7
+34 add -3
+35 add 0
+36 add -7
+37 add -3
+38 add 0
+39 add 5
+40 add -7
+41 add 0
+42 add 3
+43 add -8
+44 add 0
+45 add -2
+46 add -1
+47 add 0
+48 add 4
+49 add 8
+50 add 7
+51 add 0
+52 add -5
+53 add 8
+54 add 4
+55 add 0
+56 assume 6
+57 phase -2
+58 phase 8
+59 simplify 7 0
+60 add 12
+61 add -10
+62 add -11
+63 add 0
+64 add -10
+65 add 13
+66 add 0
+67 add -11
+68 add -12
+69 add -9
+70 add 0
+71 add 12
+72 add 10
+73 add -9
+74 add 0
+75 add 13
+76 add -11
+77 add 8
+78 add 0
+79 add 10
+80 add 14
+81 add 11
+82 add -8
+83 add 0
+84 add 12
+85 add 8
+86 add 11
+87 add -14
+88 add 0
+89 add 10
+90 add -13
+91 add 0
+92 add 8
+93 add -11
+94 add 0
+95 add -12
+96 add 13
+97 add 11
+98 add 0
+99 add 10
+100 add 9
+101 add 12
+102 add -13
+103 add 0
+104 add -11
+105 add 10
+106 add 12
+107 add 0
+108 add -9
+109 add -10
+110 add 0
+111 add 11
+112 add -12
+113 add 9
+114 add 0
+115 add -9
+116 add -12
+117 add 0
+118 add 12
+119 add -11
+120 add -8
+121 add 0
+122 add 8
+123 add -10
+124 add 0
+125 add 11
+126 add -10
+127 add -12
+128 add 0
+129 add 10
+130 add -9
+131 add -12
+132 add 0
+133 assume -9
+134 phase 2
+135 phase -3
+136 phase 5
+137 phase -6
+138 phase 7
+139 phase 8
+140 phase 9
+141 phase 10
+142 phase -13
+143 phase -16
+144 solve 0

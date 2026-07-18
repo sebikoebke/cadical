@@ -1,0 +1,38 @@
+0 init
+1 set check 1
+2 set lucky 0
+3 add 3
+4 add -2
+5 add 0
+6 phase 5
+7 phase -8
+8 add 1
+9 add 4
+10 add 0
+11 add -1
+12 add 2
+13 add -4
+14 add 0
+15 add 1
+16 add -2
+17 add 0
+18 phase 1
+19 phase 2
+20 phase -3
+21 phase -7
+22 add 4
+23 add 3
+24 add 0
+25 add -3
+26 add 2
+27 add -4
+28 add 0
+29 phase 1
+30 phase 2
+31 phase -3
+32 phase -4
+33 phase 5
+34 phase -6
+35 phase -7
+36 phase 8
+37 solve 0

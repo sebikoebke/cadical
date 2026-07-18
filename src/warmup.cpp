@@ -33,7 +33,7 @@ inline void Internal::warmup_assign (int lit, Clause *reason) {
   lit_level = level;
 
   v.level = lit_level;
-  v.trail = trail.size ();
+  v.trail = get_trail_size ();
   v.reason = reason;
   assert ((int) num_assigned < max_var);
   assert (num_assigned == trail.size ());
@@ -153,9 +153,9 @@ void Internal::warmup_propagate_beyond_conflict () {
             while (k != middle && (v = val (r = *k)) < 0)
               k++;
           }
-
+#if 0 // my intuiton: does not make sense to update here
           w.clause->pos = k - lits; // always save position
-
+#endif
           assert (lits + 2 <= k), assert (k <= w.clause->end ());
 
           if (v > 0) {
@@ -209,7 +209,7 @@ void Internal::warmup_propagate_beyond_conflict () {
   STOP (propagate);
 }
 
-int Internal::warmup_decide () {
+int Internal::warmup_decide_assumptions () {
   assert (!satisfied ());
   START (decide);
   int res = 0;
@@ -314,18 +314,85 @@ int Internal::warmup_decide () {
 #endif
 
   } else {
-    const bool target = (stable || opts.target == 2);
-    stats.warmup.decision++;
-    int idx = next_decision_variable ();
-    if (flags (idx).eliminated ())
-      ++stats.warmup.dummydecision;
-    int decision = decide_phase (idx, target);
-    new_trail_level (decision);
-    warmup_assign (decision, decision_reason);
+    assert (false);
   }
   if (res)
     marked_failed = false;
   STOP (decide);
+  return res;
+}
+
+void Internal::warmup_decide () {
+  assert (!satisfied ());
+  START (decide);
+  assert ((size_t) level >= assumptions.size ());
+  assert (!constraint.size () || (size_t) level > assumptions.size ());
+  const bool target = (stable || opts.target == 2);
+  stats.warmup.decision++;
+  int idx = next_decision_variable ();
+  if (flags (idx).eliminated ())
+    ++stats.warmup.dummydecision;
+  int decision = decide_phase (idx, target);
+  new_trail_level (decision);
+  warmup_assign (decision, decision_reason);
+  STOP (decide);
+}
+
+int Internal::decide_and_propagate_all_assumptions (std::vector<int> &set_literals) {
+  LOG ("decide and propagate all assumptions to fill the vectors");
+  assert (!private_steps);
+  int res = 0;
+  int last_assumption_level = assumptions.size ();
+  if (!last_assumption_level)
+    return res;
+  if (constraint.size ())
+    last_assumption_level++;
+  while (!res) {
+    if (unsat)
+      res = 20;
+    else if (unsat_constraint)
+      res = 20;
+    else if (!propagate ()) {
+      // let analyze run to get failed assumptions
+      if (!unsat)
+        analyze ();
+      else
+       break;
+    } else if (satisfied ()) {
+      assert (!res);
+      if (external) {
+        LOG ("found satisfied assignment ignoring the external propagator, so probably not valid");
+      } else {
+        res = 10;
+      }
+      break;
+    } else {
+      if (level >= last_assumption_level)
+        break;
+      notify_assignments ();
+      res = decide ();
+    }
+  }
+
+  if (unsat || unsat_constraint)
+    res = 20;
+
+
+  set_literals.reserve(trail.size ());
+  for (auto lit: trail)
+    set_literals.push_back(lit);
+  if (!res) {
+    // we need to repropagate now due to out-of-order units and renotify them
+    backtrack ();
+    if (propagated < trail.size () && !propagate ()) {
+      LOG ("empty clause after root level propagation");
+      learn_empty_clause ();
+      res = 20;
+    }
+  } else {
+    assert (res == 20);
+    notify_assignments ();
+  }
   return res;
 }
 
@@ -344,6 +411,8 @@ int Internal::warmup () {
   const int64_t decision = stats.warmup.decision;
   const int64_t dummydecision = stats.warmup.dummydecision;
 #endif
+  LOG ("starting warmup");
+
   // first propagate assumptions in case we find a conflict. One subtle
   // thing, if we find a conflict in the assumption, then we actually do
   // need the notifications. Otherwise, we there should be no notification
@@ -352,16 +421,19 @@ int Internal::warmup () {
   // propagation function, even if it could counts ticks.
   const size_t assms_contraint_level =
       assumptions.size () + !constraint.empty ();
-  while (!res && (size_t) level < assms_contraint_level &&
+  while (!res && !conflict && (size_t) level < assms_contraint_level &&
          num_assigned < (size_t) max_var) {
     assert (num_assigned < (size_t) max_var);
-    res = warmup_decide ();
-    if (!propagate ()) {
+    res = warmup_decide_assumptions ();
+    if (!res && !propagate ()) {
       res = 20;
       marked_failed = false;
       break;
     }
   }
+  if (conflict && !res)
+    marked_failed = false, res = 20;
+
   const bool no_backtrack_notification = (level == 0);
 
   // now we do not need any notification and can simply propagate
@@ -370,13 +442,13 @@ int Internal::warmup () {
   private_steps = true;
 
   LOG ("propagating beyond conflicts to warm-up walk");
-  while (!res && num_assigned < (size_t) max_var) {
+  while (!res && num_assigned < (size_t) max_var - stats.unused) {
     assert (propagated == trail.size ());
-    res = warmup_decide ();
+    warmup_decide ();
     warmup_propagate_beyond_conflict ();
     LOG (lrat_chain, "during warmup with lrat chain:");
   }
-  assert (res || num_assigned == (size_t) max_var);
+  assert (res || num_assigned + stats.unused == (size_t) max_var);
 #ifndef QUIET
   // constrains with empty levels break this
   // assert (res || stats.warmup.propagated - warmup_propagated ==

@@ -1,0 +1,29 @@
+0 init
+1 add -1
+2 add 3
+3 add 2
+4 add 0
+5 add 1
+6 add 2
+7 add -3
+8 add 0
+9 add -2
+10 add -3
+11 add 0
+12 phase 1
+13 phase -3
+14 add -4
+15 add -2
+16 add -1
+17 add 0
+18 add 4
+19 add -2
+20 add 1
+21 add 0
+22 add 3
+23 add 1
+24 add 0
+25 disconnect mock-propagator
+26 phase 3
+27 phase 4
+28 simplify 9 0

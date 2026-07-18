@@ -1,0 +1,47 @@
+0 init
+1 set check 1
+2 set congruencebinaries 0
+3 set varkeepname 0
+4 add -2
+5 add -4
+6 add 0
+7 add -4
+8 add -1
+9 add 0
+10 add -3
+11 add -1
+12 add 2
+13 add 0
+14 add 2
+15 add -3
+16 add 1
+17 add 0
+18 add 3
+19 add -1
+20 add -2
+21 add 0
+22 add 1
+23 add 4
+24 add -2
+25 add 0
+26 add -4
+27 add 1
+28 add 2
+29 add 0
+30 add -2
+31 add -3
+32 add -1
+33 add 0
+34 add 3
+35 add 2
+36 add 1
+37 add 0
+38 add 4
+39 add 2
+40 add 1
+41 add 0
+42 phase -1
+43 phase 7
+44 phase 8
+45 phase -9
+46 simplify 8 0

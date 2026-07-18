@@ -1,0 +1,97 @@
+0 init
+1 set check 1
+2 configure sat
+3 set checkproof 1
+4 set fastelim 0
+5 set probe 0
+6 set sweepmaxvars 2
+7 set vivifyflush 0
+8 add -7
+9 add -6
+10 add -5
+11 add 0
+12 add 5
+13 add -3
+14 add 0
+15 add -6
+16 add 4
+17 add 5
+18 add 0
+19 add 4
+20 add 6
+21 add 3
+22 add 0
+23 add 7
+24 add 2
+25 add 0
+26 add 1
+27 add 6
+28 add -7
+29 add 0
+30 add -7
+31 add -2
+32 add 3
+33 add 0
+34 add -1
+35 add -5
+36 add -3
+37 add 2
+38 add 0
+39 add 2
+40 add 3
+41 add -6
+42 add -5
+43 add 0
+44 propagate 0
+45 add -3
+46 add 4
+47 add -2
+48 add 0
+49 add 3
+50 add 6
+51 add 4
+52 add 0
+53 add -4
+54 add 3
+55 add -1
+56 add 5
+57 add 0
+58 add -5
+59 add -4
+60 add 3
+61 add -2
+62 add 0
+63 add -1
+64 add 6
+65 add -2
+66 add 0
+67 add -3
+68 add -4
+69 add -5
+70 add 0
+71 add 3
+72 add 5
+73 add 2
+74 add 0
+75 add -4
+76 add 1
+77 add 0
+78 add 2
+79 add -6
+80 add -5
+81 add 0
+82 add 6
+83 add 2
+84 add -7
+85 add -3
+86 add 0
+87 assume -5
+88 phase -4
+89 phase 6
+90 solve 0
+91 phase 1
+92 phase -3
+93 phase -4
+94 phase -5
+95 phase -8
+96 simplify 0 0

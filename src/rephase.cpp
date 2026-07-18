@@ -103,8 +103,10 @@ char Internal::rephase_walk () {
          "starting local search to improve current phase");
   if (opts.walkpassat)
     walk_passat ();
-  else if (opts.walkfullocc)
+  else if (opts.walkfullocc == 1)
     walk_full_occs ();
+  else if (opts.walkfullocc == 2)
+    walk_ddfw ();
   else
     walk ();
   return 'W';
@@ -129,6 +131,7 @@ void Internal::rephase () {
   report ('~', 1);
 
   backtrack ();
+  autarky ('a');
 
   size_t count = lim.rephased[stable]++;
   bool single;
@@ -318,8 +321,12 @@ void Internal::rephase () {
       }
   } else if (!stable && (!opts.walk || !opts.walknonstable)) {
     // flipping,(random,best,flipping,best)^\omega
-    if (!count)
-      type = rephase_flipping ();
+    if (!count) {
+      if (stats.searches <= 1)
+        type = rephase_flipping ();
+      else // seems important for BMC due to our unsynchronized rephasing
+        type = rephase_original ();
+    }
     else
       switch ((count - 1) % 4) {
       case 0:
@@ -342,7 +349,7 @@ void Internal::rephase () {
     assert (!stable && opts.walk && opts.walknonstable);
     // flipping,(random,best,walk,flipping,best,walk)^\omega
     if (!count)
-      type = rephase_original ();
+      type = rephase_flipping ();
     else
       switch ((count - 1) % 6) {
       case 0:
@@ -373,7 +380,7 @@ void Internal::rephase () {
   // clear after walk such that random walk can still access the target
   // by using the saved phases
   copy_phases (phases.target);
-  target_assigned = 0;
+  // resetting target_assigned is not in `update_target_and_best`.
 
   int64_t delta = opts.rephaseint * (stats.rephased.total + 1);
   lim.rephase =
@@ -383,6 +390,8 @@ void Internal::rephase () {
          "new rephase limit %" PRId64 " after %" PRId64 " conflicts",
          lim.rephase, delta);
 
+  if (opts.autarkyafter)
+    autarky('z');
   // This will trigger to report the effect of this new set of phases at the
   // 'backtrack' (actually 'update_target_and_best') after the next
   // conflict, as well as resetting 'best_assigned' then to allow to compute
@@ -392,7 +401,6 @@ void Internal::rephase () {
   rephased = type;
 
   if (!marked_failed || unsat_constraint) {
-    assert (opts.warmup);
     return;
   }
   if (stable)

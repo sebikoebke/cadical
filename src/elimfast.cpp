@@ -278,7 +278,7 @@ int Internal::elimfast_round (bool &completed,
 
   if (opts.elimlimited) {
     int64_t delta = stats.propagations.search;
-    delta *= 1e-3 * opts.elimeffort;
+    delta *= opts.elimeffort;
     if (delta < opts.elimmineff)
       delta = opts.elimmineff;
     if (delta > opts.elimmaxeff)
@@ -300,6 +300,8 @@ int Internal::elimfast_round (bool &completed,
   // clauses with root level assigned literals (both false and true).
   //
   for (const auto &c : clauses) {
+    if (last_irredundant && c > last_irredundant)
+      break;
     if (c->garbage || c->redundant)
       continue;
     bool satisfied = false, falsified = false;
@@ -342,6 +344,8 @@ int Internal::elimfast_round (bool &completed,
       continue;
     if (!flags (idx).elim)
       continue;
+    if (!opts.fastelimfactor && flags (idx).factored)
+      continue;
     LOG ("scheduling %d for elimination initially", idx);
     schedule.push_back (idx);
   }
@@ -358,11 +362,14 @@ int Internal::elimfast_round (bool &completed,
 
   // Connect irredundant clauses.
   //
-  for (const auto &c : clauses)
+  for (const auto &c : clauses) {
+    if (last_irredundant && c > last_irredundant)
+      break;
     if (!c->garbage && !c->redundant)
       for (const auto &lit : *c)
         if (active (lit))
           occs (lit).push_back (c);
+  }
 
 #ifndef QUIET
   const int64_t old_resolutions = stats.elimres;
@@ -437,6 +444,8 @@ int Internal::elimfast_round (bool &completed,
 
 void Internal::elimfast () {
 
+  if (!opts.fastelim)
+    return;
   if (unsat)
     return;
   if (level)

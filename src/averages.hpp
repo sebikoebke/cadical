@@ -2,6 +2,7 @@
 #define _averages_hpp_INCLUDED
 
 #include "ema.hpp" // alphabetically after 'averages.hpp'
+#include <cstdint>
 
 namespace CaDiCaL {
 

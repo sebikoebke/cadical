@@ -1,0 +1,51 @@
+0 init
+1 set elim 0
+2 set preprocessinit 0
+3 add -3
+4 add 1
+5 add 0
+6 add 4
+7 add 5
+8 add 0
+9 add -1
+10 add -5
+11 add 0
+12 add -2
+13 add 3
+14 add 0
+15 add -6
+16 add 4
+17 add 7
+18 add 0
+19 add -5
+20 add -7
+21 add -8
+22 add 0
+23 add 6
+24 add -3
+25 add 0
+26 add -4
+27 add 7
+28 add 0
+29 add -6
+30 add -5
+31 add 2
+32 add 0
+33 add -4
+34 add 8
+35 add 0
+36 simplify 8 0
+37 add 5
+38 add -7
+39 add 0
+40 add 4
+41 add 6
+42 add -7
+43 add 0
+44 add 5
+45 add 7
+46 add -4
+47 add 0
+48 connect mock-propagator
+49 limit preprocessing 1
+50 solve 0

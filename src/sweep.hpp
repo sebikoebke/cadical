@@ -1,6 +1,10 @@
 #ifndef _sweep_hpp_INCLUDED
 #define _sweep_hpp_INCLUDED
 
+#include "random.hpp"
+#include <cstdint>
+#include <vector>
+
 namespace CaDiCaL {
 
 struct Internal;
@@ -10,14 +14,13 @@ struct sweep_proof_clause {
   int64_t cad_id;    // cadical id
   unsigned kit_id;   // kitten id
   bool learned;
-  vector<int> literals;
-  vector<unsigned> chain; // lrat
+  std::vector<int> literals;
+  std::vector<unsigned> chain; // lrat
 };
 
 struct sweep_blocked_clause {
-  int blit;
   int64_t id;
-  vector<int> literals;
+  std::vector<int> literals;
 };
 
 struct sweep_binary {
@@ -26,29 +29,30 @@ struct sweep_binary {
   int64_t id;
 };
 
+struct Clause;
+
 struct Sweeper {
   Sweeper (Internal *internal);
   ~Sweeper ();
   Internal *internal;
   Random random;
-  vector<unsigned> depths;
+  std::vector<unsigned> depths;
   int *reprs;
-  vector<int> next, prev;
-  int first, last, blit;
+  std::vector<int> next, prev;
+  int first, last;
   unsigned encoded;
   unsigned save;
-  vector<int> vars;
-  vector<Clause *> clauses;
-  vector<sweep_blocked_clause> blocked_clauses;
-  bool flush_blocked_clauses;
-  vector<int> blockable;
-  vector<int> clause;
-  vector<int> propagate;
-  vector<int> backbone;
-  vector<int> partition;
-  vector<bool> prev_units;
-  vector<sweep_binary> binaries;
-  vector<sweep_proof_clause> core[2];
+  std::vector<int> vars;
+  std::vector<Clause *> clauses;
+  std::vector<sweep_blocked_clause> blocked_clauses;
+  std::vector<int> blockable;
+  std::vector<int> clause;
+  std::vector<int> propagate;
+  std::vector<int> backbone;
+  std::vector<int> partition;
+  std::vector<bool> prev_units;
+  std::vector<sweep_binary> binaries;
+  std::vector<sweep_proof_clause> core[2];
   uint64_t current_ticks;
   struct {
     uint64_t ticks;

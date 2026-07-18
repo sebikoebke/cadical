@@ -4,7 +4,10 @@
 /*------------------------------------------------------------------------*/
 
 #include "range.hpp"
+#include "util.hpp"
+#include <climits>
 #include <cstdint>
+#include <cstdlib>
 #include <unordered_map>
 #include <vector>
 
@@ -44,8 +47,30 @@ using namespace std;
 /*------------------------------------------------------------------------*/
 
 struct Clause;
-struct Internal;
+class ClauseIterator;
 struct CubesWithStatus;
+class ExternalPropagator;
+class FixedAssignmentListener;
+struct Internal;
+class Learner;
+class Terminator;
+class WitnessIterator;
+
+
+struct StoredExtension {
+  bool single_witness;
+  int64_t id;
+  union {
+    std::vector<int> witness;
+    int witness_lit;
+  };
+  std::vector<int> clause;
+
+  StoredExtension (std::vector<int>&& w, uint64_t my_id, std::vector<int> &&c) : single_witness(false), id (my_id), witness (w), clause (c) {}
+
+  StoredExtension (int w, uint64_t my_id, std::vector<int> &&c) : single_witness(true), id (my_id), witness_lit (w), clause (c) {}
+
+};
 
 /*------------------------------------------------------------------------*/
 
@@ -61,7 +86,7 @@ struct External {
   size_t vsize; // Allocated external size.
 
   vector<bool> vals; // Current external (extended) assignment.
-  vector<int> e2i;   // External 'idx' to internal 'lit'.
+  std::unordered_map<int, int> e2i;   // External 'idx' to internal 'lit'.
 
   vector<int> assumptions; // External assumptions.
   vector<int> constraint;  // External constraint. Terminated by zero.
@@ -127,6 +152,8 @@ struct External {
 
   void force_backtrack (int new_level);
 
+  std::vector<int> tmp_witness;
+
   //----------------------------------------------------------------------//
 
   signed char *solution; // Given solution checking for debugging.
@@ -171,6 +198,9 @@ struct External {
     return eidx > max_var || !ervars[eidx];
   }
 
+  inline int internal_lit (int elit) const {
+    return find_or_default (e2i, elit, 0);
+  }
   /*----------------------------------------------------------------------*/
 
   // The following five functions push individual literals or clauses on the
@@ -232,6 +262,8 @@ struct External {
 
   void push_external_clause_and_witness_on_extension_stack (
       const vector<int> &clause, const vector<int> &witness, int64_t id);
+  void push_external_clause_and_witness_on_extension_stack (
+      Clause *clause, vector<int> &&witness);
 
   void push_id_on_extension_stack (int64_t id);
 
@@ -270,11 +302,14 @@ struct External {
   void enlarge (int new_max_var); // Enlarge allocated 'vsize'.
   void init (int new_max_var,
              bool extension = false); // Initialize up-to 'new_max_var'.
+  void reserve (int new_max_var); // Reserves up-to 'new_max_var'.
 
   int internalize (
       int,
       bool extension = false); // Translate external to internal literal.
 
+  /*----------------------------------------------------------------------*/
+  int declare_var (int new_var, bool extension);
   /*----------------------------------------------------------------------*/
 
   // According to the CaDiCaL API contract (as well as IPASIR) we have to
@@ -409,7 +444,8 @@ struct External {
 
   /*----------------------------------------------------------------------*/
 
-  // Copy flags for determining preprocessing state.
+  // Copy flags for determining preprocessing state, including if a variable is
+  // an extension.
 
   void copy_flags (External &other) const;
 

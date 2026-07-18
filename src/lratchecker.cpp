@@ -134,7 +134,7 @@ LratChecker::LratChecker (Internal *i)
 
 void LratChecker::connect_internal (Internal *i) {
   internal = i;
-  LOG ("connected to internal");
+  LOG ("LRAT CHECKER connected to internal");
 }
 
 LratChecker::~LratChecker () {
@@ -271,7 +271,12 @@ bool LratChecker::check_resolution (vector<int64_t> proof_chain) {
       return false;
     }
     if (!checked_lit (lit)) {
+      LOG ("literal %d of the clause is not present in the resolvents.", lit);
       // learned clause is subsumed by resolvents
+      // should only be triggered by following options.
+      // TODO this should be fixed on master
+      //assert (internal->opts.vivifyinst || internal->opts.cover ||
+      //        internal->opts.instantiate);
       checked_lit (lit) = true;
     }
     checked_lit (-lit) = true;
@@ -412,6 +417,7 @@ bool LratChecker::check_blocked (vector<int64_t> proof_chain) {
             checked_lit (-lit) = false;
             mark (-lit) = false;
           }
+          LOG (c->literals, c->size, "LRAT CHECKER non-blocked clause");
           return false;
         } else {
           // all literals outside of candidates are not valid RAT candidates

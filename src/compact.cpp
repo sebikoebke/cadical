@@ -256,11 +256,8 @@ void Internal::compact () {
         continue;
       }
       int64_t id = unit_clauses (2 * src);
-      int lit = src;
-      if (!id) {
+      if (!id)
         id = unit_clauses (2 * src + 1);
-        lit = -lit;
-      }
       unit_clauses (2 * src) = 0;
       unit_clauses (2 * src + 1) = 0;
       assert (id);
