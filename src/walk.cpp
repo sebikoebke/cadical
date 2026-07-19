@@ -113,7 +113,10 @@ struct Walker {
   vector<signed char> pure_lits;   // pure_lits is a set of variables where passat_lookup_table[lit] == 0 
                                    // or passat_lookup_table[-lit] == 0 occure, this set can be fixed before the main walk_passat loop
   vector<int> autarky_worklist;     // clauses that lost their supporter and have to be processed
-
+  bool autarky_elimination_mode = false; // true if we want to eliminate the autarky found by walk_passat
+  bool frozen_autarky = false;          // true if the autarky contain a frozen literal => autarky cant be eliminated
+  vector<int> autarky_trail;
+  vector<signed char> autarky_val;
 
   std::vector<signed char> best_values; // best model stored so far
   double score (unsigned);              // compute score from break count
@@ -1207,6 +1210,7 @@ void Internal::passat_build (Walker &walker) {
   walker.not_autark.resize(vsize, 0);
   walker.pure_lits.resize(vsize, 0);
   walker.satisfied_counter.resize (clauses.size(), 0);
+  walker.autarky_val.resize(2 * max_var + 2, 0);
 
 
   // accumulate total literals and clause count over the tracked clauses to
@@ -2126,6 +2130,9 @@ void Internal::passat_assign_pure_literals (Walker &walker) {
       continue;
     }
 
+    // frozen check
+    if (frozen(pure_lit)) walker.frozen_autarky = true;
+
     bool check = passat_assign (walker, pure_lit);
     assert(check);
     (void) check;
@@ -2135,6 +2142,11 @@ void Internal::passat_assign_pure_literals (Walker &walker) {
     walker.ticks++;
     walker.pure_lits[vidx(pure_lit)] = 1;
     walker.ticks++;
+
+    // bookeeping if we want to eliminate the founded autarky
+    walker.autarky_trail.push_back(pure_lit);
+    walker.autarky_val[vlit(pure_lit)]  =  1;
+    walker.autarky_val[vlit(-pure_lit)] = -1;
 
     stats.walk.passatpureliterals++;
     // every clause of pure literal is satisfied and we dont need to visit them in the future
@@ -2206,12 +2218,24 @@ void Internal::build_autarky(Walker &walker) {
   walker.ticks += 1 + cache_lines(walker.passat_trail.size(), sizeof(int));
   for (auto lit : walker.passat_trail){
     walker.ticks++;
-    // pure literals fixed before the main loop are trivially autark, but they
-    // are tracked and reported on their own, so keep them out of the autarky set
+    // Pure literals fixed before the main loop are trivially autark, but they
+    // are assigned and tracked there already.  Keeping them out here is not
+    // just a reporting choice: it guarantees that every literal enters
+    // 'autarky_trail' exactly once, which the witness written to the
+    // extension stack by 'autarky_apply' relies on.
     if (walker.not_autark[vidx(lit)] != 1 && !walker.pure_lits[vidx(lit)]) {
       found_autarky = true;
+
+      // frozen check
+      if (frozen(lit)) walker.frozen_autarky = true;
+
       if (!walker.unflippable[vidx (lit)]) {
         walker.unflippable[vidx (lit)] = 1;
+        // bookeeping if we want to eliminate the founded autarky
+        walker.autarky_trail.push_back(lit);
+        walker.autarky_val[vlit(lit)]  =  1;
+        walker.autarky_val[vlit(-lit)] = -1;
+
         stats.walk.passatautarkylits++;
         autarky_grew = true;
       }
@@ -2254,8 +2278,6 @@ void Internal::build_autarky(Walker &walker) {
 
   walker.not_autark_trail.clear();
 }
-
-
 
 /*----------------------------------------------------------------------------*/
 
@@ -2449,6 +2471,7 @@ void Internal::walk_passat() {
   // version 30 = version 22 (v5 + anti-stagnation) + autarky check (only) after expansion
   // version 31 = version 22 (v5 + anti-stagnation) + autarky check (only) after repair
   // version 32 = version 22 (v5 + anti-stagnation) + autarky check after expansion and after repair
+  // version 33 = version 30 + autarky elimination
   if (opts.walkpassat == 24) {
     walker.cheap_break_value = false;
     walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 10); // 10%
@@ -2472,14 +2495,16 @@ void Internal::walk_passat() {
     walker.autarky_mode = true;
   } else if (opts.walkpassat == 22 || opts.walkpassat == 23 ||
              opts.walkpassat == 30 || opts.walkpassat == 31 ||
-             opts.walkpassat == 32) {
+             opts.walkpassat == 32 || opts.walkpassat == 33) {
     walker.cheap_break_value = false;
     walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 10); // 10% like v5
     walker.anti_stagnation = true;
     walker.increased_passat_limit = (opts.walkpassat == 23);
     walker.autarky_mode = (opts.walkpassat >= 30);
     walker.autarky_check_expansion = (opts.walkpassat != 31);
-    walker.autarky_check_repair = (opts.walkpassat != 30);
+    walker.autarky_check_repair =
+        (opts.walkpassat != 30 && opts.walkpassat != 33);
+    walker.autarky_elimination_mode = (opts.walkpassat == 33);
   } else if (opts.walkpassat == 15 || opts.walkpassat == 19) {
     // 1. Pick the starting barrier from the average clause length:
     //    avg clause-length > 3.5 => start at 1% (static 1% works better on long clauses), else 10%.
@@ -2681,6 +2706,51 @@ void Internal::walk_passat() {
   level = 0;
 
   STOP_INNER_WALK();
+
+  // we do the same as a call from autarky() in autarky.cpp does
+  // 1. build a lookup array for the autarky set
+  // 1. claer all watches
+  // 2. call autarky_apply
+  // 3. eiminate all literals
+  // 4. reconnect all watches
+#ifndef NDEBUG
+  // Check that everey lit is at most once on the autarky_trail
+  {
+    vector<signed char> seen (vsize, 0);
+    for (const auto lit : walker.autarky_trail) {
+      assert (!seen[vidx (lit)]);
+      seen[vidx (lit)] = 1;
+    }
+  }
+#endif
+
+  if (!unsat && walker.autarky_mode && walker.autarky_elimination_mode) {
+
+    // Counted calls of autarky_applay() as autarky() in autarky.cpp does
+    ++stats.autarkies.tries;
+
+    if (!walker.frozen_autarky && !walker.autarky_trail.empty ()) {
+      clear_watches ();
+      autarky_apply (walker.autarky_val, walker.autarky_trail);
+
+      for (auto idx : vars) {
+        if (!walker.autarky_val[vlit (idx)])
+          continue;
+        assert (active (idx));
+        mark_eliminated (idx);
+      }
+
+      connect_watches ();
+
+      // Count all successfull elimination
+      ++stats.autarkies.successful;
+      stats.autarkies.eliminated += (int64_t) walker.autarky_trail.size ();
+
+      PHASE ("walk_passat", stats.walk.passat,
+             "eliminated autarky of %zu literals",
+             walker.autarky_trail.size ());
+    } 
+  } 
 }
 
 } // namespace CaDiCaL
