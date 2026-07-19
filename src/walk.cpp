@@ -1452,12 +1452,23 @@ bool Internal::up_expansion(Walker &walker) {
   // e.g. flips that probSAT_repair re-enqueued
   if (!passat_up(walker)) return false;
 
-  // Loop until every variable is activated
-  while (walker.activated < (size_t) max_var) {
+  // Loop until every variable is activated which could be activated.
+  // Like advanced_expansion we only aim for pre_assigned + activatable:
+  // counting up to max_var would include inactive (eliminated/substituted)
+  // variables, which passat_assign must never see (assert (active (lit))).
+  while (walker.activated < walker.pre_assigned + walker.activatable) {
     // pick a next unassigned variable to assign
     // because no propagation is left on the propagation_queue
     const int idx = use_scores () ? next_decision_variable_with_best_score ()
                                   : next_decision_variable_on_queue ();
+
+    // next_decision_variable could pick an inactive variable
+    // => we have to make shure we are only picking active variables
+    if (!active (idx)) {
+      set_val (idx, 1);
+      walker.passat_trail.push_back (idx);
+      continue;
+    }
 
     const bool target = (stable || opts.target == 2);
     // chose the polarity for the choosen variable idx
@@ -1468,7 +1479,7 @@ bool Internal::up_expansion(Walker &walker) {
     // propagate the consequences. On conflict hand over to probSAT_repair
     if (!passat_up(walker)) return false;
   }
-  // all variables assigned, no conflict => SAT: no clause may be broken
+  // all activatable variables assigned, no conflict => SAT: no clause may be broken
   assert (walker.broken_clauses.empty ());
   return true;
 }
@@ -2218,11 +2229,16 @@ void Internal::build_autarky(Walker &walker) {
   walker.ticks += 1 + cache_lines(walker.passat_trail.size(), sizeof(int));
   for (auto lit : walker.passat_trail){
     walker.ticks++;
+    // make shure that inactive (parked) literals and free variables are not in the set of an autarky
+    // because they dont cause any clause
+    if (!active (lit) || (walker.passat_lookup_table[vlit (lit)].empty () &&
+                          walker.passat_lookup_table[vlit (-lit)].empty ()))
+      continue;
     // Pure literals fixed before the main loop are trivially autark, but they
-    // are assigned and tracked there already.  Keeping them out here is not
-    // just a reporting choice: it guarantees that every literal enters
-    // 'autarky_trail' exactly once, which the witness written to the
-    // extension stack by 'autarky_apply' relies on.
+    // are assigned and tracked there already
+    // Keeping them out here guarantees that every literal enters
+    // autarky_trail exactly once, which the witness written to the
+    // extension stack by autarky_apply relies on.
     if (walker.not_autark[vidx(lit)] != 1 && !walker.pure_lits[vidx(lit)]) {
       found_autarky = true;
 
