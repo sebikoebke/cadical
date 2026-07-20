@@ -109,6 +109,12 @@ struct External {
   vector<bool> witness; // Literal witness on extension stack.
   vector<bool> tainted; // Literal tainted in adding literals.
 
+  vector<int> autarky_id;   // Save the correct autarky ID for all literals, if a literal is not in an autarky, 0 is set
+  vector<bool> tainted_id;  // per default false for the corresponding autarky ID, if an autarky a gets tainted, tainted_id[a] gets true
+                            // can be used to restore tainted clauses and literals
+  vector<vector<int>> autarky_sets; // list for all autarkies which literals has to be restored
+
+
   vector<bool> ervars; // Variables added through Extended Resolution.
 
   vector<unsigned> frozentab; // Reference counts for frozen variables.
@@ -256,6 +262,32 @@ struct External {
     const unsigned ulit = elit2ulit (elit);
     if (ulit < map.size ())
       map[ulit] = false;
+  }
+
+  // input: literal output: if literal is inside an autarky, return the autarky_id, if not it return 0
+  int literal_id (int elit) {
+    const unsigned ulit = elit2ulit (elit);
+    return ulit < autarky_id.size() ? autarky_id[ulit] : 0;
+  }
+
+  int new_autarky_sets ()  {
+    if (autarky_sets.empty()) {
+      autarky_sets.emplace_back();
+      tainted_id.push_back(false);
+    }
+    autarky_sets.emplace_back ();
+    tainted_id.push_back (false);
+    return (int) autarky_sets.size () - 1;
+  }
+
+  void add_autarky_lit (int elit, int aut_id) {
+    const unsigned ulit = elit2ulit (elit);
+    if (ulit >= autarky_id.size()) {
+      autarky_id.resize(ulit + 1, 0);
+    }
+    assert(!autarky_id[ulit]);
+    autarky_id[ulit] = aut_id;
+    autarky_sets[aut_id].push_back(elit);
   }
 
   /*----------------------------------------------------------------------*/

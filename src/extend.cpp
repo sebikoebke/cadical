@@ -145,6 +145,14 @@ void External::push_external_clause_and_witness_on_extension_stack (
 // witness reconstruction here which for instance would also work for
 // super-blocked or set-blocked clauses.
 
+// If the autarky reconstruction stores only one satisfying literal per clause
+// the rules above are not enough.
+// For witness literals inside an autarky group ('autarky_id' is non-zero),
+// we force the witness literal itself true, ignoring the case the clause is already satisfied.
+// Since every stored clause contains its own witness literal, all of
+// them end up satisfied, and the literals of one autarky are consistent,
+// so forcing them cannot conflict.
+
 void External::extend () {
 
   assert (!extended);
@@ -179,6 +187,10 @@ void External::extend () {
 #ifndef QUIET
   int64_t flipped = 0;
 #endif
+
+  // check if autarky ids are used => if so autarky_id in external.hpp is not empty
+  const bool use_autarky_ids = !autarky_id.empty();
+
   while (i != begin) {
     bool satisfied = false;
     int lit;
@@ -200,27 +212,29 @@ void External::extend () {
     assert (!*i);
     --i;
     assert (i != begin);
-    if (satisfied)
-      while (*--i)
-        assert (i != begin);
-    else {
-      while ((lit = *--i)) {
-        const int tmp = ival (lit); // not 'signed char'!!!
-        if (tmp != lit) {
-          LOG ("flipping blocking literal %d", lit);
-          assert (lit);
-          assert (lit != INT_MIN);
-          size_t idx = abs (lit);
-          if (idx >= vals.size ())
-            vals.resize (idx + 1, false);
-          vals[idx] = !vals[idx];
-          internal->stats.extended++;
-#ifndef QUIET
-          flipped++;
-#endif
-        }
-        assert (i != begin);
+
+    // We have to make sure, that all witness literals of an autarky are true.
+    // Therefore we force the witness literals of an autarky to true.
+    // We find an autarky literal, if we look at autarky_id[witness literal] and the entry is not 0
+    while ((lit = *--i)) {
+      if (satisfied && (!use_autarky_ids || !literal_id(lit))) {
+        continue;
       }
+      const int tmp = ival (lit); // not 'signed char'!!!
+      if (tmp != lit) {
+        LOG ("flipping blocking literal %d", lit);
+        assert (lit);
+        assert (lit != INT_MIN);
+        size_t idx = abs (lit);
+        if (idx >= vals.size ())
+          vals.resize (idx + 1, false);
+        vals[idx] = !vals[idx];
+        internal->stats.extended++;
+#ifndef QUIET
+        flipped++;
+#endif
+      }
+      assert (i != begin);
     }
   }
   PHASE ("extend", internal->stats.extensions,

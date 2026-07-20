@@ -290,6 +290,9 @@ void Internal::autarky_apply (const std::vector<signed char> &autarky_val,
 
   int removed = 0;
   bool compact = opts.autarkynonincr;
+
+  bool use_ids = opts.autarkyid && !compact;
+
   LOG (actual_autarky, "the autarky is ");
 
   for (auto *c : clauses) {
@@ -328,12 +331,51 @@ void Internal::autarky_apply (const std::vector<signed char> &autarky_val,
       if (!compact) {
         if (proof)
           proof->weaken_minus(c);
-        std::vector<int> witness = actual_autarky;
-        external->push_external_clause_and_witness_on_extension_stack(c, std::move (witness));
+        // if we decide to use the id extension stack we change here the saving modus
+        if (use_ids) {
+          int satlit = 0;
+          // find the witness literal for the clause
+          // in an autarky, we need just one fullfilling literal per clause
+          for (auto lit : *c) {
+            if (autarky_val[vlit(lit)] > 0) {
+              satlit = lit;
+              break;
+            }
+          }
+          assert(satlit);
+          // push th witness literal and the clause on the extension stack
+          external->push_clause_on_extension_stack(c, satlit);
+        } else {
+          std::vector<int> witness = actual_autarky;
+          external->push_external_clause_and_witness_on_extension_stack(c, std::move (witness));
+        }
       }
       LOG (c, "autarky removed satisfied clause");
       mark_garbage (c);
       ++removed;
+    }
+  }
+
+  
+  if (use_ids && removed) {
+    // if we decide to use the id extension stack we need to open a new group for autarkies
+    int autarky_group = external->new_autarky_sets ();
+
+    for (auto lit : actual_autarky){
+      // Two ways to make the reconstruction sound:
+      // 1. Option (--autarkyunitstack=1): push a unit entry per literal.
+      //    Processed first by extend() (it walks backwards), they force all of
+      //    alpha true, after which every clause entry really is satisfied and
+      //    the standard rule is correct again. 
+      //    Should costs some extra entries for the units.
+      // 2. Option: extend() looks up autarky_id for every witness literal
+      //    and forces the ones belonging to an autarky to true.  
+      //    Same effect and no extra entries.
+
+      if (opts.autarkyunitstack){
+        external->push_external_clause_and_witness_on_extension_stack({lit}, {lit}, abs(lit));
+      } 
+      external->add_autarky_lit(externalize(lit), autarky_group);
     }
   }
 
