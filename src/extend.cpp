@@ -217,9 +217,14 @@ void External::extend () {
     // Therefore we force the witness literals of an autarky to true.
     // We find an autarky literal, if we look at autarky_id[witness literal] and the entry is not 0
     while ((lit = *--i)) {
+      if (use_autarky_ids && literal_id(lit)) {
+        internal->stats.autarkies.witnesses++;
+      }
+
       if (satisfied && (!use_autarky_ids || !literal_id(lit))) {
         continue;
       }
+
       const int tmp = ival (lit); // not 'signed char'!!!
       if (tmp != lit) {
         LOG ("flipping blocking literal %d", lit);
@@ -233,12 +238,15 @@ void External::extend () {
 #ifndef QUIET
         flipped++;
 #endif
+        if (satisfied)
+          internal->stats.autarkies.forced++;
       }
       assert (i != begin);
     }
   }
   PHASE ("extend", internal->stats.extensions,
          "flipped %" PRId64 " literals during extension", flipped);
+  
   extended = true;
   LOG ("extended");
   STOP (extend);
