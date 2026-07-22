@@ -141,6 +141,32 @@ void External::reset_limits () { internal->reset_limits (); }
 
 /*------------------------------------------------------------------------*/
 
+// Taint every autarky ID that has lit as literal
+// Be aware of transitivety:
+// if an autarkie a' is restored, every other autarkie a'' sharing
+// one of its literals has to be restored as well, otherwise a''
+// could end up only partially restored, which breaks the autarky property.
+void External::check_tainted_ids (int lit) {
+
+  if (elit2ulit(lit) >= autarky_id.size()) return;
+
+  for (auto id : autarky_id[elit2ulit(lit)]) {
+
+    if (tainted_id[id]) continue;
+
+    LOG ("taint autarky set %d through literal %d", id, lit);
+    tainted_id[id] = true;
+    tainted_trail.push_back (id);
+    
+    // we have to make sure to catch all possible tainted autarkies
+    for (const auto other : autarky_sets[id]) {
+      check_tainted_ids (other);
+    }
+  }
+}
+
+/*------------------------------------------------------------------------*/
+
 // when extension is true, elit should be a fresh variable and
 // we can set a flag that it is an extension variable.
 // This is then used in the API contracts, that extension variables are
@@ -199,6 +225,15 @@ int External::internalize (int elit, bool extension) {
       LOG ("marking tainted %d", elit);
       mark (tainted, elit);
     }
+
+    // if the opposite polarity of an autarky literal is internalized,
+    // we have to mark all its autarky IDs (closed over shared literals)
+    // in order to reconstruct the autarkies completely
+    // if the same polarity of an autarky literal is internalized,
+    // we need to do nothing, because even if the same polarity is assigned with false,
+    // if a model is found, extend() will fullfill the autarky clauses and
+    // force all witness literals to true
+    check_tainted_ids (-elit);
   } else
     ilit = 0;
   return ilit;

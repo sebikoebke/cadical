@@ -109,9 +109,16 @@ struct External {
   vector<bool> witness; // Literal witness on extension stack.
   vector<bool> tainted; // Literal tainted in adding literals.
 
-  vector<int> autarky_id;   // Save the correct autarky ID for all literals, if a literal is not in an autarky, 0 is set
+  vector<vector<int>> autarky_id;   // Save the correct autarky ID for all literals, if a literal is not in an autarky, 0 is set
+                                    // Be aware that in incremental mode a literal can be the witness literal of multiple autarkies!
   vector<bool> tainted_id;  // per default false for the corresponding autarky ID, if an autarky a gets tainted, tainted_id[a] gets true
                             // can be used to restore tainted clauses and literals
+                            // NEVER set this directly, ONLY through check_tainted_ids --
+                            // otherwise the ID misses the tainted_trail and its
+                            // registration is never cleaned up after the restore
+  vector<int> tainted_trail; // IDs tainted since the last restore_clauses, used to
+                             // clean up their registration; since tainted_id is never
+                             // reset, every ID enters this trail at most once ever
   vector<vector<int>> autarky_sets; // list for all autarkies which literals has to be restored
 
 
@@ -264,10 +271,21 @@ struct External {
       map[ulit] = false;
   }
 
-  // input: literal output: if literal is inside an autarky, return the autarky_id, if not it return 0
-  int literal_id (int elit) {
+  // true if the literal is registered in at least one autarky group. 
+  bool literal_id (int elit) {
     const unsigned ulit = elit2ulit (elit);
-    return ulit < autarky_id.size() ? autarky_id[ulit] : 0;
+    return ulit < autarky_id.size () && !autarky_id[ulit].empty ();
+  }
+
+  // true if some autarky group containing 'elit' is tainted
+  bool tainted_autarky_group (int elit) {
+    const unsigned ulit = elit2ulit (elit);
+    if (ulit >= autarky_id.size ())
+      return false;
+    for (const auto id : autarky_id[ulit])
+      if (tainted_id[id])
+        return true;
+    return false;
   }
 
   int new_autarky_sets ()  {
@@ -282,12 +300,17 @@ struct External {
 
   void add_autarky_lit (int elit, int aut_id) {
     const unsigned ulit = elit2ulit (elit);
-    if (ulit >= autarky_id.size()) {
-      autarky_id.resize(ulit + 1, 0);
+    if (ulit >= autarky_id.size ()) {
+      autarky_id.resize (ulit + 1);
     }
-    assert(!autarky_id[ulit]);
-    autarky_id[ulit] = aut_id;
-    autarky_sets[aut_id].push_back(elit);
+    // a literal may belong to several groups now,
+    // but the same group is not allowed to register a literal twice
+#ifndef NDEBUG
+    for (const auto id : autarky_id[ulit])
+      assert (id != aut_id);
+#endif
+    autarky_id[ulit].push_back (aut_id);
+    autarky_sets[aut_id].push_back (elit);
   }
 
   /*----------------------------------------------------------------------*/
@@ -336,6 +359,7 @@ struct External {
              bool extension = false); // Initialize up-to 'new_max_var'.
   void reserve (int new_max_var); // Reserves up-to 'new_max_var'.
 
+  void check_tainted_ids(int inserted_lit);
   int internalize (
       int,
       bool extension = false); // Translate external to internal literal.

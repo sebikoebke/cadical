@@ -361,22 +361,8 @@ void Internal::autarky_apply (const std::vector<signed char> &autarky_val,
     // if we decide to use the id extension stack we need to open a new group for autarkies
     int autarky_group = external->new_autarky_sets ();
 
-    for (auto lit : actual_autarky){
-      // Two ways to make the reconstruction sound:
-      // 1. Option (--autarkyunitstack=1): push a unit entry per literal.
-      //    Processed first by extend() (it walks backwards), they force all of
-      //    alpha true, after which every clause entry really is satisfied and
-      //    the standard rule is correct again. 
-      //    Should costs some extra entries for the units.
-      // 2. Option: extend() looks up autarky_id for every witness literal
-      //    and forces the ones belonging to an autarky to true.  
-      //    Same effect and no extra entries.
-
-      if (opts.autarkyunitstack){
-        external->push_external_clause_and_witness_on_extension_stack({lit}, {lit}, abs(lit));
-      } 
-      external->add_autarky_lit(externalize(lit), autarky_group);
-    }
+    for (auto lit : actual_autarky)
+      external->add_autarky_lit (externalize (lit), autarky_group);
   }
 
   MSG ("autarky applied");

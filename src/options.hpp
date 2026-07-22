@@ -34,7 +34,6 @@ OPTION( autarkyafter,      1,  0,  1,0,0,1, "run autarkies also after rephasing"
 OPTION( autarkydelay,      1,  0,  1,0,0,1, "delay autarkies if not useful") \
 OPTION( autarkyid,         0,  0,  1,0,0,1, "optimized autarky-id based reconstruction, therefore lineaer extension stack") \
 OPTION( autarkynonincr,    0,  0,  1,0,0,1, "compact autarky reconstruction. Non compatible with incremental") \
-OPTION( autarkyunitstack,  0,  0,  1,0,0,1, "autarky-id based reconstruction stack with unit entries (requires --autarkyid=1)") \
 OPTION( backbone,          1,  0,  2,0,0,1, "binary clause backbone") \
 OPTION( backboneeffort,   20,  0,1e5,0,0,1, "binary effort in per mile") \
 OPTION( backbonemaxrounds,1e3, 0,1e5,0,0,1, "backbone rounds limit") \

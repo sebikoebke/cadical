@@ -127,6 +127,7 @@ void External::restore_clauses () {
     // Copy witness part and try to find a tainted witness literal in it.
     //
     int tlit = 0; // Negation tainted.
+    bool autarky_tainted = false;
     int elit;
     //
     assert (p != end_of_extension);
@@ -137,6 +138,9 @@ void External::restore_clauses () {
         tlit = elit;
         LOG ("negation of witness literal %d tainted", tlit);
       }
+
+      if (!autarky_tainted && tainted_autarky_group(elit))
+        autarky_tainted = true;
 
       assert (p != end_of_extension);
     }
@@ -171,7 +175,11 @@ void External::restore_clauses () {
       satisfied = 0;
     }
 
-    if (satisfied || tlit || internal->opts.restoreall) {
+    // satisfied: a literal is on root level fixed
+    // tlit: the negation of a witness literal is marked as tainted => tlit is added incrementally
+    // autarky_tainted: an autarky of a witness literal is marked as tainted, every clause of that group needs to be restored
+    // internal->opts.restoreall: option that restore everything
+    if (satisfied || tlit || autarky_tainted || internal->opts.restoreall) {
 
       if (satisfied) {
         LOG (p, end_of_clause,
@@ -179,6 +187,9 @@ void External::restore_clauses () {
              satisfied);
         clauses.satisfied++;
       } else {
+        // check how many autarkies IDs need to be restored / tainted
+        for (auto r = saved + 1; *r; r++)
+          check_tainted_ids (*r);
         restore_clause (p, end_of_clause, id); // Might taint literals.
         clauses.restored++;
       }
@@ -236,6 +247,28 @@ void External::restore_clauses () {
 #endif
   LOG ("extension stack clean");
   tainted.clear ();
+
+  // remove the tainted autarkies
+  // the tainted autarkies IDs stay true => they will neve be used in the future
+  for (auto id : tainted_trail) {
+    assert (tainted_id[id]);
+    for (auto elit : autarky_sets[id]) {
+      unsigned ulit = elit2ulit (elit);
+      assert (ulit < autarky_id.size ());
+#ifndef NDEBUG
+      for (const auto other : autarky_id[ulit])
+        assert (tainted_id[other]);
+#endif
+      autarky_id[ulit].clear ();
+    }
+    LOG ("cleared registration of restored autarky set %d", id);
+    autarky_sets[id].clear ();
+  }
+  tainted_trail.clear ();
+#ifndef NDEBUG
+  for (size_t id = 0; id < autarky_sets.size (); id++)
+    assert (!tainted_id[id] || autarky_sets[id].empty ());
+#endif
 
   // Finally recompute the witness bits.
   //
