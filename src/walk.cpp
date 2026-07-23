@@ -52,8 +52,12 @@ struct Walker {
   vector<int> bv;                 // incrementally exact break values, indexed by vlit:
                                   // bv[vlit(l)] = # clauses with conflict_counter == 1 whose unique
                                   // not-false (critical) literal is -l (=> flipping l to true breaks a clause)
+  vector<int> broken_occ;          // occurence of a Literal in a broken clause
   vector<int> clauses_critical_literal; // per clause: the critical literal (signed, like on the trail)
                                         // avoids a rescanning process of the clause in flip_and_repair
+  vector<int> lsl;                // Last Satisfied Literal per literal, show how often the literal is the last satisfied literal per clause
+  vector<int> sat_critical_lit;   // per clause: the unique true literal when satisfied_counter == 1, else 0
+                                  // sat-side mirror of clauses_critical_literal, avoids rescanning the clause
   vector<int> flip_count;         // LS Hotspots, indexed by variables
   vector<signed char> mark;       // per-variable dedup flag, invariant 0 outside repair_propagation_queue
   vector<int> cache_queue;        // reusable cache to rebuild propagation_queue without allocating
@@ -96,6 +100,7 @@ struct Walker {
   bool increased_passat_limit = false; // walkpassat=18..21: multiply the tick limit by 3
 
   bool autarky_mode = false;
+  bool autarky_tuc_pic = false;
   bool autarky_check_expansion = true; // run build_autarky after a conflicting expansion
   bool autarky_check_repair = true;    // run build_autarky after a successful repair
   vector<int> satisfied_counter;  // satisfied_counter is initialized with 0 for every clause, is increased by one if one literals is assigned with true in the clause
@@ -1203,7 +1208,10 @@ void Internal::passat_build (Walker &walker) {
   walker.conflict_counter.resize (clauses.size ());
   walker.broken_pos.resize (clauses.size (), -1);
   walker.bv.resize(2 * vsize, 0);
+  walker.broken_occ.resize(2 * vsize, 0);
+  walker.lsl.resize(2 * vsize, 0);
   walker.clauses_critical_literal.resize(clauses.size ());
+  walker.sat_critical_lit.resize(clauses.size ());
   walker.tuc_pos.resize (clauses.size(), -1);
   walker.unvisitable.resize (clauses.size(), 0);
   walker.unflippable.resize (vsize, 0);
@@ -1259,6 +1267,16 @@ void Internal::passat_build (Walker &walker) {
           walker.bv[vlit(-lit)]++;
           // save the critical literal
           walker.clauses_critical_literal[pos] = lit;
+          break;
+        }
+      }
+    }
+
+    if (opts.walkpassat >= 33 && walker.satisfied_counter[pos] == 1) {
+      for (auto lit : *c) {
+        if (val (lit) > 0) {
+          walker.lsl[vlit(-lit)]++;
+          walker.sat_critical_lit[pos] = lit;
           break;
         }
       }
@@ -1331,6 +1349,22 @@ bool Internal::passat_assign(Walker &walker, int lit) {
         walker.ticks++;
         // increase the clause because it is now fullfilled
         walker.satisfied_counter[clause]++;
+
+        // lsl bookkeeping 
+        if (walker.autarky_tuc_pic) {
+          if (walker.satisfied_counter[clause] == 1) {
+            // clause´s unique true literal is found
+            walker.lsl[vlit(-lit)]++;
+            walker.sat_critical_lit[clause] = lit;
+          } else if (walker.satisfied_counter[clause] == 2) {
+            // clause lost its unique-satisfier status => undo the old critical entry
+            const int m = walker.sat_critical_lit[clause];
+            assert (m);
+            walker.lsl[vlit(-m)]--;
+            walker.sat_critical_lit[clause] = 0;
+          }
+        }
+
         // the clause just got its first true literal => it is satisfied now and has to leave tuc
         if (walker.satisfied_counter[clause] == 1 && walker.tuc_pos[clause] != -1){
           // swap - remove operation to remove clause from tuc
@@ -1360,9 +1394,18 @@ bool Internal::passat_assign(Walker &walker, int lit) {
         signal = false;
         walker.broken_pos[clause] = (int) walker.broken_clauses.size();
         walker.broken_clauses.push_back(clause);
-        if (walker.dynamic_barrier) walker.expansion_conflict_counter++; // v15
+        if (walker.dynamic_barrier) walker.expansion_conflict_counter++; 
 
-                walker.ticks++;
+        // bookeeping for the broken_occ list: increasing here because clause is now broken
+        if (walker.autarky_tuc_pic) {
+          Clause *bc = clauses[clause];
+          walker.ticks += cache_lines(bc->size, sizeof(int));
+          for (auto i : *bc) {
+            walker.broken_occ[vlit(i)]++;
+          }
+        }
+        
+        walker.ticks++;
         assert (walker.clauses_critical_literal[clause] == -lit);
         walker.bv[vlit(lit)]--;
         walker.clauses_critical_literal[clause] = 0;
@@ -1595,19 +1638,29 @@ int Internal::pick_random_clause(Walker &walker, const vector<int> &list_of_clau
     size = INT_MAX;
   int picked = list_of_clauses[walker.random.pick_int (0, size - 1)];
 
-  // an autarky-satisfied clause should not be picked. A broken/tuc clause is
-  // never satisfied by an autarky, so with correct bookkeeping this branch is
-  // dead. Fall back to the first visitable clause; if somehow none is visitable
-  // keep the raw pick rather than returning an invalid index (clauses[-1] would
-  // segfault downstream in probSAT_pick_lit).
-  if (walker.autarky_mode && walker.unvisitable[picked]) {
-    for (int c : list_of_clauses) {
-      if (!walker.unvisitable[c]) {
-        picked = c;
-        break; 
-      }
-    }
+  // an autarky clause should not be picked
+  assert(!walker.unvisitable[picked]);
+
+  return picked;
+}
+
+/*----------------------------------------------------------------------------*/
+
+int Internal::pick_tuc_clause(Walker &walker) {
+  
+  int64_t size = walker.tuc_clauses.size ();
+  if (size > INT_MAX)
+    size = INT_MAX;
+  int picked = 0;
+  // pick a clause out of tuc which is not broken
+  for(;;){
+    picked = walker.tuc_clauses[walker.random.pick_int (0, size - 1)];
+    if (walker.broken_pos[picked] == -1) break;
   }
+
+  // an autarky clause should not be picked
+  assert(!walker.unvisitable[picked]);
+  
   return picked;
 }
 
@@ -1632,7 +1685,34 @@ unsigned Internal::passat_break_value(Walker &walker, int lit){
 }
 
 /*----------------------------------------------------------------------------*/
-// helper function which dont go through all clauses from vlit[-lit] to calc the break value, 
+// exact broken-clause occurrence of 'lit' for debug validation of broken_occ:
+// how many currently broken clauses (conflict_counter == 0) contain lit.
+// tick-neutral (measurement only, wrapped in asserts).
+unsigned Internal::passat_broken_occurence(Walker &walker, int lit){
+  unsigned res = 0;
+  for (int c : walker.passat_lookup_table[vlit(lit)])
+    if (walker.conflict_counter[c] == 0)
+      res++;
+  return res;
+}
+
+/*----------------------------------------------------------------------------*/
+// exact last-satisfied-literal value of 'lit' for debug validation of lsl:
+// how many clauses have -lit as their unique true literal (satisfied_counter == 1),
+// i.e. how many clauses would become touched-unsatisfied if lit were flipped true.
+// tick-neutral (measurement only, wrapped in asserts).
+unsigned Internal::passat_lsl_value(Walker &walker, int lit){
+  // -lit can only be someone's sole satisfier if it is actually true
+  if (val (-lit) <= 0) return 0;
+  unsigned res = 0;
+  for (int c : walker.passat_lookup_table[vlit(-lit)])
+    if (walker.satisfied_counter[c] == 1)
+      res++;
+  return res;
+}
+
+/*----------------------------------------------------------------------------*/
+// helper function which dont go through all clauses from vlit[-lit] to calc the break value,
 // just count how many clauses contain vlit[-lit]
 unsigned Internal::passat_fixed_occurence(Walker &walker, int lit){
   walker.ticks++;
@@ -1664,7 +1744,7 @@ int Internal::probSAT_pick_lit(Walker &walker, int picked_clause){
     // an assumed or inactive (fixed, eliminated or substituted) variable is not allowed to be flipped
     // otherwise flipping would mess the root level vals[] and those variables we cant cleanup here
     // a literal fixed should not be flipped => either autarky or pure lit
-    if (assumed(lit) || assumed(-lit) || !active(lit) || walker.unflippable[vidx(lit)])
+    if (assumed(lit) || assumed(-lit) || !active(lit) || val(lit) == 0 || walker.unflippable[vidx(lit)])
       continue;
 
     // measure the (real, cheap) break-value pair for this literal
@@ -1681,6 +1761,11 @@ int Internal::probSAT_pick_lit(Walker &walker, int picked_clause){
     {
       const int64_t saved_ticks = walker.ticks;
       assert (passat_break_value (walker, lit) == (unsigned) walker.bv[vlit (lit)]);
+      
+      if (walker.autarky_tuc_pic) {
+        assert (passat_broken_occurence (walker, lit) == (unsigned) walker.broken_occ[vlit(lit)]);
+        assert (passat_lsl_value (walker, lit) == (unsigned) walker.lsl[vlit(lit)]);
+      }
       walker.ticks = saved_ticks;
     }
 #endif
@@ -1689,79 +1774,14 @@ int Internal::probSAT_pick_lit(Walker &walker, int picked_clause){
     unsigned bv;
     if (walker.cheap_break_value)
       bv = passat_fixed_occurence(walker, lit);
-    else {
+    else if (walker.autarky_tuc_pic) {
+      bv = walker.lsl[vlit(lit)] + walker.bv[vlit(lit)];
+    } else {
       walker.ticks++;
       bv = walker.bv[vlit(lit)];
     }
 
     const double s = walker.score(bv);
-    walker.scores_passat.push_back({s, lit});
-    sum += s;
-  }
-
-  // every literal is assumed => nothing to flip, signal "not repairable"
-  if (walker.scores_passat.empty()){
-    return 0;
-  }
-
-  // roulette wheel: pick a random limit in [0, sum).
-  const double limit = sum * walker.random.generate_double();
-
-  // Phase 2: pick a random lit
-  double current_value = 0;
-  int res = 0;
-  for (const auto &pick : walker.scores_passat){
-    res = pick.second;
-    current_value += pick.first;
-    if (current_value > limit){
-      break; 
-    }
-  }
-
-  walker.scores_passat.clear();
-  return res;
-}
-
-/*----------------------------------------------------------------------------*/
-
-int Internal::tuc_pick_lit(Walker &walker, int picked_clause){
-  Clause *c = clauses[picked_clause];
-  assert (walker.scores_passat.empty ());
-  // one tick for entering the pick, like walk_pick_lit charges the framework
-  walker.ticks++;
-  double sum = 0;
-
-  // start with a new broken clause => new id and row for break_value track file
-  if (walker.track_break_value)
-    ++break_value_pick;
-
-  // Phase 1: score every flippable literal by its break-value.
-  for (const auto lit : *c){
-    // an assumed or inactive (fixed, eliminated or substituted) variable is not allowed to be flipped
-    // otherwise flipping would mess the root level vals[] and those variables we cant cleanup here
-    // also a not assigned literal is not allowed to be flipped, because here we dont work only with broken clauses
-    // we also work with touched unsatisfied clauses
-    // a literal frozen inside an autarky (walkpassat=24) must not be flipped either
-    if (assumed(lit) || assumed(-lit) || !active(lit) || val(lit) == 0
-        || walker.unflippable[vidx(lit)]) continue;
-
-    const int64_t saved_ticks = walker.ticks;
-    const unsigned real_bv  = walker.bv[vlit(lit)];
-    const unsigned cheap_bv = passat_fixed_occurence (walker, lit);
-    walker.ticks = saved_ticks;
-    write_log_file (walker, nullptr, picked_clause, lit, real_bv, cheap_bv);
-
-#ifndef NDEBUG
-    // incrementally maintained break value must equal the exact break value
-    {
-      const int64_t saved_ticks = walker.ticks;
-      assert (passat_break_value (walker, lit) == (unsigned) walker.bv[vlit (lit)]);
-      walker.ticks = saved_ticks;
-    }
-#endif
-
-    walker.ticks++;
-    const double s = walker.score(walker.bv[vlit(lit)]);
     walker.scores_passat.push_back({s, lit});
     sum += s;
   }
@@ -1826,6 +1846,16 @@ void Internal::flip_and_repair(Walker &walker, int lit){
     // conflict_counter == 1 means the clause was broken and is now
     // satisfied => remove it from broken_clauses
     if (walker.conflict_counter[c] == 1){
+      
+      // bookeeping for the broken_occ list: decreasing here because clause is now satisfied
+      if (walker.autarky_tuc_pic) {
+        Clause *bc = clauses[c];
+        walker.ticks += cache_lines(bc->size, sizeof(int));
+        for (auto i : *bc) {
+            walker.broken_occ[vlit(i)]--;
+        }
+      }
+
       int change_position = walker.broken_pos[c];
       int last_element = walker.broken_clauses.back();
       // move the last element into the new free slot
@@ -1847,6 +1877,19 @@ void Internal::flip_and_repair(Walker &walker, int lit){
     if (walker.autarky_mode) {
 
       walker.satisfied_counter[c]++;
+
+      // lsl bookkeeping
+      if (walker.autarky_tuc_pic) {
+        if (walker.satisfied_counter[c] == 1) {
+          walker.lsl[vlit(-lit)]++;
+          walker.sat_critical_lit[c] = lit;
+        } else if (walker.satisfied_counter[c] == 2) {
+          const int m = walker.sat_critical_lit[c];
+          assert (m);
+          walker.lsl[vlit(-m)]--;
+          walker.sat_critical_lit[c] = 0;
+        }
+      }
 
       if (walker.satisfied_counter[c] == 1 && walker.tuc_pos[c] != -1) {
         int change_position = walker.tuc_pos[c];
@@ -1871,6 +1914,28 @@ void Internal::flip_and_repair(Walker &walker, int lit){
     if (walker.autarky_mode) {
       walker.satisfied_counter[c]--;
 
+      // lsl bookkeeping: -lit was true before the flip and is now false
+      if (walker.autarky_tuc_pic) {
+        if (walker.satisfied_counter[c] == 0) {
+          // clause lost its last satisfier => undo the critical entry
+          const int m = walker.sat_critical_lit[c];
+          assert (m == -lit);
+          walker.lsl[vlit(-m)]--;
+          walker.sat_critical_lit[c] = 0;
+        } else if (walker.satisfied_counter[c] == 1) {
+          // clause dropped back to a unique satisfier
+          Clause *cl = clauses[c];
+          walker.ticks += cache_lines(cl->size, sizeof(int));
+          for (auto t : *cl) {
+            if (val (t) > 0) {
+              walker.lsl[vlit(-t)]++;
+              walker.sat_critical_lit[c] = t;
+              break;
+              }
+          }
+        }
+      }
+
       if (walker.satisfied_counter[c] == 0 && walker.tuc_pos[c] == -1) {
         walker.tuc_pos[c] = (int) walker.tuc_clauses.size();
         walker.tuc_clauses.push_back(c);
@@ -1888,6 +1953,15 @@ void Internal::flip_and_repair(Walker &walker, int lit){
       assert (walker.clauses_critical_literal[c] == -lit);
       walker.bv[vlit(lit)]--;
       walker.clauses_critical_literal[c] = 0;
+
+      // bookeeping for the broken_occ list: increasing here because clause is now broken
+      if (walker.autarky_tuc_pic) {
+        Clause *bc = clauses[c];
+        walker.ticks += cache_lines(bc->size, sizeof(int));
+        for (auto i : *bc) {
+          walker.broken_occ[vlit(i)]++;
+        }
+      }
     }
 
     // adjust the break value
@@ -2346,10 +2420,16 @@ bool Internal::probSAT_repair(Walker &walker) {
 
   while(!walker.broken_clauses.empty() && walker.ticks < walker.limit){
     // pick random clause, then a literal of it via ProbSAT
-    int lit = probSAT_pick_lit(walker, pick_random_clause(walker, walker.broken_clauses));
+    int lit = 0;
+    if (walker.autarky_tuc_pic && (walker.tuc_clauses.size() > walker.broken_clauses.size())){
+      lit = probSAT_pick_lit(walker, pick_tuc_clause(walker));
+    }
+    if (lit == 0) {
+      lit = probSAT_pick_lit(walker, pick_random_clause(walker, walker.broken_clauses));
+    }
 
-    // lit == 0: the clause consists only of assumptions, so it cannot be
-    // repaired without violating an assumption => unsatisfiable under the
+    // lit == 0 from a broken clause: it consists only of assumptions, so it cannot
+    // be repaired without violating an assumption => unsatisfiable under the
     // assumptions, stop and report failure.
     if (lit == 0) {
       walker.assumption_unsat = true;
@@ -2487,6 +2567,9 @@ void Internal::walk_passat() {
   // version 30 = version 22 (v5 + anti-stagnation) + autarky check (only) after expansion + elimination
   // version 31 = version 22 (v5 + anti-stagnation) + autarky check (only) after repair + elimination
   // version 32 = version 22 (v5 + anti-stagnation) + autarky check after expansion and after repair + elimination
+  // version 33 = version 30 + fill broken_occ/lsl/sat_critical_lit + draw repair clause from TUC\BC
+  // version 34 = version 31 + fill broken_occ/lsl/sat_critical_lit + draw repair clause from TUC\BC
+  // version 35 = version 32 + fill broken_occ/lsl/sat_critical_lit + draw repair clause from TUC\BC
   if (opts.walkpassat == 24) {
     walker.cheap_break_value = false;
     walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 10); // 10%
@@ -2510,14 +2593,16 @@ void Internal::walk_passat() {
     walker.autarky_mode = true;
   } else if (opts.walkpassat == 22 || opts.walkpassat == 23 ||
              opts.walkpassat == 30 || opts.walkpassat == 31 ||
-             opts.walkpassat == 32) {
+             opts.walkpassat == 32 || opts.walkpassat == 33 ||
+             opts.walkpassat == 34 || opts.walkpassat == 35) {
     walker.cheap_break_value = false;
     walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 10); // 10% like v5
     walker.anti_stagnation = true;
     walker.increased_passat_limit = (opts.walkpassat == 23);
     walker.autarky_mode = (opts.walkpassat >= 30);
-    walker.autarky_check_expansion = (opts.walkpassat != 31);
-    walker.autarky_check_repair = (opts.walkpassat != 30);
+    walker.autarky_tuc_pic = (opts.walkpassat >= 33);
+    walker.autarky_check_expansion = (opts.walkpassat != 31 && opts.walkpassat != 34);
+    walker.autarky_check_repair = (opts.walkpassat != 30 && opts.walkpassat != 33);
     walker.autarky_elimination_mode = (opts.walkpassat >= 30);
   } else if (opts.walkpassat == 15 || opts.walkpassat == 19) {
     // 1. Pick the starting barrier from the average clause length:

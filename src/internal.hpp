@@ -1459,7 +1459,10 @@ struct Internal {
   bool advanced_propagation (Walker &walker);
   bool advanced_expansion (Walker &walker);
   int pick_random_clause(Walker &walker, const vector<int> &list_of_clauses);
+  int pick_tuc_clause(Walker &walker);
   unsigned passat_break_value (Walker &walker, int lit);
+  unsigned passat_broken_occurence (Walker &walker, int lit);
+  unsigned passat_lsl_value (Walker &walker, int lit);
   unsigned passat_fixed_occurence(Walker &walker, int lit);
   int probSAT_pick_lit(Walker &walker, int picked_clause);
   int tuc_pick_lit(Walker &walker, int picked_clause);
