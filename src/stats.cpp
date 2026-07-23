@@ -891,18 +891,27 @@ void Stats::print (Internal *internal) {
      PRT ("  stag-breaks:   %15" PRId64 "   %10.2f    %% of repairs stopped by stagnation limit",
          stats.walk.passatstagnationbreaks,
          percent (stats.walk.passatstagnationbreaks, stats.walk.passatrepair));
-     PRT ("  autarky:       %15" PRId64 "                 build_autarky calls that saw a non-empty autark set",
+     PRT ("  autarky:       %15" PRId64 "   %10.2f %%  of walk_passat runs found an autarky",
+         stats.walk.passatautarkyruns,
+         percent (stats.walk.passatautarkyruns, stats.walk.passat));
+     PRT ("   calls:        %15" PRId64 "                 build_autarky calls that saw a non-empty autark set",
          stats.walk.passatautarky);
-     PRT ("  autarky-lits:  %15" PRId64 "                 literals in an autarky set",
-         stats.walk.passatautarkylits);
+     PRT ("  autarky-lits:  %15" PRId64 "   %10.2f    total literals, average per autarky",
+         stats.walk.passatautarkylits,
+         relative (stats.walk.passatautarkylits, stats.walk.passatautarkyruns));
+     PRT ("   largest:      %15" PRId64 "                 literals in the largest autarky",
+         stats.walk.passatautarkylitsmax);
      PRT ("   after-expand: %15" PRId64 "   %10.2f %%  of autarky literals",
          stats.walk.passatautarkylitsexp,
          percent (stats.walk.passatautarkylitsexp, stats.walk.passatautarkylits));
      PRT ("   after-repair: %15" PRId64 "   %10.2f %%  of autarky literals",
          stats.walk.passatautarkylitsrep,
          percent (stats.walk.passatautarkylitsrep, stats.walk.passatautarkylits));
-     PRT ("  autarky-claus: %15" PRId64 "                 clauses in a autarky set",
-         stats.walk.passatautarkyclauses);
+     PRT ("  autarky-claus: %15" PRId64 "   %10.2f    total clauses, average per autarky",
+         stats.walk.passatautarkyclauses,
+         relative (stats.walk.passatautarkyclauses, stats.walk.passatautarkyruns));
+     PRT ("   largest:      %15" PRId64 "                 clauses of the largest autarky",
+         stats.walk.passatautarkyclausesmax);
      PRT ("   after-expand: %15" PRId64 "   %10.2f %%  of autarky clauses",
          stats.walk.passatautarkyclausesexp,
          percent (stats.walk.passatautarkyclausesexp, stats.walk.passatautarkyclauses));
@@ -911,7 +920,7 @@ void Stats::print (Internal *internal) {
          percent (stats.walk.passatautarkyclausesrep, stats.walk.passatautarkyclauses));
      PRT ("  pure-lits:     %15" PRId64 "                 pure literals before the walk_passat loop",
          stats.walk.passatpureliterals);
-     PRT ("  pure-claus:    %15" PRId64 "                 clauses satisfied by a pure literals",
+     PRT ("  pure-claus:    %15" PRId64 "                 clauses satisfied by a pure literal",
          stats.walk.passatpureclauses);
   }
   if (all || stats.weakened) {

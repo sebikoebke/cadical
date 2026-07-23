@@ -2484,10 +2484,9 @@ void Internal::walk_passat() {
   // version 27 = dynamic barrier + 3xtl (=v19) + autarky finding
   // version 28 = version 7 (classic PASSAT, up_expansion) + autarky check (only) after expansion
   // version 29 = version 7 (classic PASSAT, up_expansion) + autarky check (only) after repair
-  // version 30 = version 22 (v5 + anti-stagnation) + autarky check (only) after expansion
-  // version 31 = version 22 (v5 + anti-stagnation) + autarky check (only) after repair
-  // version 32 = version 22 (v5 + anti-stagnation) + autarky check after expansion and after repair
-  // version 33 = version 30 + autarky elimination
+  // version 30 = version 22 (v5 + anti-stagnation) + autarky check (only) after expansion + elimination
+  // version 31 = version 22 (v5 + anti-stagnation) + autarky check (only) after repair + elimination
+  // version 32 = version 22 (v5 + anti-stagnation) + autarky check after expansion and after repair + elimination
   if (opts.walkpassat == 24) {
     walker.cheap_break_value = false;
     walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 10); // 10%
@@ -2511,16 +2510,15 @@ void Internal::walk_passat() {
     walker.autarky_mode = true;
   } else if (opts.walkpassat == 22 || opts.walkpassat == 23 ||
              opts.walkpassat == 30 || opts.walkpassat == 31 ||
-             opts.walkpassat == 32 || opts.walkpassat == 33) {
+             opts.walkpassat == 32) {
     walker.cheap_break_value = false;
     walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 10); // 10% like v5
     walker.anti_stagnation = true;
     walker.increased_passat_limit = (opts.walkpassat == 23);
     walker.autarky_mode = (opts.walkpassat >= 30);
     walker.autarky_check_expansion = (opts.walkpassat != 31);
-    walker.autarky_check_repair =
-        (opts.walkpassat != 30 && opts.walkpassat != 33);
-    walker.autarky_elimination_mode = (opts.walkpassat == 33);
+    walker.autarky_check_repair = (opts.walkpassat != 30);
+    walker.autarky_elimination_mode = (opts.walkpassat >= 30);
   } else if (opts.walkpassat == 15 || opts.walkpassat == 19) {
     // 1. Pick the starting barrier from the average clause length:
     //    avg clause-length > 3.5 => start at 1% (static 1% works better on long clauses), else 10%.
@@ -2593,6 +2591,9 @@ void Internal::walk_passat() {
   // SAT (all activated, no conflict) or a conflict; probSAT_repair then repairs
   // the fully-activated subproblem. Resume only if the conflict was resolved.
   bool no_conflict = false;
+  
+  const int64_t autarky_lits_at_start = stats.walk.passatautarkylits;
+  const int64_t autarky_clauses_at_start = stats.walk.passatautarkyclauses;
   if (consistent_with_assumptions){
     no_conflict = true;
 
@@ -2657,7 +2658,7 @@ void Internal::walk_passat() {
       autarky_ticks_before = walker.ticks;
       autarky_lits_before = stats.walk.passatautarkylits;
       autarky_clauses_before = stats.walk.passatautarkyclauses;
-      if (walker.autarky_mode && walker.autarky_check_repair && repaired)
+      if (walker.autarky_mode && walker.autarky_check_repair)
         build_autarky (walker);
       stats.walk.passatautarkyticksrep += walker.ticks - autarky_ticks_before;
       stats.walk.passatautarkylitsrep += stats.walk.passatautarkylits - autarky_lits_before;
@@ -2683,6 +2684,21 @@ void Internal::walk_passat() {
 
   stats.walk.passatactivations += walker.activated - walker.pre_assigned;
   stats.walk.passatactivatable += walker.activatable;
+
+  // count the size of the autarky of the current walk_passat run
+  {
+    const int64_t run_lits =
+        stats.walk.passatautarkylits - autarky_lits_at_start;
+    const int64_t run_clauses =
+        stats.walk.passatautarkyclauses - autarky_clauses_at_start;
+    if (run_lits) {
+      stats.walk.passatautarkyruns++;
+      if (run_lits > stats.walk.passatautarkylitsmax)
+        stats.walk.passatautarkylitsmax = run_lits;
+      if (run_clauses > stats.walk.passatautarkyclausesmax)
+        stats.walk.passatautarkyclausesmax = run_clauses;
+    }
+  }
 
   LOG("walk_passat: %s", no_conflict ? "SAT" : "limit reached");
 
