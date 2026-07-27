@@ -1459,7 +1459,7 @@ struct Internal {
   bool advanced_propagation (Walker &walker);
   bool advanced_expansion (Walker &walker);
   int pick_random_clause(Walker &walker, const vector<int> &list_of_clauses);
-  int pick_tuc_clause(Walker &walker);
+  int advanced_picking(Walker &walker);
   unsigned passat_break_value (Walker &walker, int lit);
   unsigned passat_broken_occurence (Walker &walker, int lit);
   unsigned passat_lsl_value (Walker &walker, int lit);
@@ -1473,6 +1473,7 @@ struct Internal {
   void build_autarky(Walker &walker);
   void write_autarky_log(Walker &walker, bool pure = false);
   void passat_assign_pure_literals (Walker &walker);
+  void find_pure_literals(Walker &walker);
   bool probSAT_repair (Walker &walker);
   void walk_passat ();
 

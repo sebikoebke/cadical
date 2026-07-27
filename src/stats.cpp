@@ -842,7 +842,8 @@ void Stats::print (Internal *internal) {
                   relative (stats.walk.passatactivatable, stats.walk.passat)));
      {
        const int64_t passatautarkyticks =
-           stats.walk.passatautarkyticksexp + stats.walk.passatautarkyticksrep;
+           stats.walk.passatautarkyticksexp + stats.walk.passatautarkyticksrep +
+           stats.walk.passatautarkytickstuc;
        const int64_t passattotalticks =
            stats.walk.passatexpansionticks + stats.walk.passatrepairticks +
            stats.walk.passatpureticks + passatautarkyticks;
@@ -855,6 +856,13 @@ void Stats::print (Internal *internal) {
        PRT ("  pure-ticks:    %15" PRId64 "   %10.2f    %% of walk_passat ticks",
            stats.walk.passatpureticks,
            percent (stats.walk.passatpureticks, passattotalticks));
+       PRT ("   pre:          %15" PRId64 "   %10.2f    %% of pure ticks, scan before the main loop",
+           stats.walk.passatpureticks - stats.walk.passatextrapureticks,
+           percent (stats.walk.passatpureticks - stats.walk.passatextrapureticks,
+                    stats.walk.passatpureticks));
+       PRT ("   intermediate: %15" PRId64 "   %10.2f    %% of pure ticks, fixpoint inside the loop (V3)",
+           stats.walk.passatextrapureticks,
+           percent (stats.walk.passatextrapureticks, stats.walk.passatpureticks));
        PRT ("  autarky-ticks: %15" PRId64 "   %10.2f    %% of walk_passat ticks",
            passatautarkyticks,
            percent (passatautarkyticks, passattotalticks));
@@ -864,6 +872,9 @@ void Stats::print (Internal *internal) {
        PRT ("   after-repair: %15" PRId64 "   %10.2f    %% of autarky ticks",
            stats.walk.passatautarkyticksrep,
            percent (stats.walk.passatautarkyticksrep, passatautarkyticks));
+       PRT ("   at-tuc-min:   %15" PRId64 "   %10.2f    %% of autarky ticks (v41)",
+           stats.walk.passatautarkytickstuc,
+           percent (stats.walk.passatautarkytickstuc, passatautarkyticks));
      }
      PRT ("  reflips:       %15" PRId64 "   %10.2f    %% of flips re-flip a var",
          stats.walk.passatreflips,
@@ -907,6 +918,18 @@ void Stats::print (Internal *internal) {
      PRT ("   after-repair: %15" PRId64 "   %10.2f %%  of autarky literals",
          stats.walk.passatautarkylitsrep,
          percent (stats.walk.passatautarkylitsrep, stats.walk.passatautarkylits));
+     PRT ("   at-tuc-min:   %15" PRId64 "   %10.2f %%  of autarky literals, found at a TUC low-water mark (v41)",
+         stats.walk.passatautarkylitstuc,
+         percent (stats.walk.passatautarkylitstuc, stats.walk.passatautarkylits));
+     PRT ("    tuc-checks:  %15" PRId64 "   %10.2f    build_autarky calls triggered, literals per call",
+         stats.walk.passatautarkychecktuc,
+         relative (stats.walk.passatautarkylitstuc, stats.walk.passatautarkychecktuc));
+     PRT ("   extra-pure:   %15" PRId64 "   %10.2f %%  of autarky literals, added by the pure fixpoint (V3)",
+         stats.walk.passatextrapure,
+         percent (stats.walk.passatextrapure, stats.walk.passatautarkylits));
+     PRT ("   extra-rounds: %15" PRId64 "   %10.2f    productive fixpoint rounds, literals per round",
+         stats.walk.passatextrapurerounds,
+         relative (stats.walk.passatextrapure, stats.walk.passatextrapurerounds));
      PRT ("  autarky-claus: %15" PRId64 "   %10.2f    total clauses, average per autarky",
          stats.walk.passatautarkyclauses,
          relative (stats.walk.passatautarkyclauses, stats.walk.passatautarkyruns));
@@ -922,6 +945,9 @@ void Stats::print (Internal *internal) {
          stats.walk.passatpureliterals);
      PRT ("  pure-claus:    %15" PRId64 "                 clauses satisfied by a pure literal",
          stats.walk.passatpureclauses);
+     PRT ("  adv-clauses:   %15" PRId64 "   %10.2f    clauses visited per advanced pick",
+         stats.walk.passatadvclauses,
+         relative (stats.walk.passatadvclauses, stats.walk.passatflips));
   }
   if (all || stats.weakened) {
     PRT ("weakened:        %15" PRId64 "   %10.2f    average size",
