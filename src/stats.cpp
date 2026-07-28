@@ -824,6 +824,8 @@ void Stats::print (Internal *internal) {
     PRT ("  flips:         %15" PRId64 "   %10.2f    per walk_passat",
          stats.walk.passatflips,
          relative (stats.walk.passatflips, stats.walk.passat));
+    PRT ("  flips/second:  %15.2f                 million flips per second",
+         1e-6 * relative (stats.walk.passatflips, stats.walk.passatseconds));
     PRT ("  broken:        %15" PRId64 "   %10.2f    per flip",
          stats.walk.passatbroken,
          relative (stats.walk.passatbroken, stats.walk.passatflips));

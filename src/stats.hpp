@@ -150,6 +150,9 @@ struct Stats {
     int64_t improved = 0;
     int64_t passat = 0;           // passat == how often walk_passat() was cald
     int64_t passatflips = 0;      // number of flips done in walk_passat (probSAT_repair)
+    double passatseconds = 0;     // wall-clock time spent inside walk_passat, summed over all
+                                  // calls; only used to report flips per second. The tick budget
+                                  // is fixed, so this is where data-structure work shows up.
     int64_t passatbroken = 0;     // sum of broken clauses present after each walk_passat flip
     int64_t passatexpansion = 0;  // number of up_expansion callse
     int64_t passatactivations = 0; // number of variables PASSAT newly activated (excl. pre-assigned)

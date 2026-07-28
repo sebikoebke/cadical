@@ -2722,12 +2722,17 @@ void Internal::walk_passat() {
   // increase the statistic counter for passat
   stats.walk.passat++;
 
+  // wall-clock of this call, accumulated into stats.walk.passatseconds at every
+  // exit below; only feeds the flips-per-second line in the statistics
+  const double passat_start_time = time ();
+
     backtrack ();
   
   //propagate() is called if unpropagated literals are still present in the trail after backtrack()
   if (propagated < trail.size () && !propagate ()) {
     LOG ("empty clause after root level propagation");
     learn_empty_clause ();
+    stats.walk.passatseconds += time () - passat_start_time;
     STOP_INNER_WALK ();
     return;
   }
@@ -2921,6 +2926,8 @@ void Internal::walk_passat() {
   
   const int64_t autarky_lits_at_start = stats.walk.passatautarkylits;
   const int64_t autarky_clauses_at_start = stats.walk.passatautarkyclauses;
+  // flips done by this walk_passat call, for the flips-per-second report below
+  const int64_t flips_at_start = stats.walk.passatflips;
   if (consistent_with_assumptions){
     no_conflict = true;
 
@@ -3047,10 +3054,16 @@ void Internal::walk_passat() {
          walker.ticks);
 
 #ifndef QUIET
-  if (opts.profile >= 2)
+  if (opts.profile >= 2) {
+    const double seconds = time () - profiles.walk.started;
+    const int64_t run_flips = stats.walk.passatflips - flips_at_start;
     PHASE ("walk_passat", stats.walk.passat, "%.2f million ticks per second",
-           1e-6 *
-               relative (walker.ticks, time () - profiles.walk.started));
+           1e-6 * relative (walker.ticks, seconds));
+    // the interesting number for data-structure work: the tick budget is fixed,
+    // so a faster implementation shows up here and nowhere else
+    PHASE ("walk_passat", stats.walk.passat, "%.2f million flips per second",
+           1e-6 * relative (run_flips, seconds));
+  }
 #endif
 
   // Save the result: the whole point of walk_passat is to leave a better
@@ -3076,6 +3089,7 @@ void Internal::walk_passat() {
   
   level = 0;
 
+  stats.walk.passatseconds += time () - passat_start_time;
   STOP_INNER_WALK();
 
   // we do the same as a call from autarky() in autarky.cpp does
