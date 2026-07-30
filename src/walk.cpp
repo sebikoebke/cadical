@@ -31,12 +31,16 @@ struct Walker {
   vector<double> scores;         // scores of candidate literals
   vector<pair<double, int>> scores_passat;   //maybe we can safe one loop with that structure
   std::vector<int> flips; // remember the flips compared to the last best saved model
+                          // in walk_passat only contain the set of flipped variables: 
+                          // repair_propagation_queue reads nothing but vidx() from
+                          // the entry and takes the polarity fresh from vals[]
+  vector<signed char> in_flips;   // shows if a variable already in flips
   int best_trail_pos;
   size_t minimum = (size_t)(-1);
   vector<int> propagation_queue;  // our replacement for the trail in walk_passat (with a difference): the list of all literals which are assigned or should. 
                                   // Changed if probSAT_repair is finished with LS_repair: Old propagations are not longer needed, therefore ther are cut. Just pending and flipped variables remain.
   size_t propagated = 0;          // how far propagation_queue has been processed (like Internal::propagated)
-  vector<int> passat_trail;       // every literal we assigned via set_val during this walk
+  vector<int> passat_trail;       // every variable we assigned via set_val during this walk
                                   // used at cleanup to reset exactly those vals in O(assigned)
   size_t activated = 0;           // counts assigned variables; up_expansion stops once all are
                                   // activated. Replaces ordering_O/ls_score: variable + polarity
@@ -49,6 +53,14 @@ struct Walker {
                                   // maintained incrementally by passat_assign and flip_and_repair
   vector<int> broken_pos;         // position of a clause inside broken_clauses (indexed by clause pos), -1 if not broken; enables fast removal (like in WalkerFO)
   vector<int> conflict_counter;   // counter which shows if there is a conflict inside a clause, if c_c == 0 => conflict, decreased if the opposite polarity is assigned to true
+  vector<int> notfalse_xor;       // XOR of the literals conflict_counter counts.
+                                  // This enable to finde the critical literal in a very fast way:
+                                  // If the conflict_counter of clause c decrease to 1,
+                                  // the number (xor value) in notfalse_xor[c] is equal 
+                                  // to the last not false liter in the clause c
+                                  // looking up is just a simple lookup and not a scanning proccess.
+                                  // To be able to do that trick, a clause is not allowed to contain duplicates
+                                  // (CaDiCal guarantee it)
   vector<int> bv;                 // incrementally exact break values, indexed by vlit:
                                   // bv[vlit(l)] = # clauses with conflict_counter == 1 whose unique
                                   // not-false (critical) literal is -l (=> flipping l to true breaks a clause)
@@ -125,7 +137,6 @@ struct Walker {
   vector<signed char> unflippable;  // show if a literal is in an autarky => unflippable[lit] == 1 => lit is in an autarky
   vector<signed char> unvisitable;  // show if a clause is fullfilled by alsan autarky => unvisitable[lit] == 1 => clause is fullfilled by an autarky
   vector<signed char> not_autark;   // set of variables that cant be autark
-  vector<int> not_autark_trail;
   vector<signed char> pure_lits;   // pure_lits is a set of variables where passat_lookup_table[lit] == 0 
                                    // or passat_lookup_table[-lit] == 0 occure, this set can be fixed before the main walk_passat loop
   vector<int> autarky_worklist;     // clauses that lost their supporter and have to be processed
@@ -133,6 +144,9 @@ struct Walker {
   bool frozen_autarky = false;          // true if the autarky contain a frozen literal => autarky cant be eliminated
   vector<int> autarky_trail;
   vector<signed char> autarky_val;
+  vector<int> peel_counter;       // copy of the satisfied counter, for cheaper autarky peeling
+  vector<unsigned> peel_stamp;    // timestamp which show if we already visited a clause during peeling
+  unsigned peel_generation = 0;   // current peel generation
 
   std::vector<signed char> best_values; // best model stored so far
   double score (unsigned);              // compute score from break count
@@ -1217,19 +1231,26 @@ void Internal::walk () {
 void Internal::passat_build (Walker &walker) {
   walker.passat_lookup_table.resize (2 * vsize);
   walker.conflict_counter.resize (clauses.size ());
+  walker.notfalse_xor.resize (clauses.size (), 0);
   walker.broken_pos.resize (clauses.size (), -1);
   walker.bv.resize(2 * vsize, 0);
-  walker.broken_occ.resize(2 * vsize, 0);
-  walker.lsl.resize(2 * vsize, 0);
   walker.clauses_critical_literal.resize(clauses.size ());
-  walker.sat_critical_lit.resize(clauses.size ());
   walker.tuc_pos.resize (clauses.size(), -1);
   walker.unvisitable.resize (clauses.size(), 0);
   walker.unflippable.resize (vsize, 0);
   walker.not_autark.resize(vsize, 0);
+  walker.in_flips.resize(vsize, 0);
   walker.pure_lits.resize(vsize, 0);
   walker.satisfied_counter.resize (clauses.size(), 0);
   walker.autarky_val.resize(2 * max_var + 2, 0);
+
+  // broken_occ, lsl and sat_critical_lit only feed the alternative pick scores
+  // they only size if they are needed
+  if (walker.maintain_pick_stats) {
+    walker.broken_occ.resize(2 * vsize, 0);
+    walker.lsl.resize(2 * vsize, 0);
+    walker.sat_critical_lit.resize(clauses.size ());
+  }
 
 
   // accumulate total literals and clause count over the tracked clauses to
@@ -1252,11 +1273,17 @@ void Internal::passat_build (Walker &walker) {
     counted++;
 
     for (const auto lit : *c) {
-      const signed char v = val (lit);
+      const signed char v = val(lit);
 
       // if a literal is not false, we have to increase the conflict_counter of the clause
-      if (v >= 0)
+      if (v >= 0) {
         walker.conflict_counter[pos]++;
+
+        // xor every literal that starts not false.
+        // Once the counter drops to 1 the xor is the critical literal
+        // and no clause scan is needed to find it.
+        walker.notfalse_xor[pos] ^= lit;
+      }
 
       // count already-true literals so satisfied_counter is exact from the start,
       // mirroring conflict_counter (which also accounts for pre-assigned literals).
@@ -1271,16 +1298,14 @@ void Internal::passat_build (Walker &walker) {
     }
 
     if (walker.conflict_counter[pos] == 1) {
-      for (auto lit : *c) {
-        const signed char v = val (lit);
-        if (v >= 0) {
-          // adjust the break value
-          walker.bv[vlit(-lit)]++;
-          // save the critical literal
-          walker.clauses_critical_literal[pos] = lit;
-          break;
-        }
-      }
+      // the loop above already seeded notfalse_xor, and with a counter of 1 it
+      // holds the single not-false literal => no second pass over the clause
+      const int lit = walker.notfalse_xor[pos];
+      assert (val (lit) >= 0);
+      // adjust the break value
+      walker.bv[vlit(-lit)]++;
+      // save the critical literal
+      walker.clauses_critical_literal[pos] = lit;
     }
 
     if (walker.maintain_pick_stats && walker.satisfied_counter[pos] == 1) {
@@ -1344,7 +1369,7 @@ bool Internal::passat_assign(Walker &walker, int lit) {
     assert (active (lit));
     set_val(lit, 1);
     // record on the passat_trail so cleanup can reset exactly this assignment
-    walker.passat_trail.push_back(lit);
+    walker.passat_trail.push_back(vidx(lit));
     // (4) count this activation so up_expansion knows when all variables are assigned
     walker.activated++;
     // (2) enqueue for later propagation in passat_up
@@ -1398,7 +1423,9 @@ bool Internal::passat_assign(Walker &walker, int lit) {
       walker.ticks++;
       
       walker.conflict_counter[clause]--;
-      // a clause whose conflict_counter hit 0 is falsified 
+      // -lit just turned false, so it leaves the set the counter tracks
+      walker.notfalse_xor[clause] ^= -lit;
+      // a clause whose conflict_counter hit 0 is falsified
       // => it is added broken_clauses here
       // conflict_counter == 0 implies that all lits in the clause are assigned
       if (walker.conflict_counter[clause] == 0) {
@@ -1431,18 +1458,12 @@ bool Internal::passat_assign(Walker &walker, int lit) {
 
       // adjust the break value
       if (walker.conflict_counter[clause] == 1) {
-        Clause *c = clauses[clause];
-        // scanning the clause for the critical literal is charged like a unit scan (passat_up)
-        walker.ticks += cache_lines(c->size, sizeof(int));
-        for (auto other : *c) {
-          if (val (other) >= 0) {
-            // other is the only non false literal => if it is flipped to fals the clause is broken
-            // => bv of -other has to be incremented
-            walker.bv[vlit(-other)]++;
-            walker.clauses_critical_literal[clause] = other;
-            break;
-          }
-        }
+        // exactly one not-false literal is left, so notfalse_xor is equal to the critical literal
+        assert (val (walker.notfalse_xor[clause]) >= 0);
+        // other is the only non false literal => if it is flipped to fals the clause is broken
+        // => bv of -other has to be incremented
+        walker.bv[vlit(-walker.notfalse_xor[clause])]++;
+        walker.clauses_critical_literal[clause] = walker.notfalse_xor[clause];
       }
     }
   }
@@ -1912,6 +1933,8 @@ void Internal::flip_and_repair(Walker &walker, int lit){
     }
 
     walker.conflict_counter[c]++;
+    // lit was false and just turned true, so it re-enters the set of not false literals per clause
+    walker.notfalse_xor[c] ^= lit;
     // conflict_counter == 1 means the clause was broken and is now
     // satisfied => remove it from broken_clauses
     if (walker.conflict_counter[c] == 1){
@@ -1977,6 +2000,8 @@ void Internal::flip_and_repair(Walker &walker, int lit){
   for (int c : neg_row){
     walker.ticks++;
     walker.conflict_counter[c]--;
+    // -lit was true before the flip and is now false => it leaves the not false literals of a clause
+    walker.notfalse_xor[c] ^= -lit;
 
     // autarky bookkeeping: -lit was true before the flip and is now false, so c
     // loses a true literal
@@ -2035,23 +2060,18 @@ void Internal::flip_and_repair(Walker &walker, int lit){
 
     // adjust the break value
     if (walker.conflict_counter[c] == 1) {
-      Clause *clause = clauses[c];
-      // scanning the clause for the critical literal is charged like a unit scan (passat_up) 
-      walker.ticks += cache_lines(clause->size, sizeof(int));
-      for (auto other : *clause) {
-        if (val (other) >= 0) {
-          // 'other' ist das einzige nicht-falsche Literal: flippt man es auf
-          // false (macht also -other true), bricht die Klausel => bv von -other
-          walker.bv[vlit(-other)]++;
-          walker.clauses_critical_literal[c] = other;
-          break;
-        }
-      }
+      // exactly one not-false literal is left, so notfalse_xor is equal to the critical literal
+      assert (val (walker.notfalse_xor[c]) >= 0);
+      walker.bv[vlit(-walker.notfalse_xor[c])]++;
+      walker.clauses_critical_literal[c] = walker.notfalse_xor[c];
     }
   }
 
-  // 4.
-  walker.flips.push_back(lit);
+  // 4. Only the first flip of a variable is pushed and then marked
+  if (!walker.in_flips[fidx]) {
+    walker.in_flips[fidx] = 1;
+    walker.flips.push_back(lit);
+  }
   stats.walk.passatflips++;
   // accumulate the number of broken clauses still present after this flip,
   // analogous to walk()'s stats.walk.broken (printed as "per flip")
@@ -2127,8 +2147,8 @@ void Internal::write_log_file (Walker &walker, const char *label, int picked_cla
     // variables are not listed; repair never flips those anyway, so the
     // Start/End diff below is unaffected.
     std::vector<char> seen (max_var + 1, 0);
-    for (const int l : walker.passat_trail)
-      seen[vidx (l)] = 1;
+    for (const int idx : walker.passat_trail)
+      seen[vidx (idx)] = 1;
     std::vector<int> assignment;
     for (int idx = 1; idx <= max_var; idx++)
       if (seen[idx])
@@ -2203,25 +2223,31 @@ void Internal::write_autarky_log(Walker &walker, bool pure) {
   else
     fprintf (f, "%zu. Autarky:\n", ++autarky_log_count);
 
-  // which trail literals belong to this block
-  auto selected = [&] (int lit) {
-    return pure ? (bool) walker.pure_lits[vidx (lit)]
-                : (!walker.not_autark[vidx (lit)] && !walker.pure_lits[vidx (lit)]);           
+  // which trail variables belong to this block
+  // both predicates are vidx-based, so they take the trail entry directly
+  auto selected = [&] (int idx) {
+    return pure ? (bool) walker.pure_lits[vidx (idx)]
+                : (!walker.not_autark[vidx (idx)] && !walker.pure_lits[vidx (idx)]);
   };
+
+  // the literal a trail variable currently stands for: passat_trail only records
+  // which variables PASSAT assigned, the polarity lives in vals[] because
+  // flip_and_repair changes it without touching the trail
+  auto trail_lit = [&] (int idx) { return val (idx) > 0 ? idx : -idx; };
 
   // V: the literals of this block (pure lits, or the peeled autarky literals)
   fprintf (f, "%s = {", pure ? "V(pure)" : "V(autarky)");
   bool first = true;
-  for (const auto lit : walker.passat_trail)
-    if (selected (lit))
-      fprintf (f, "%s%d", first ? (first = false, "") : ", ", lit);
+  for (const auto idx : walker.passat_trail)
+    if (selected (idx))
+      fprintf (f, "%s%d", first ? (first = false, "") : ", ", trail_lit (idx));
   fputs ("}\n", f);
 
   // F: clauses satisfied by V = union of occ(lit) over V, de-duplicated
   std::vector<int> fset;
-  for (const auto lit : walker.passat_trail)
-    if (selected (lit))
-      for (const auto c : walker.passat_lookup_table[vlit (lit)])
+  for (const auto idx : walker.passat_trail)
+    if (selected (idx))
+      for (const auto c : walker.passat_lookup_table[vlit (trail_lit (idx))])
         fset.push_back (c);
   std::sort (fset.begin (), fset.end ());
   fset.erase (std::unique (fset.begin (), fset.end ()), fset.end ());
@@ -2239,8 +2265,9 @@ void Internal::write_autarky_log(Walker &walker, bool pure) {
   if (!pure) {
     fputs ("lit\t| clauses\n", f);
     fputs ("--------------------------------------------------\n", f);
-    for (const auto lit : walker.passat_trail)
-      if (selected (lit)) {
+    for (const auto idx : walker.passat_trail)
+      if (selected (idx)) {
+        const int lit = trail_lit (idx);
         fprintf (f, "%d\t| ", lit);
         bool fc = true;
         for (const auto c : walker.passat_lookup_table[vlit (lit)])
@@ -2427,10 +2454,21 @@ void Internal::find_pure_literals(Walker &walker){
 // here we build the autarky_set
 void Internal::build_autarky(Walker &walker) {
   assert (walker.autarky_mode);
-  assert (walker.not_autark_trail.empty());
+
+  // make shure not_autark array is every zero at the start
+  std::fill (walker.not_autark.begin (), walker.not_autark.begin () + max_var + 1, 0);
+  walker.ticks += 1 + cache_lines ((size_t) max_var + 1, sizeof (signed char));
 
   walker.ticks += 1 + cache_lines(walker.tuc_clauses.size(), sizeof(int));
   walker.autarky_worklist.assign(walker.tuc_clauses.begin(), walker.tuc_clauses.end());
+
+
+  // lazy sizing if we need peel_counter and peel_stamp
+  if(walker.peel_stamp.empty()){
+    walker.peel_counter.resize (clauses.size ());
+    walker.peel_stamp.resize (clauses.size (), 0);
+  }
+  walker.peel_generation++;
 
   // Phase 1:
   // remove all assigned literals lit that cannot be in an autarky set,
@@ -2443,22 +2481,32 @@ void Internal::build_autarky(Walker &walker) {
 
     walker.ticks += cache_lines(clause->size, sizeof(int));
     for (auto lit : *clause){
-      assert (val(lit) != 1 || walker.not_autark[vidx(lit)]);
+      assert(val(lit) != 1 || walker.not_autark[vidx(lit)]);
 
       if (val(lit) == -1) {
         if (walker.not_autark[vidx(-lit)]) continue;
 
         walker.not_autark[vidx(-lit)] = 1;
-        walker.not_autark_trail.push_back(-lit);
+
+        // -lit is assigned true and the clause we are processing is touched by it
+        // => -lit cannot be part of the autarky candidate
+        // every clause with -lit loses a satisifier
+        // therefore we have to decrease the temporary satisfied_counter (peel_counter) by one
         const auto &row = walker.passat_lookup_table[vlit(-lit)];
         walker.ticks += 1 + cache_lines(row.size(), sizeof(int));
         for (auto c : row){
           walker.ticks++;
+          // check if clause is visited before in that call
+          // if not we have to assign the correct peel_counter
+          if (walker.peel_stamp[c] != walker.peel_generation){
+            walker.peel_stamp[c] = walker.peel_generation;
+            walker.peel_counter[c] = walker.satisfied_counter[c];
+          }
           // c is not visited yet for -lit, so satisfied_counter[c] still should be positiv
-          assert(walker.satisfied_counter[c] > 0);
+          assert(walker.peel_counter[c] > 0);
           // decrement the satisfied_counter because -lit cant be the reason for autarky
-          walker.satisfied_counter[c]--;
-          if (walker.satisfied_counter[c] == 0){
+          walker.peel_counter[c]--;
+          if (walker.peel_counter[c] == 0){
             // we need to take care of the rest of c without -lit
             walker.autarky_worklist.push_back(c);
           }
@@ -2475,22 +2523,26 @@ void Internal::build_autarky(Walker &walker) {
   bool autarky_grew = false;
 
   walker.ticks += 1 + cache_lines(walker.passat_trail.size(), sizeof(int));
-  for (auto lit : walker.passat_trail){
+  for (auto idx : walker.passat_trail){
     walker.ticks++;
     // make shure that inactive (parked) literals and free variables are not in the set of an autarky
     // because they dont cause any clause
-    if (!active (lit)) continue;
+    if (!active(idx)) continue;
+
+    assert (val(idx));
+    const int lit = val(idx) > 0 ? idx : -idx;
     
     walker.ticks++;
-    if (walker.passat_lookup_table[vlit (lit)].empty ()) {
+    if (walker.passat_lookup_table[vlit(lit)].empty ()) {
       walker.ticks++;
-      if (walker.passat_lookup_table[vlit (-lit)].empty ()) continue;
+      if (walker.passat_lookup_table[vlit(-lit)].empty ()) continue;
     }
-    // Pure literals fixed before the main loop are trivially autark, but they
-    // are assigned and tracked there already
-    // Keeping them out here guarantees that every literal enters
-    // autarky_trail exactly once, which the witness written to the
-    // extension stack by autarky_apply relies on.
+
+    // take care of a new founded autarky lit which is not pure.
+    // Pure literals are assigned and tracked before the main loop because they are trivially autark.
+    // Together with the !unflippable guard below this keeps the invariant that
+    // every literal enters autarky_trail exactly once. 
+    // Additional pure literals in later loop runs are processed by find_pure_literals().
     if (walker.not_autark[vidx(lit)] != 1 && !walker.pure_lits[vidx(lit)]) {
       found_autarky = true;
 
@@ -2506,17 +2558,26 @@ void Internal::build_autarky(Walker &walker) {
 
         stats.walk.passatautarkylits++;
         autarky_grew = true;
-      }
 
-      const auto &row = walker.passat_lookup_table[vlit(lit)];
-      walker.ticks += cache_lines(row.size(), sizeof(int));
-      for (auto c : row){
-        walker.ticks++;
-        if (!walker.unvisitable[c]) {
-          walker.unvisitable[c] = 1;
-          stats.walk.passatautarkyclauses++;
+        // take care of all the clause we are not allowed to touch anymore 
+        // because of the autarky
+        const auto &row = walker.passat_lookup_table[vlit(lit)];
+        walker.ticks += cache_lines(row.size(), sizeof(int));
+        for (auto c : row){
+          walker.ticks++;
+          if (!walker.unvisitable[c]) {
+            walker.unvisitable[c] = 1;
+            stats.walk.passatautarkyclauses++;
+          }
         }
       }
+      #ifndef NDEBUG
+        else {
+          // proof of the skip above: everything must already be covered
+          for (auto c : walker.passat_lookup_table[vlit (lit)])
+            assert (walker.unvisitable[c]);
+        }
+      #endif
     }
   }
 
@@ -2525,23 +2586,6 @@ void Internal::build_autarky(Walker &walker) {
   // optional flag for showing the grwing autarky
   if (walker.show_autarky && autarky_grew)
     write_autarky_log (walker);
-
-  // Phase 3:
-  // reset und undo every literal counter that are pushed on not_autark_trail
-  walker.ticks += 1 + cache_lines(walker.not_autark_trail.size(), sizeof(int));
-  for (auto m : walker.not_autark_trail){
-    walker.ticks++;
-    // not_autark is vidx-indexed, m is the literal we pushed => use vidx(m)
-    walker.not_autark[vidx(m)] = 0;
-    const auto &row = walker.passat_lookup_table[vlit(m)];
-    walker.ticks += 1 + cache_lines(row.size(), sizeof(int));
-    for (auto n : row){
-      walker.ticks++;
-      walker.satisfied_counter[n]++;
-    }
-  }
-
-  walker.not_autark_trail.clear();
 }
 
 /*----------------------------------------------------------------------------*/
@@ -2565,6 +2609,9 @@ bool Internal::probSAT_repair(Walker &walker) {
   stats.walk.passatrepair++;
 
   //Clear all earlier made flips
+  // resetting via the list itself costs O(distinct variables), not O(max_var)
+  for (const int l : walker.flips)
+    walker.in_flips[vidx (l)] = 0;
   walker.flips.clear();
 
   walker.stagnation_counter = 0;
@@ -3070,20 +3117,24 @@ void Internal::walk_passat() {
   // polarity assignment in phases.saved, which the following CDCL search uses
   // as decision phases
   for (int id = 1; id <= max_var; id++)
-    if (val (id))
-      phases.saved[id] = val (id);
+    if (val(id))
+      phases.saved[id] = val(id);
 
-  // vals[] is the solver's single global assignment
-  // table with the invariant "vals[v] != 0 <=> v is on the trail"
-  // We broke that invariant by assigning via passat_assign() without pushing to the trail.
-  // Restore it by clearing exactly the literals we assigned (recorded on passat_trail) and
-  // reset the decision level to the root, otherwise the next CDCL search runs on a
-  // corrupted state (like in walk_round). Fixed vars are never on the trail, so their
-  // real root-level vals stay untouched.
-  for (const auto lit : walker.passat_trail) {
-    set_val (lit, 0);
-    int idx = vidx(lit);
-    if (!scores.contains (idx)) scores.push_back (idx);
+  // In walk_passat we do not push on the trail if we assign, 
+  // therefore we have to restore values of variables we assigned during walk_passat to 0.
+  // Then we have to reset the decision level to the root,
+  // otherwise the next CDCL search runs on a corrupted state (like in walk_round). 
+  // Fixed vars are never on the trail, so their real root-level vals stay untouched.
+  for (const auto idx : walker.passat_trail) {
+
+    if (walker.autarky_mode && walker.autarky_val[vlit(idx)]){
+      // check if the correct literal of an autarky variable is assigned to true and 
+      // not incorrect flipped
+      assert(val(idx) == walker.autarky_val[vlit(idx)]);
+    }
+
+    set_val(idx, 0);
+    if (!scores.contains(idx)) scores.push_back (idx);
     if (queue.bumped < btab[idx]) update_queue_unassigned (idx);
   }
   
@@ -3120,10 +3171,9 @@ void Internal::walk_passat() {
       autarky_apply (walker.autarky_val, walker.autarky_trail);
 
       for (auto idx : vars) {
-        if (!walker.autarky_val[vlit (idx)])
-          continue;
-        assert (active (idx));
-        mark_eliminated (idx);
+        if (!walker.autarky_val[vlit(idx)]) continue;
+        assert(active(idx));
+        mark_eliminated(idx);
       }
 
       connect_watches ();
