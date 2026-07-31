@@ -70,6 +70,8 @@ Internal::~Internal () {
     fclose (measure_file);
   if (break_value_file)
     fclose (break_value_file);
+  if (autarky_file)
+    fclose (autarky_file);
   delete[] (char *) dummy_binary;
   for (const auto &c : clauses)
     delete_clause (c);

@@ -3138,13 +3138,6 @@ void Internal::walk_passat() {
   }
 #endif
 
-  // Save the result: the whole point of walk_passat is to leave a better
-  // polarity assignment in phases.saved, which the following CDCL search uses
-  // as decision phases
-  for (int id = 1; id <= max_var; id++)
-    if (val(id))
-      phases.saved[id] = val(id);
-
   // In walk_passat we do not push on the trail if we assign, 
   // therefore we have to restore values of variables we assigned during walk_passat to 0.
   // Then we have to reset the decision level to the root,
@@ -3158,8 +3151,16 @@ void Internal::walk_passat() {
       assert(val(idx) == walker.autarky_val[vlit(idx)]);
     }
 
+    // Save the result:
+    // Only the variables walk_passat actually touched go into the saved phases
+    if (active (idx))
+      phases.saved[idx] = val (idx);
+
     set_val(idx, 0);
-    if (!scores.contains(idx)) scores.push_back (idx);
+    // same guard as in Internal::unassign: a declared but not yet activated
+    // variable must stay out of the scores heap, otherwise we break the
+    // 'unused () => !scores.contains ()' invariant checked in internal.cpp
+    if (!flags (idx).declared () && !scores.contains(idx)) scores.push_back (idx);
     if (queue.bumped < btab[idx]) update_queue_unassigned (idx);
   }
   

@@ -1465,7 +1465,6 @@ struct Internal {
   unsigned passat_lsl_value (Walker &walker, int lit);
   unsigned passat_fixed_occurence(Walker &walker, int lit);
   int probSAT_pick_lit(Walker &walker, int picked_clause);
-  int tuc_pick_lit(Walker &walker, int picked_clause);
   void flip_and_repair(Walker &walker, int lit);
   void repair_propagation_queue(Walker &walker);
   void write_log_file (Walker &walker, const char *label, int picked_clause,
