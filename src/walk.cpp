@@ -229,7 +229,12 @@ void Walker::populate_table (double size) {
   // according to the average size every second invocation and otherwise
   // just the default '2.0', which turns into the base '0.5'.
   //
-  const bool use_size_based_cb = (internal->stats.walk.count & 1);
+  bool use_size_based_cb;
+  if (internal->stats.walk.passat){
+    use_size_based_cb = (internal->stats.walk.passat & 1);
+  } else {
+    use_size_based_cb = (internal->stats.walk.count & 1);
+  }
   const double cb = use_size_based_cb ? fitcbval (size) : 2.0;
   assert (cb);
   const double base = 1 / cb; // scores are 'base^0,base^1,base^2,...
@@ -1272,66 +1277,59 @@ void Internal::passat_build (Walker &walker) {
     total_size += c->size;
     counted++;
 
+    // because passat_build is cald first in walk_passat and 
+    // we only work with complete unassigned clauses
+    // we are able to set the conflict_counter for every clause equal to their size
+    walker.conflict_counter[pos] = c->size;
+
     for (const auto lit : *c) {
-      const signed char v = val(lit);
+      // No tracked clause can hold an assigned literal here:
+      // walk_passat backtrack to level 0 and propagated to fixpoint,
+      // => every assigned literal is root fixed 
+      // => the garbage collection (runs before passat_build) drop the clauses containing 
+      // the true polarity and delete the false polarity out of the remaining clauses
+      // (walk_round use the same logic)
+      // => no tracked clause should hold an assigned literal anymore
+      assert (!val (lit));
 
-      // if a literal is not false, we have to increase the conflict_counter of the clause
-      if (v >= 0) {
-        walker.conflict_counter[pos]++;
-
-        // xor every literal that starts not false.
-        // Once the counter drops to 1 the xor is the critical literal
-        // and no clause scan is needed to find it.
-        walker.notfalse_xor[pos] ^= lit;
-      }
-
-      // count already-true literals so satisfied_counter is exact from the start,
-      // mirroring conflict_counter (which also accounts for pre-assigned literals).
-      // Done unconditionally: walker.autarky_mode is only set after passat_build in
-      // the --walkpassat dispatch, so guarding on it here would leave it at 0.
-      if (v > 0)
-        walker.satisfied_counter[pos]++;
+      // xor every literal that starts not false.
+      // Once the counter drops to 1 the xor is the critical literal
+      // and no clause scan is needed to find it.
+      walker.notfalse_xor[pos] ^= lit;
 
       // (a) if a clause contain the variable v, the clause-position in clauses is inserted
       // in the correct polarity of v in passat_lookup_table => passat_lookup_table[v] += [clause_position]
       walker.passat_lookup_table[vlit (lit)].push_back ((int) pos);
     }
 
-    if (walker.conflict_counter[pos] == 1) {
-      // the loop above already seeded notfalse_xor, and with a counter of 1 it
-      // holds the single not-false literal => no second pass over the clause
-      const int lit = walker.notfalse_xor[pos];
-      assert (val (lit) >= 0);
-      // adjust the break value
-      walker.bv[vlit(-lit)]++;
-      // save the critical literal
-      walker.clauses_critical_literal[pos] = lit;
-    }
-
-    if (walker.maintain_pick_stats && walker.satisfied_counter[pos] == 1) {
-      for (auto lit : *c) {
-        if (val (lit) > 0) {
-          walker.lsl[vlit(-lit)]++;
-          walker.sat_critical_lit[pos] = lit;
-          break;
-        }
-      }
-    }
+    // Nothing is assigned yet, so no clause is satisfied
+    // satisfied_counter, bv, clauses_critical_literal, lsl and sat_critical_lit
+    // therefore should all be 0 (until the first passat_assign)
+    assert (!walker.satisfied_counter[pos]);
   }
 
   // part (d)
-  walker.activated = 0;
-  walker.pre_assigned = 0;
-  walker.activatable = 0;
-  
-  for (int idx = 1; idx <= max_var; idx++) {
-    if (val(idx)) {
-      walker.activated++;
-      walker.pre_assigned++;
-    } else if (active(idx)) {
-      walker.activatable++;
+  // an active variable is always unassigned here and an assigned variable is
+  // always root fixed and therefore on the trail
+  walker.pre_assigned = trail.size();
+  // the pre-assigned variables are not activated by PASSAT, but they do count as activated:
+  // the expansion loops stop at pre_assigned + activatable
+  walker.activated = trail.size();
+  walker.activatable = active();
+
+#ifndef NDEBUG
+  {
+    size_t assigned = 0, activatable = 0;
+    for (int idx = 1; idx <= max_var; idx++) {
+      if (val (idx))
+        assigned++;
+      else if (active (idx))
+        activatable++;
     }
+    assert (assigned == walker.pre_assigned);
+    assert (activatable == walker.activatable);
   }
+#endif
 
   // build the ProbSAT score table from the average clause size, like walk()
   // average clause size is used in walkpassat=15
@@ -1532,6 +1530,11 @@ bool Internal::up_expansion(Walker &walker) {
   // counting up to max_var would include inactive (eliminated/substituted)
   // variables, which passat_assign must never see (assert (active (lit))).
   while (walker.activated < walker.pre_assigned + walker.activatable) {
+
+    // check if we run out of ticks
+    if (walker.ticks >= walker.limit) 
+      return false;
+
     // pick a next unassigned variable to assign
     // because no propagation is left on the propagation_queue
     const int idx = use_scores () ? next_decision_variable_with_best_score ()
@@ -1618,6 +1621,10 @@ bool Internal::advanced_expansion(Walker &walker) {
 
   // Loop until every variable is activated which could be activated
   while (walker.activated < walker.pre_assigned + walker.activatable) {
+
+    if (walker.ticks >= walker.limit)
+      return false;
+
     // pick a next unassigned variable to assign
     // because no propagation is left on the propagation_queue
     const int idx = use_scores () ? next_decision_variable_with_best_score ()
@@ -1680,7 +1687,7 @@ int Internal::pick_random_clause(Walker &walker, const vector<int> &list_of_clau
 
 int Internal::advanced_picking(Walker &walker) {
 
-  signed char picked_lits = 0;
+  int picked_lits = 0;
 
   int64_t size = walker.broken_clauses.size ();
   if (size > INT_MAX) size = INT_MAX;
@@ -2367,6 +2374,7 @@ void Internal::find_pure_literals(Walker &walker){
   assert (walker.autarky_mode);
 
   bool changed = true;
+  
   while (changed) {
     changed = false;
 
@@ -2784,6 +2792,10 @@ void Internal::walk_passat() {
     return;
   }
 
+  // make shure we do not work with clauses that contain a root level fixed literal
+  if (last.collect.fixed < stats.all.fixed) 
+    garbage_collection ();
+
   //calc limit, identically as in walk()
   const int64_t start_ticks = stats.ticks.search[0] + stats.ticks.search[1];
   int64_t limit = start_ticks - last.walk.ticks;
@@ -2921,7 +2933,13 @@ void Internal::walk_passat() {
     walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 10); // 10%
     walker.passat_track_improvement = (opts.walkpassat == 17 || opts.walkpassat == 21);
     walker.increased_passat_limit = (opts.walkpassat == 18 || opts.walkpassat == 21);
-  } 
+  }
+  else if (opts.walkpassat == 22 || opts.walkpassat == 23) {
+    walker.cheap_break_value = false;
+    walker.passat_expansion_barrier = std::max ((size_t) 1, walker.activatable / 10); // 10% like v5
+    walker.anti_stagnation = true;
+    walker.increased_passat_limit = (opts.walkpassat == 23); // v23 = v22 + 3x
+  }
   else {
     walker.cheap_break_value = (opts.walkpassat > 7);
     switch (((opts.walkpassat - 1) % 7) + 1) {
@@ -3003,6 +3021,7 @@ void Internal::walk_passat() {
       int64_t autarky_ticks_before = walker.ticks;
       int64_t autarky_lits_before = stats.walk.passatautarkylits;
       int64_t autarky_clauses_before = stats.walk.passatautarkyclauses;
+
       if (walker.autarky_mode && walker.autarky_check_expansion)
         build_autarky (walker);
       stats.walk.passatautarkyticksexp += walker.ticks - autarky_ticks_before;
@@ -3033,8 +3052,7 @@ void Internal::walk_passat() {
       ticks_before = walker.ticks;
       const bool repaired = probSAT_repair(walker);
       
-      stats.walk.passatrepairticks +=
-          walker.ticks - ticks_before - walker.tuc_autarky_ticks;
+      stats.walk.passatrepairticks += walker.ticks - ticks_before - walker.tuc_autarky_ticks;
       stats.walk.passatautarkytickstuc += walker.tuc_autarky_ticks;
 
       // check for autarkies after Repair
@@ -3042,8 +3060,10 @@ void Internal::walk_passat() {
       autarky_ticks_before = walker.ticks;
       autarky_lits_before = stats.walk.passatautarkylits;
       autarky_clauses_before = stats.walk.passatautarkyclauses;
-      if (walker.autarky_mode && walker.autarky_check_repair)
+
+      if (walker.autarky_mode && walker.autarky_check_repair) 
         build_autarky (walker);
+
       stats.walk.passatautarkyticksrep += walker.ticks - autarky_ticks_before;
       stats.walk.passatautarkylitsrep += stats.walk.passatautarkylits - autarky_lits_before;
       stats.walk.passatautarkyclausesrep += stats.walk.passatautarkyclauses - autarky_clauses_before;
@@ -3062,7 +3082,12 @@ void Internal::walk_passat() {
       if (walker.passat_track_improvement && !repaired && !walker.anti_stagnation) {
         // restore only the activated vars
         // everything else was never touched by probSAT
-        for (size_t i = 0; i < walker.passat_trail.size (); i++)
+        // iterate over the snapshot, not over passat_trail: the trail is only
+        // appended to, but find_pure_literals above can have grown it since
+        // probSAT_repair sized best_repair_model, and the extra entries have no
+        // snapshot entry to restore from
+        assert (walker.best_repair_model.size () <= walker.passat_trail.size ());
+        for (size_t i = 0; i < walker.best_repair_model.size (); i++)
           set_val (walker.passat_trail[i], walker.best_repair_model[i]);
         if (walker.last_min_broken >= walker.last_start_broken)
           stats.walk.passatexpkept++;
