@@ -2374,8 +2374,8 @@ void Internal::find_pure_literals(Walker &walker){
   assert (walker.autarky_mode);
 
   bool changed = true;
-  
-  while (changed) {
+
+  while (changed && walker.ticks < walker.limit) {
     changed = false;
 
     for (int i = 1; i <= max_var; i++) {
