@@ -1443,38 +1443,42 @@ struct Internal {
   int walk_pick_lit (Walker &walker, TaggedBinary c);
   int walk_round (int64_t limit, bool prev);
   void walk ();
-  // walk_passat measurement files in Internal so they stay open across all walk_passat runs
+  // walk_palsat measurement files in Internal so they stay open across all walk_palsat runs
   FILE *measure_file = nullptr;     // local_search_modul_measure.log (probSAT_repair)
-  FILE *break_value_file = nullptr; // break_value_measure.csv (break-value correlation)
   FILE *autarky_file = nullptr;     // autarky.log (build_autarky, show_autarky flag)
   size_t measure_round = 0;         // round index shared by matching Start/End Repair
-  size_t break_value_pick = 0;      // id of the picked broken clause, groups its literals
   size_t autarky_log_count = 0;     // running number of autarkies written to autarky.log
   size_t pure_log_count = 0;        // running number of pure-literal blocks written to autarky.log
 
-  void passat_build (Walker &walker);
-  bool passat_assign (Walker &walker, int lit);
-  bool passat_up (Walker &walker);
+  void palsat_build (Walker &walker);
+  bool palsat_assign (Walker &walker, int lit);
+  bool palsat_up (Walker &walker);
   bool up_expansion (Walker &walker);
   bool advanced_propagation (Walker &walker);
   bool advanced_expansion (Walker &walker);
   int pick_random_clause(Walker &walker, const vector<int> &list_of_clauses);
   int advanced_picking(Walker &walker);
-  unsigned passat_break_value (Walker &walker, int lit);
-  unsigned passat_broken_occurence (Walker &walker, int lit);
-  unsigned passat_lsl_value (Walker &walker, int lit);
-  unsigned passat_fixed_occurence(Walker &walker, int lit);
+  unsigned palsat_break_value (Walker &walker, int lit);
+  unsigned palsat_broken_occurence (Walker &walker, int lit);
+  unsigned palsat_lsl_value (Walker &walker, int lit);
   int probSAT_pick_lit(Walker &walker, int picked_clause);
   void flip_and_repair(Walker &walker, int lit);
   void repair_propagation_queue(Walker &walker);
-  void write_log_file (Walker &walker, const char *label, int picked_clause,
-                       int lit, unsigned real_bv, unsigned cheap_bv);
-  void build_autarky(Walker &walker);
+  void write_log_file (Walker &walker, const char *label);
+  void build_autarky(Walker &walker, const char *site = nullptr,
+                     bool shadow = false);
   void write_autarky_log(Walker &walker, bool pure = false);
-  void passat_assign_pure_literals (Walker &walker);
+  void trace_autarky_check (Walker &walker, const char *site);
+  void trace_autarky_run (Walker &walker);
+  void trace_autarky_shadow (Walker &walker);
+  void print_autarky_trace_line (FILE *f, const char *kind, int64_t run,
+                                 int64_t iter, const char *site,
+                                 std::vector<int> &autark, int64_t pure,
+                                 int frozen);
+  void palsat_assign_pure_literals (Walker &walker);
   void find_pure_literals(Walker &walker);
   bool probSAT_repair (Walker &walker);
-  void walk_passat ();
+  void walk_palsat ();
 
   int walk_full_occs_round (int64_t limit, bool prev);
   void walk_full_occs ();

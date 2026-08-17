@@ -818,138 +818,146 @@ void Stats::print (Internal *internal) {
     PRT ("  wght-transfer: %15" PRId64 "   %10.2f %% flip",
          stats.walk.weight_transfer, percent (stats.walk.weight_transfer, stats.walk.flips));
   }
-  if (all || stats.walk.passat) {
-    PRT ("walked_passat:   %15" PRId64 "   %10.2f    interval",
-         stats.walk.passat, relative (stats.conflicts, stats.walk.passat));
-    PRT ("  flips:         %15" PRId64 "   %10.2f    per walk_passat",
-         stats.walk.passatflips,
-         relative (stats.walk.passatflips, stats.walk.passat));
+  if (all || stats.walk.palsat) {
+    PRT ("walked_palsat:   %15" PRId64 "   %10.2f    interval",
+         stats.walk.palsat, relative (stats.conflicts, stats.walk.palsat));
+    PRT ("  flips:         %15" PRId64 "   %10.2f    per walk_palsat",
+         stats.walk.palsatflips,
+         relative (stats.walk.palsatflips, stats.walk.palsat));
     PRT ("  flips/second:  %15.2f                 million flips per second",
-         1e-6 * relative (stats.walk.passatflips, stats.walk.passatseconds));
+         1e-6 * relative (stats.walk.palsatflips, stats.walk.palsatseconds));
     PRT ("  broken:        %15" PRId64 "   %10.2f    per flip",
-         stats.walk.passatbroken,
-         relative (stats.walk.passatbroken, stats.walk.passatflips));
-     PRT ("  expansion:     %15" PRId64 "   %10.2f    per walk_passat",
-         stats.walk.passatexpansion,
-         relative (stats.walk.passatexpansion, stats.walk.passat));
-     PRT ("  repair:        %15" PRId64 "   %10.2f    per walk_passat",
-         stats.walk.passatrepair,
-         relative (stats.walk.passatrepair, stats.walk.passat));
+         stats.walk.palsatbroken,
+         relative (stats.walk.palsatbroken, stats.walk.palsatflips));
+     PRT ("  expansion:     %15" PRId64 "   %10.2f    per walk_palsat",
+         stats.walk.palsatexpansion,
+         relative (stats.walk.palsatexpansion, stats.walk.palsat));
+     PRT ("  repair:        %15" PRId64 "   %10.2f    per walk_palsat",
+         stats.walk.palsatrepair,
+         relative (stats.walk.palsatrepair, stats.walk.palsat));
      PRT ("  activated-var: %15.2f   %10.2f    %% of activatable variables",
-         relative (stats.walk.passatactivations, stats.walk.passat),
-         percent (stats.walk.passatactivations, stats.walk.passatactivatable));
+         relative (stats.walk.palsatactivations, stats.walk.palsat),
+         percent (stats.walk.palsatactivations, stats.walk.palsatactivatable));
      PRT ("  per-round:     %15.2f   %10.2f    new vars per up_expansion (%% of activatable)",
-         relative (stats.walk.passatactivations, stats.walk.passatexpansion),
-         percent (relative (stats.walk.passatactivations, stats.walk.passatexpansion),
-                  relative (stats.walk.passatactivatable, stats.walk.passat)));
+         relative (stats.walk.palsatactivations, stats.walk.palsatexpansion),
+         percent (relative (stats.walk.palsatactivations, stats.walk.palsatexpansion),
+                  relative (stats.walk.palsatactivatable, stats.walk.palsat)));
      {
-       const int64_t passatautarkyticks =
-           stats.walk.passatautarkyticksexp + stats.walk.passatautarkyticksrep +
-           stats.walk.passatautarkytickstuc;
-       const int64_t passattotalticks =
-           stats.walk.passatexpansionticks + stats.walk.passatrepairticks +
-           stats.walk.passatpureticks + passatautarkyticks;
-       PRT ("  expan-ticks:   %15" PRId64 "   %10.2f    %% of walk_passat ticks",
-           stats.walk.passatexpansionticks,
-           percent (stats.walk.passatexpansionticks, passattotalticks));
-       PRT ("  repair-ticks:  %15" PRId64 "   %10.2f    %% of walk_passat ticks",
-           stats.walk.passatrepairticks,
-           percent (stats.walk.passatrepairticks, passattotalticks));
-       PRT ("  pure-ticks:    %15" PRId64 "   %10.2f    %% of walk_passat ticks",
-           stats.walk.passatpureticks,
-           percent (stats.walk.passatpureticks, passattotalticks));
+       const int64_t palsatautarkyticks =
+           stats.walk.palsatautarkyticksexp + stats.walk.palsatautarkyticksrep +
+           stats.walk.palsatautarkytickstuc + stats.walk.palsatautarkyticksend;
+       const int64_t palsattotalticks =
+           stats.walk.palsatexpansionticks + stats.walk.palsatrepairticks +
+           stats.walk.palsatpureticks + palsatautarkyticks;
+       PRT ("  expan-ticks:   %15" PRId64 "   %10.2f    %% of walk_palsat ticks",
+           stats.walk.palsatexpansionticks,
+           percent (stats.walk.palsatexpansionticks, palsattotalticks));
+       PRT ("  repair-ticks:  %15" PRId64 "   %10.2f    %% of walk_palsat ticks",
+           stats.walk.palsatrepairticks,
+           percent (stats.walk.palsatrepairticks, palsattotalticks));
+       PRT ("  pure-ticks:    %15" PRId64 "   %10.2f    %% of walk_palsat ticks",
+           stats.walk.palsatpureticks,
+           percent (stats.walk.palsatpureticks, palsattotalticks));
        PRT ("   pre:          %15" PRId64 "   %10.2f    %% of pure ticks, scan before the main loop",
-           stats.walk.passatpureticks - stats.walk.passatextrapureticks,
-           percent (stats.walk.passatpureticks - stats.walk.passatextrapureticks,
-                    stats.walk.passatpureticks));
-       PRT ("   intermediate: %15" PRId64 "   %10.2f    %% of pure ticks, fixpoint inside the loop (V3)",
-           stats.walk.passatextrapureticks,
-           percent (stats.walk.passatextrapureticks, stats.walk.passatpureticks));
-       PRT ("  autarky-ticks: %15" PRId64 "   %10.2f    %% of walk_passat ticks",
-           passatautarkyticks,
-           percent (passatautarkyticks, passattotalticks));
+           stats.walk.palsatpureticks - stats.walk.palsatextrapureticks,
+           percent (stats.walk.palsatpureticks - stats.walk.palsatextrapureticks,
+                    stats.walk.palsatpureticks));
+       PRT ("   intermediate: %15" PRId64 "   %10.2f    %% of pure ticks, fixpoint in the loop (mode 4: once at the end)",
+           stats.walk.palsatextrapureticks,
+           percent (stats.walk.palsatextrapureticks, stats.walk.palsatpureticks));
+       PRT ("  autarky-ticks: %15" PRId64 "   %10.2f    %% of walk_palsat ticks",
+           palsatautarkyticks,
+           percent (palsatautarkyticks, palsattotalticks));
        PRT ("   after-expand: %15" PRId64 "   %10.2f    %% of autarky ticks",
-           stats.walk.passatautarkyticksexp,
-           percent (stats.walk.passatautarkyticksexp, passatautarkyticks));
+           stats.walk.palsatautarkyticksexp,
+           percent (stats.walk.palsatautarkyticksexp, palsatautarkyticks));
        PRT ("   after-repair: %15" PRId64 "   %10.2f    %% of autarky ticks",
-           stats.walk.passatautarkyticksrep,
-           percent (stats.walk.passatautarkyticksrep, passatautarkyticks));
-       PRT ("   at-tuc-min:   %15" PRId64 "   %10.2f    %% of autarky ticks (v41)",
-           stats.walk.passatautarkytickstuc,
-           percent (stats.walk.passatautarkytickstuc, passatautarkyticks));
+           stats.walk.palsatautarkyticksrep,
+           percent (stats.walk.palsatautarkyticksrep, palsatautarkyticks));
+       PRT ("   at-tuc-min:   %15" PRId64 "   %10.2f    %% of autarky ticks",
+           stats.walk.palsatautarkytickstuc,
+           percent (stats.walk.palsatautarkytickstuc, palsatautarkyticks));
+       PRT ("   at-end:       %15" PRId64 "   %10.2f    %% of autarky ticks, single call after the loop",
+           stats.walk.palsatautarkyticksend,
+           percent (stats.walk.palsatautarkyticksend, palsatautarkyticks));
      }
      PRT ("  reflips:       %15" PRId64 "   %10.2f    %% of flips re-flip a var",
-         stats.walk.passatreflips,
-         percent (stats.walk.passatreflips, stats.walk.passatflips));
+         stats.walk.palsatreflips,
+         percent (stats.walk.palsatreflips, stats.walk.palsatflips));
      PRT ("  repair-ok:     %15" PRId64 "   %10.2f    %% of repairs reach broken==0",
-         stats.walk.passatrepairsuccess,
-         percent (stats.walk.passatrepairsuccess, stats.walk.passatrepair));
+         stats.walk.palsatrepairsuccess,
+         percent (stats.walk.palsatrepairsuccess, stats.walk.palsatrepair));
      PRT ("  broken-start:  %15.2f   %10s    avg broken at repair start",
-         relative (stats.walk.passatbrokenstart, stats.walk.passatrepair), "");
+         relative (stats.walk.palsatbrokenstart, stats.walk.palsatrepair), "");
      PRT ("  broken-min:    %15.2f   %10s    avg best broken (failed repairs only)",
-         relative (stats.walk.passatbrokenmin,
-                   stats.walk.passatrepair - stats.walk.passatrepairsuccess), "");
-     PRT ("  repair_droped: %15" PRId64 "   %10.2f    %% failed repairs that never improved on expansion",
-         stats.walk.passatexpkept,
-         percent (stats.walk.passatexpkept, stats.walk.passatrepair));
-     PRT ("  barrier-up:    %15" PRId64 "   %10.2f    dynamic barrier increases per walk_passat",
-         stats.walk.passatbarrierup,
-         relative (stats.walk.passatbarrierup, stats.walk.passat));
-     PRT ("  barrier-down:  %15" PRId64 "   %10.2f    dynamic barrier decreases per walk_passat",
-         stats.walk.passatbarrierdown,
-         relative (stats.walk.passatbarrierdown, stats.walk.passat));
+         relative (stats.walk.palsatbrokenmin,
+                   stats.walk.palsatrepair - stats.walk.palsatrepairsuccess), "");
+     PRT ("  barrier-up:    %15" PRId64 "   %10.2f    dynamic barrier increases per walk_palsat",
+         stats.walk.palsatbarrierup,
+         relative (stats.walk.palsatbarrierup, stats.walk.palsat));
+     PRT ("  barrier-down:  %15" PRId64 "   %10.2f    dynamic barrier decreases per walk_palsat",
+         stats.walk.palsatbarrierdown,
+         relative (stats.walk.palsatbarrierdown, stats.walk.palsat));
      PRT ("  stagnation:    %15" PRId64 "   %10.2f    avg flips since last improvement at repair end",
-         stats.walk.passatstagnation,
-         relative (stats.walk.passatstagnation, stats.walk.passatrepair));
+         stats.walk.palsatstagnation,
+         relative (stats.walk.palsatstagnation, stats.walk.palsatrepair));
      PRT ("  stag-breaks:   %15" PRId64 "   %10.2f    %% of repairs stopped by stagnation limit",
-         stats.walk.passatstagnationbreaks,
-         percent (stats.walk.passatstagnationbreaks, stats.walk.passatrepair));
-     PRT ("  autarky:       %15" PRId64 "   %10.2f %%  of walk_passat runs found an autarky",
-         stats.walk.passatautarkyruns,
-         percent (stats.walk.passatautarkyruns, stats.walk.passat));
+         stats.walk.palsatstagnationbreaks,
+         percent (stats.walk.palsatstagnationbreaks, stats.walk.palsatrepair));
+     PRT ("  autarky:       %15" PRId64 "   %10.2f %%  of walk_palsat runs found an autarky",
+         stats.walk.palsatautarkyruns,
+         percent (stats.walk.palsatautarkyruns, stats.walk.palsat));
      PRT ("   calls:        %15" PRId64 "                 build_autarky calls that saw a non-empty autark set",
-         stats.walk.passatautarky);
+         stats.walk.palsatautarky);
+     PRT ("   peeling-rate:             %15.2f %%   of the assigned literals survive the peeling, average per call",
+         relative (stats.walk.palsatautarkylitrate, stats.walk.palsatautarky));
      PRT ("  autarky-lits:  %15" PRId64 "   %10.2f    total literals, average per autarky",
-         stats.walk.passatautarkylits,
-         relative (stats.walk.passatautarkylits, stats.walk.passatautarkyruns));
+         stats.walk.palsatautarkylits,
+         relative (stats.walk.palsatautarkylits, stats.walk.palsatautarkyruns));
      PRT ("   largest:      %15" PRId64 "                 literals in the largest autarky",
-         stats.walk.passatautarkylitsmax);
-     PRT ("   after-expand: %15" PRId64 "   %10.2f %%  of autarky literals",
-         stats.walk.passatautarkylitsexp,
-         percent (stats.walk.passatautarkylitsexp, stats.walk.passatautarkylits));
-     PRT ("   after-repair: %15" PRId64 "   %10.2f %%  of autarky literals",
-         stats.walk.passatautarkylitsrep,
-         percent (stats.walk.passatautarkylitsrep, stats.walk.passatautarkylits));
-     PRT ("   at-tuc-min:   %15" PRId64 "   %10.2f %%  of autarky literals, found at a TUC low-water mark (v41)",
-         stats.walk.passatautarkylitstuc,
-         percent (stats.walk.passatautarkylitstuc, stats.walk.passatautarkylits));
+         stats.walk.palsatautarkylitsmax);
+     PRT ("   from-expand:  %15" PRId64 "   %10.2f %%  autarky literals found by expansion",
+         stats.walk.palsatautarkylitsexp,
+         percent (stats.walk.palsatautarkylitsexp, stats.walk.palsatautarkylits));
+     PRT ("    touched-repair:%13" PRId64 "   %10.2f %%  of those, moved by repair and moved back",
+         stats.walk.palsatautarkylitstouched,
+         percent (stats.walk.palsatautarkylitstouched, stats.walk.palsatautarkylits));
+     PRT ("   from-repair:  %15" PRId64 "   %10.2f %%  autarky literals found by repair",
+         stats.walk.palsatautarkylitsrep,
+         percent (stats.walk.palsatautarkylitsrep, stats.walk.palsatautarkylits));
+     PRT ("   from-pseudo-pure:%12" PRId64 "   %10.2f %%  autarky literals found by the pure fixpoint",
+         stats.walk.palsatextrapure,
+         percent (stats.walk.palsatextrapure, stats.walk.palsatautarkylits));
+     PRT ("    pure-rounds: %15" PRId64 "   %10.2f    productive fixpoint rounds, literals per round",
+         stats.walk.palsatextrapurerounds,
+         relative (stats.walk.palsatextrapure, stats.walk.palsatextrapurerounds));
+     PRT ("   from-tuc-min: %15" PRId64 "   %10.2f %%  overlaps the lines above: first seen at a TUC low-water mark",
+         stats.walk.palsatautarkylitstuc,
+         percent (stats.walk.palsatautarkylitstuc, stats.walk.palsatautarkylits));
      PRT ("    tuc-checks:  %15" PRId64 "   %10.2f    build_autarky calls triggered, literals per call",
-         stats.walk.passatautarkychecktuc,
-         relative (stats.walk.passatautarkylitstuc, stats.walk.passatautarkychecktuc));
-     PRT ("   extra-pure:   %15" PRId64 "   %10.2f %%  of autarky literals, added by the pure fixpoint (V3)",
-         stats.walk.passatextrapure,
-         percent (stats.walk.passatextrapure, stats.walk.passatautarkylits));
-     PRT ("   extra-rounds: %15" PRId64 "   %10.2f    productive fixpoint rounds, literals per round",
-         stats.walk.passatextrapurerounds,
-         relative (stats.walk.passatextrapure, stats.walk.passatextrapurerounds));
+         stats.walk.palsatautarkychecktuc,
+         relative (stats.walk.palsatautarkylitstuc, stats.walk.palsatautarkychecktuc));
      PRT ("  autarky-claus: %15" PRId64 "   %10.2f    total clauses, average per autarky",
-         stats.walk.passatautarkyclauses,
-         relative (stats.walk.passatautarkyclauses, stats.walk.passatautarkyruns));
+         stats.walk.palsatautarkyclauses,
+         relative (stats.walk.palsatautarkyclauses, stats.walk.palsatautarkyruns));
      PRT ("   largest:      %15" PRId64 "                 clauses of the largest autarky",
-         stats.walk.passatautarkyclausesmax);
+         stats.walk.palsatautarkyclausesmax);
      PRT ("   after-expand: %15" PRId64 "   %10.2f %%  of autarky clauses",
-         stats.walk.passatautarkyclausesexp,
-         percent (stats.walk.passatautarkyclausesexp, stats.walk.passatautarkyclauses));
+         stats.walk.palsatautarkyclausesexp,
+         percent (stats.walk.palsatautarkyclausesexp, stats.walk.palsatautarkyclauses));
      PRT ("   after-repair: %15" PRId64 "   %10.2f %%  of autarky clauses",
-         stats.walk.passatautarkyclausesrep,
-         percent (stats.walk.passatautarkyclausesrep, stats.walk.passatautarkyclauses));
-     PRT ("  pure-lits:     %15" PRId64 "                 pure literals before the walk_passat loop",
-         stats.walk.passatpureliterals);
+         stats.walk.palsatautarkyclausesrep,
+         percent (stats.walk.palsatautarkyclausesrep, stats.walk.palsatautarkyclauses));
+     PRT ("   at-end:       %15" PRId64 "   %10.2f %%  of autarky clauses, single call after the loop",
+         stats.walk.palsatautarkyclausesend,
+         percent (stats.walk.palsatautarkyclausesend, stats.walk.palsatautarkyclauses));
+     PRT ("  pure-lits:     %15" PRId64 "                 pure literals before the walk_palsat loop",
+         stats.walk.palsatpureliterals);
      PRT ("  pure-claus:    %15" PRId64 "                 clauses satisfied by a pure literal",
-         stats.walk.passatpureclauses);
+         stats.walk.palsatpureclauses);
      PRT ("  adv-clauses:   %15" PRId64 "   %10.2f    clauses visited per advanced pick",
-         stats.walk.passatadvclauses,
-         relative (stats.walk.passatadvclauses, stats.walk.passatflips));
+         stats.walk.palsatadvclauses,
+         relative (stats.walk.palsatadvclauses, stats.walk.palsatflips));
   }
   if (all || stats.weakened) {
     PRT ("weakened:        %15" PRId64 "   %10.2f    average size",

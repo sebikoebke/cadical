@@ -148,50 +148,55 @@ struct Stats {
     int64_t flips = 0;
     size_t minimum = 0;
     int64_t improved = 0;
-    int64_t passat = 0;           // passat == how often walk_passat() was cald
-    int64_t passatflips = 0;      // number of flips done in walk_passat (probSAT_repair)
-    double passatseconds = 0;     // wall-clock time spent inside walk_passat, summed over all
+    int64_t palsat = 0;           // palsat == how often walk_palsat() was cald
+    int64_t palsatflips = 0;      // number of flips done in walk_palsat (probSAT_repair)
+    double palsatseconds = 0;     // wall-clock time spent inside walk_palsat, summed over all
                                   // calls; only used to report flips per second. The tick budget
                                   // is fixed, so this is where data-structure work shows up.
-    int64_t passatbroken = 0;     // sum of broken clauses present after each walk_passat flip
-    int64_t passatexpansion = 0;  // number of up_expansion callse
-    int64_t passatactivations = 0; // number of variables PASSAT newly activated (excl. pre-assigned)
-    int64_t passatactivatable = 0; // sum of active&unassigned vars (the activatable universe)
-    int64_t passatexpansionticks = 0; // number of ticks per expansion
-    int64_t passatrepair = 0;     // how often probSAT repair was triggered
-    int64_t passatrepairticks = 0; //number of ticks per repair
-    int64_t passatrepairsuccess = 0; // repairs that reached broken==0 (converged)
-    int64_t passatbrokenstart = 0;   // sum of broken at the start of each repair
-    int64_t passatbrokenmin = 0;     // sum of the best (lowest) broken reached per repair
-    int64_t passatreflips = 0;       // flips that re-flip an already-flipped var
-    int64_t passatexpkept = 0;       // failed repairs where the best assignment never improved on expansion
-    int64_t passatbarrierup = 0;     // dynamic barrier: number of increases (jump up to 50%)
-    int64_t passatbarrierdown = 0;   // dynamic barrier: number of decreases (jump down to 1%)
-    int64_t passatstagnation = 0;    // sum of stagnation_counter at the end of each repair (flips since last min_broken improvement)
-    int64_t passatstagnationbreaks = 0; // anti-stagnation: repairs stopped early because stagnation_counter reached the limit
-    int64_t passatautarky = 0;       // number of build_autarky calls that found a non-empty autark part
-    int64_t passatautarkyruns = 0;   // walk_passat runs that ended with a non-empty autarky
-    int64_t passatautarkylits = 0;   // literals fixed as unflippable because of an autarky
-    int64_t passatautarkylitsmax = 0; // literals of the largest autarky found in a single run
-    int64_t passatautarkyclauses = 0; // clauses marked unvisitable because of an autarky
-    int64_t passatautarkyclausesmax = 0; // clauses of the largest autarky found in a single run
-    int64_t passatpureliterals = 0;  // pure literals detected and fixed before the main loop
-    int64_t passatpureclauses = 0;   // clauses satisfied by a fixed pure literal before the main loop
-    int64_t passatextrapure = 0;     // subset of passatautarkylits added by find_pure_literals 
-    int64_t passatextrapurerounds = 0; // fixpoint rounds of find_pure_literals that actually added a literal
-    int64_t passatadvclauses = 0;    // advanced_picking: clauses drawn/visited while collecting the candidate literals
-    int64_t passatpureticks = 0;     // ticks spent finding pure literals
-    int64_t passatextrapureticks = 0; // share of passatpureticks spent in find_pure_literals
-    int64_t passatautarkyticksexp = 0; // ticks spent in build_autarky called after a conflicting expansion
-    int64_t passatautarkyticksrep = 0; // ticks spent in build_autarky called after a successful repair
-    int64_t passatautarkytickstuc = 0; // ticks spent in build_autarky called at a new TUC Minima
-    int64_t passatautarkylitstuc = 0;    // autarky literals found by those TUC-triggered calls
-    int64_t passatautarkyclausestuc = 0; // autarky clauses found by those TUC-triggered calls
-    int64_t passatautarkychecktuc = 0;   // number of TUC-triggered build_autarky calls
-    int64_t passatautarkylitsexp = 0;  // autarky literals newly frozen by the after-expansion call
-    int64_t passatautarkylitsrep = 0;  // autarky literals newly frozen by the after-repair call
-    int64_t passatautarkyclausesexp = 0; // clauses newly marked unvisitable by the after-expansion call
-    int64_t passatautarkyclausesrep = 0; // clauses newly marked unvisitable by the after-repair call
+    int64_t palsatbroken = 0;     // sum of broken clauses present after each walk_palsat flip
+    int64_t palsatexpansion = 0;  // number of up_expansion callse
+    int64_t palsatactivations = 0; // number of variables PALSAT newly activated (excl. pre-assigned)
+    int64_t palsatactivatable = 0; // sum of active&unassigned vars (the activatable universe)
+    int64_t palsatexpansionticks = 0; // number of ticks per expansion
+    int64_t palsatrepair = 0;     // how often probSAT repair was triggered
+    int64_t palsatrepairticks = 0; //number of ticks per repair
+    int64_t palsatrepairsuccess = 0; // repairs that reached broken==0 (converged)
+    int64_t palsatbrokenstart = 0;   // sum of broken at the start of each repair
+    int64_t palsatbrokenmin = 0;     // sum of the best (lowest) broken reached per repair
+    int64_t palsatreflips = 0;       // flips that re-flip an already-flipped var
+    int64_t palsatbarrierup = 0;     // dynamic barrier: number of increases (jump up to 50%)
+    int64_t palsatbarrierdown = 0;   // dynamic barrier: number of decreases (jump down to 1%)
+    int64_t palsatstagnation = 0;    // sum of stagnation_counter at the end of each repair (flips since last min_broken improvement)
+    int64_t palsatstagnationbreaks = 0; // anti-stagnation: repairs stopped early because stagnation_counter reached the limit
+    int64_t palsatautarky = 0;       // number of build_autarky calls that found a non-empty autark part
+    int64_t palsatautarkyruns = 0;   // walk_palsat runs that ended with a non-empty autarky
+    int64_t palsatautarkylits = 0;   // literals fixed as unflippable because of an autarky
+    int64_t palsatautarkylitsmax = 0; // literals of the largest autarky found in a single run
+    double palsatautarkylitrate = 0; // sum over the successful build_autarky calls of the percentage
+                                     // of peeling candidates that survived the peeling, divided by
+                                     // palsatautarky this is the average survival rate per call
+    int64_t palsatautarkyclauses = 0; // clauses marked unvisitable because of an autarky
+    int64_t palsatautarkyclausesmax = 0; // clauses of the largest autarky found in a single run
+    int64_t palsatpureliterals = 0;  // pure literals detected and fixed before the main loop
+    int64_t palsatpureclauses = 0;   // clauses satisfied by a fixed pure literal before the main loop
+    int64_t palsatextrapure = 0;     // subset of palsatautarkylits added by find_pure_literals 
+    int64_t palsatextrapurerounds = 0; // fixpoint rounds of find_pure_literals that actually added a literal
+    int64_t palsatadvclauses = 0;    // advanced_picking: clauses drawn/visited while collecting the candidate literals
+    int64_t palsatpureticks = 0;     // ticks spent finding pure literals
+    int64_t palsatextrapureticks = 0; // share of palsatpureticks spent in find_pure_literals
+    int64_t palsatautarkyticksexp = 0; // ticks spent in build_autarky called after a conflicting expansion
+    int64_t palsatautarkyticksrep = 0; // ticks spent in build_autarky called after a successful repair
+    int64_t palsatautarkytickstuc = 0; // ticks spent in build_autarky called at a new TUC Minima
+    int64_t palsatautarkylitstuc = 0;    // autarky literals found by those TUC-triggered calls
+    int64_t palsatautarkyclausestuc = 0; // autarky clauses found by those TUC-triggered calls
+    int64_t palsatautarkychecktuc = 0;   // number of TUC-triggered build_autarky calls
+    int64_t palsatautarkylitsexp = 0;     // autarky literals whose polarity comes from the expansion
+    int64_t palsatautarkylitstouched = 0; // subset of autarky lits from exp which the repair flipped twice (didnt change the fullfilling polarity in the end) 
+    int64_t palsatautarkylitsrep = 0;     // autarky literals whose polarity was produced by the repair
+    int64_t palsatautarkyclausesexp = 0; // clauses newly marked unvisitable by the after-expansion call
+    int64_t palsatautarkyclausesrep = 0; // clauses newly marked unvisitable by the after-repair call
+    int64_t palsatautarkyticksend = 0;   // ticks spent in the closing build_autarky (+ pure fixpoint)
+    int64_t palsatautarkyclausesend = 0; // autarky clauses found by that closing call
     int64_t weight_reducing_var = 0;
     int64_t sideways = 0;
     int64_t weight_transfer = 0;

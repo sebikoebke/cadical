@@ -101,8 +101,8 @@ char Internal::rephase_walk () {
   stats.rephased.walk++;
   PHASE ("rephase", stats.rephased.total,
          "starting local search to improve current phase");
-  if (opts.walkpassat)
-    walk_passat ();
+  if (opts.walkpalsat)
+    walk_palsat ();
   else if (opts.walkfullocc == 1)
     walk_full_occs ();
   else if (opts.walkfullocc == 2)

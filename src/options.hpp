@@ -306,7 +306,12 @@ OPTION( walkmaxeff,      1e7,  0,2e9,1,0,1, "maximum efficiency (in 1e3 ticks)")
 OPTION( walkmineff,        0,  0,1e7,1,0,1, "minimum efficiency") \
 OPTION( walkmineffinit,  1e3,  0,1e7,1,0,1, "minimum efficiency of initial local search") \
 OPTION( walknonstable,     1,  0,  1,0,0,1, "walk in non-stabilizing phase") \
-OPTION( walkpassat,        0,  0, 41,1,0,1, "PASSAT: 0=off; 1-7 exact break (s=10, s=100, s=unlim, s=1pct, s=10pct, s=50pct, up_expansion), 8-14 cheap break, 15 dynamic barrier 1pct<->10pct + improvement-tracking, 16 s=0.1pct + improvement-tracking, 17 v5+improv, 18 v5+3x tick limit, 19 v15+3xtl, 20 v16+3xtl, 21 v17+3xtl, 22 v5+anti-stagnation, 23 v22+3xtl; AUTARKY LADDER (each adds one feature to the version it names): 24 v7 up_expansion + check after repair + elimination, 25 v24 + pure lits finding, 26 v25 + 3x tick limit, 27 v19 dynamic barrier + check after repair + elimination, 28 v22 anti-stagnation + check after expansion + elimination, 29 v22 anti-stagnation + check after repair + elimination, 30 v29 + check after expansion as well, 31 v29 + pure lits finding, 32 v29 + 3x tick limit, 33 v29 + pure lits finding + 3x tick limit, 34 v29 + autarky check at TUC minima, 35 v34 + pure lits finding + 3x tick limit, 36 v29 + pick scored by base^lsl, 37 v29 + pick scored by broken_occ, 38 v29 + pick scored by broken_occ*base^bv, 39 v38 + pure lits finding + 3x tick limit, 40 v29 + advanced multi-clause picking, 41 v40 + pure lits finding + 3x tick limit") \
+OPTION( walkpalsat,        0,  0,  5,1,0,1, "walkpalsat expansion strategy: 0 = off, 1 = classic palsat, 2 = 1% barrier, 3 = 10% barrier, 4 = dynamic barrier (change between 1% and 10%), 5 = anti-stagnation") \
+OPTION( walkpalsatautarky, 0,  0,  4,1,0,1, "walkpalsat autarky detection + elimination: 0 = off, 1 = after repair, 2 = after expansion, 3 = after rep. and exp., 4 = at the end of walkpalsat (once => no freezing during search)") \
+OPTION( walkpalsatautarkypure,0,0, 1,0,0,1, "walkpalsat pure literal fixpoint after each repair") \
+OPTION( walkpalsatautarkytuc,0, 0,  1,0,0,1, "walkpalsat autarky check at TUC minima") \
+OPTION( walkpalsatiwtl,    0,  0,  1,0,0,1, "walkpalsat increased walk tick limit (2.5x)") \
+OPTION( walkpalsatpick,    0,  0,  3,1,0,1, "walkpalsat literal pick score: 0 = base^bv (as normal walk), 1 = base^lsl, 2 = broken_occ*base^bv, 3 = advanced multi-clause picking") \
 OPTION( walkredundant,     0,  0,  2,0,0,1, "walk redundant clauses too [0 = none, 1 = binary nonyhyper, 2=all]") \
 OPTION( warmup,            1,  0,  1,0,0,1, "warmup before walk using propagation") \
 
