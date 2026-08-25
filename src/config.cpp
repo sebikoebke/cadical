@@ -33,12 +33,105 @@ static NameVal unsat_config[] = {
 
 /*------------------------------------------------------------------------*/
 
+// Configurations for runs with diferent identification points 
+// (after expansion, after repair, both, after PALSAT)
+
+static NameVal palsatids1_config[] = {
+    {"autarkies", 0},           {"walkpalsat", 1},
+    {"walkpalsatautarky", 1},   {"walkpalsatautarkypure", 0},
+    {"walkpalsatautarkytuc", 0}, {"walkpalsatiwtl", 0},
+    {"walkpalsatpick", 0},
+};
+
+static NameVal palsatids2_config[] = {
+    {"autarkies", 0},           {"walkpalsat", 1},
+    {"walkpalsatautarky", 2},   {"walkpalsatautarkypure", 0},
+    {"walkpalsatautarkytuc", 0}, {"walkpalsatiwtl", 0},
+    {"walkpalsatpick", 0},
+};
+
+static NameVal palsatids3_config[] = {
+    {"autarkies", 0},           {"walkpalsat", 1},
+    {"walkpalsatautarky", 3},   {"walkpalsatautarkypure", 0},
+    {"walkpalsatautarkytuc", 0}, {"walkpalsatiwtl", 0},
+    {"walkpalsatpick", 0},
+};
+
+static NameVal palsatids4_config[] = {
+    {"autarkies", 0},           {"walkpalsat", 1},
+    {"walkpalsatautarky", 4},   {"walkpalsatautarkypure", 0},
+    {"walkpalsatautarkytuc", 0}, {"walkpalsatiwtl", 0},
+    {"walkpalsatpick", 0},
+};
+
+// Configurations for different optimization techniques fpr autarkies
+
+static NameVal palsatbase_config[] = {
+    {"autarkies", 0},           {"walkpalsat", 5},
+    {"walkpalsatautarky", 4},   {"walkpalsatautarkypure", 0},
+    {"walkpalsatautarkytuc", 0}, {"walkpalsatiwtl", 0},
+    {"walkpalsatpick", 0},
+};
+
+static NameVal palsatiwtl_config[] = {
+    {"autarkies", 0},           {"walkpalsat", 5},
+    {"walkpalsatautarky", 4},   {"walkpalsatautarkypure", 0},
+    {"walkpalsatautarkytuc", 0}, {"walkpalsatiwtl", 1},
+    {"walkpalsatpick", 0},
+};
+
+static NameVal palsatpure_config[] = {
+    {"autarkies", 0},           {"walkpalsat", 5},
+    {"walkpalsatautarky", 4},   {"walkpalsatautarkypure", 1},
+    {"walkpalsatautarkytuc", 0}, {"walkpalsatiwtl", 0},
+    {"walkpalsatpick", 0},
+};
+
+static NameVal palsatpureiwtl_config[] = {
+    {"autarkies", 0},           {"walkpalsat", 5},
+    {"walkpalsatautarky", 4},   {"walkpalsatautarkypure", 1},
+    {"walkpalsatautarkytuc", 0}, {"walkpalsatiwtl", 1},
+    {"walkpalsatpick", 0},
+};
+
+// Configurations for different scores for ProbSAT to
+// check influence of Local Search on autarkies
+
+static NameVal palsatlsl_config[] = {
+    {"autarkies", 0},           {"walkpalsat", 5},
+    {"walkpalsatautarky", 4},   {"walkpalsatautarkypure", 1},
+    {"walkpalsatautarkytuc", 0}, {"walkpalsatiwtl", 1},
+    {"walkpalsatpick", 1},
+};
+
+static NameVal palsatmakebreak_config[] = {
+    {"autarkies", 0},           {"walkpalsat", 5},
+    {"walkpalsatautarky", 4},   {"walkpalsatautarkypure", 1},
+    {"walkpalsatautarkytuc", 0}, {"walkpalsatiwtl", 1},
+    {"walkpalsatpick", 2},
+};
+
+/*------------------------------------------------------------------------*/
+
 #define CONFIGS \
 \
   CONFIG (default, "set default advanced internal options") \
   CONFIG (plain, "disable all internal preprocessing options") \
   CONFIG (sat, "set internal options to target satisfiable instances") \
-  CONFIG (unsat, "set internal options to target unsatisfiable instances")
+  CONFIG (unsat, "set internal options to target unsatisfiable instances") \
+\
+  CONFIG (palsatids1, "classic palsat, autarky check after repair") \
+  CONFIG (palsatids2, "classic palsat, autarky check after expansion") \
+  CONFIG (palsatids3, "classic palsat, autarky check after both") \
+  CONFIG (palsatids4, "classic palsat, autarky check at the end") \
+\
+  CONFIG (palsatbase, "anti-stagnation palsat, autarky check at the end") \
+  CONFIG (palsatiwtl, "as '--palsatbase' plus increased walk tick limit") \
+  CONFIG (palsatpure, "as '--palsatbase' plus pure literal fixpoint") \
+  CONFIG (palsatpureiwtl, "as '--palsatbase' plus both of them") \
+\
+  CONFIG (palsatlsl, "as '--palsatpureiwtl' but picking on base^lsl") \
+  CONFIG (palsatmakebreak, "as '--palsatpureiwtl' but picking on make-break")
 
 static const char *configs[] = {
 #define CONFIG(N, D) #N,
@@ -88,7 +181,7 @@ bool Config::set (Options &opts, const char *name) {
 /*------------------------------------------------------------------------*/
 
 void Config::usage () {
-#define CONFIG(N, D) printf ("  %-14s " D "\n", "--" #N);
+#define CONFIG(N, D) printf ("  %-18s " D "\n", "--" #N);
   CONFIGS
 #undef CONFIG
 }
