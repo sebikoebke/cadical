@@ -126,6 +126,10 @@ struct Walker {
   vector<int> autarky_set;        // set with all literals that build an autarky
                                   // the advantage is, that we could bould easily a set of clauses with palsat_lookup_table if we want to generate the autarky clauses
   bool show_autarky = false;
+  bool check_cuts = false;        // set to true by hand: run check_for_cuts once at the end
+                                  // of the run and report how many connected components the
+                                  // residual formula F | A has, against the whole formula as
+                                  // baseline (no ticks are charged)
   bool trace_autarky = true;      // set to true by hand to write the per-check trace of
                                   // autarky.log ( see scripts/compare_autarky_checkpoints.py)
   int64_t loop_iteration = 0;     // iteration of the walk_palsat main loop, only used to line up the
@@ -2796,6 +2800,163 @@ void Internal::build_autarky(Walker &walker, const char *site, bool shadow) {
 
 /*----------------------------------------------------------------------------*/
 
+void Internal::check_for_cuts(Walker &walker) {
+  /*
+  A cut divide a set of clauses into multiple sets of variables and clauses.
+  Every set can be resolved by its one, because all clauses of a set contain no
+  variable of another set.
+  To be able to detect those sets, we have to build 'islands'.
+  To be able to say, if a variable belongs to an island, each island needs a parent 
+  variable => tree structure with a root == parent, but the root can have multiple childs 
+  (way more than two if the island grow and grow).
+  The parent node gets a negative value in parent, which is an upper bound for the tree height.
+  next_var points on for each variable on his neighbor on the island.
+  If the variable is alone on the island, next_var is -1 (to begin, otherwise every var would 
+  point on var 0).
+  The last element of an island point again to the parent node (circle).
+  seen shows if we already touched a variable.
+  */
+  vector<int> parent;
+  vector<int> next_var;
+  vector<signed char> seen;
+
+  // lambda function to detect the parent nodes
+  // parent nodes always have negative values
+  auto find = [&] (int i){
+    int j = i;
+    // first reach the parent node
+    while (parent[j] >= 0) j = parent[j];
+    // flatten the tree
+    while (parent[i] >= 0){
+      int next = parent[i];
+      // assign the new parent node 
+      parent[i] = j;
+      i = next;
+    }
+    return j;
+  };
+
+  // lambda function to merge two islands
+  auto unite = [&] (int a, int b){
+    a = find(a);
+    b = find(b);
+    // check if the two vars are already on the same island
+    if (a == b) return;
+
+    // both rings have to exist before we merge them
+    assert (next_var[a] != -1 && next_var[b] != -1);
+
+    // smaller value is the deeper tree, should be the new parent node
+    if (parent[a] > parent[b]) swap (a, b);
+
+    // only if both trees were equally deep the survivor gets one level taller
+    if (parent[a] == parent[b]) parent[a]--;
+
+    parent[b] = a;
+
+    // merge the two rings into one
+    swap (next_var[a], next_var[b]);
+  };
+
+  // one pass over the tracked clauses.
+  // skip_autark == true drops every clause the autarky already satisfies,
+  // so the islands are made by the autarky (which is the cut)
+  // skip_autark == false keeps the autarky clauses, which gives the baseline of the whole formula
+  // autark: the residual formula F[A], without the clauses the autarky satisfies
+  // base:   the whole formula, the baseline to compare against
+  int64_t islands_autark = 0, variables_seen_autark = 0, largest_island_autark = 0,
+          clauses_check_autark = 0;
+  int64_t islands_base = 0, variables_seen_base = 0, largest_island_base = 0,
+          clauses_check_base = 0;
+
+  auto scan = [&] (bool skip_autark, int64_t &islands, int64_t &variables,
+                   int64_t &largest_island, int64_t &counted) {
+    parent.assign (vsize, -1);
+    next_var.assign (vsize, -1);
+    seen.assign (vsize, 0);
+    islands = variables = largest_island = counted = 0;
+
+    // check all clauses which are not garbage, redundant or unvisitable (autark)
+    for (size_t pos = 0; pos < clauses.size (); pos++) {
+      Clause *c = clauses[pos];
+      if (c->garbage)
+        continue;
+      if (c->redundant) {
+        if (!opts.walkredundant)
+          continue;
+        if (!likely_to_be_kept_clause (c))
+          continue;
+      }
+      if (skip_autark && walker.unvisitable[pos])
+        continue;
+      counted++;
+
+      // link every active variable of the clause to the first one.
+      int first = 0;
+      for (const auto lit : *c) {
+        const int v = vidx (lit);
+        // eliminated or substituted variables are not part of the formula anymore
+        if (!active (v))
+          continue;
+
+        // check if autark literals survived
+        assert (!skip_autark || !walker.unflippable[v]);
+
+        // put the variable into a ring of its own the first time we see it
+        if (!seen[v]) {
+          seen[v] = 1;
+          next_var[v] = v;
+        }
+
+        if (!first)
+          first = v;
+        else
+          unite (first, v);
+      }
+    }
+
+    // a root is a seen variable that dont have a child, 
+    // and the size of its island is the length of the ring
+    int64_t seen_total = 0;
+    for (int idx = 1; idx <= max_var; idx++)
+      if (seen[idx]) seen_total++;
+
+    for (int idx = 1; idx <= max_var; idx++) {
+      if (!seen[idx] || parent[idx] >= 0)
+        continue;
+      islands++;
+      int64_t size = 0;
+      int w = idx;
+      do {
+        size++;
+        w = next_var[w];
+        assert (w != -1);
+      } while (w != idx);
+      variables += size;
+      if (size > largest_island) largest_island = size;
+    }
+
+    // every seen variable lies on exactly one ring, so the island sizes have to add
+    // up, this verifies the ring bookkeeping, not just the island count
+    assert (variables == seen_total);
+    (void) seen_total;
+  };
+
+  scan (false, islands_base, variables_seen_base, largest_island_base,
+        clauses_check_base);
+  scan (true, islands_autark, variables_seen_autark, largest_island_autark,
+        clauses_check_autark);
+
+  PHASE ("walk_palsat", stats.walk.palsat,
+         "cuts: islands %" PRId64 " -> %" PRId64 ", largest %" PRId64 "/%" PRId64
+         " -> %" PRId64 "/%" PRId64 ", clauses %" PRId64 " -> %" PRId64,
+         islands_base, islands_autark, largest_island_base, variables_seen_base,
+         largest_island_autark, variables_seen_autark, clauses_check_base,
+         clauses_check_autark);
+}
+
+/*----------------------------------------------------------------------------*/
+
 // Returns true if the conflict was fully resolved (broken == 0) so that
 // up_expansion can resume; false if it could not be repaired (=> UNSAT).
 bool Internal::probSAT_repair(Walker &walker) {
@@ -3220,9 +3381,9 @@ void Internal::walk_palsat() {
       const int64_t pure_ticks_before = walker.ticks;
       walker.limit = walker.ticks + walk_budget;
       find_pure_literals (walker);
+
       const int64_t spent = walker.ticks - pure_ticks_before;
-      stats.walk.palsatpureticks += spent;
-      stats.walk.palsatextrapureticks += spent;
+      stats.walk.palsatpureticksend += spent;
     }
   }
 
@@ -3348,6 +3509,10 @@ void Internal::walk_palsat() {
 
     // if an autarky contain a frozen literal, the autarky cant be removed
     if (!walker.frozen_autarky && !walker.autarky_trail.empty ()) {
+
+      // does the autarky split the rest of the formula into independent components?
+      if (walker.check_cuts) check_for_cuts (walker);
+
       clear_watches ();
       autarky_apply (walker.autarky_val, walker.autarky_trail);
 

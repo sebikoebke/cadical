@@ -845,7 +845,9 @@ void Stats::print (Internal *internal) {
      {
        const int64_t palsatautarkyticks =
            stats.walk.palsatautarkyticksexp + stats.walk.palsatautarkyticksrep +
-           stats.walk.palsatautarkytickstuc + stats.walk.palsatautarkyticksend;
+           stats.walk.palsatautarkytickstuc;
+       const int64_t palsatpostticks =
+           stats.walk.palsatautarkyticksend + stats.walk.palsatpureticksend;
        const int64_t palsattotalticks =
            stats.walk.palsatexpansionticks + stats.walk.palsatrepairticks +
            stats.walk.palsatpureticks + palsatautarkyticks;
@@ -862,10 +864,10 @@ void Stats::print (Internal *internal) {
            stats.walk.palsatpureticks - stats.walk.palsatextrapureticks,
            percent (stats.walk.palsatpureticks - stats.walk.palsatextrapureticks,
                     stats.walk.palsatpureticks));
-       PRT ("   intermediate: %15" PRId64 "   %10.2f    %% of pure ticks, fixpoint in the loop (mode 4: once at the end)",
+       PRT ("   intermediate: %15" PRId64 "   %10.2f    %% of pure ticks, fixpoint inside the loop",
            stats.walk.palsatextrapureticks,
            percent (stats.walk.palsatextrapureticks, stats.walk.palsatpureticks));
-       PRT ("  autarky-ticks: %15" PRId64 "   %10.2f    %% of walk_palsat ticks",
+       PRT ("  autarky-ticks: %15" PRId64 "   %10.2f    %% of walk_palsat ticks, checks inside the loop",
            palsatautarkyticks,
            percent (palsatautarkyticks, palsattotalticks));
        PRT ("   after-expand: %15" PRId64 "   %10.2f    %% of autarky ticks",
@@ -877,9 +879,14 @@ void Stats::print (Internal *internal) {
        PRT ("   at-tuc-min:   %15" PRId64 "   %10.2f    %% of autarky ticks",
            stats.walk.palsatautarkytickstuc,
            percent (stats.walk.palsatautarkytickstuc, palsatautarkyticks));
-       PRT ("   at-end:       %15" PRId64 "   %10.2f    %% of autarky ticks, single call after the loop",
+       PRT ("  post-ticks:    %15" PRId64 "   %10.2f    %% additional on top of the walk_palsat ticks",
+           palsatpostticks, percent (palsatpostticks, palsattotalticks));
+       PRT ("   peeling:      %15" PRId64 "   %10.2f    %% of post ticks, the closing build_autarky",
            stats.walk.palsatautarkyticksend,
-           percent (stats.walk.palsatautarkyticksend, palsatautarkyticks));
+           percent (stats.walk.palsatautarkyticksend, palsatpostticks));
+       PRT ("   pseudo-pure:  %15" PRId64 "   %10.2f    %% of post ticks, the closing pure fixpoint",
+           stats.walk.palsatpureticksend,
+           percent (stats.walk.palsatpureticksend, palsatpostticks));
      }
      PRT ("  reflips:       %15" PRId64 "   %10.2f    %% of flips re-flip a var",
          stats.walk.palsatreflips,

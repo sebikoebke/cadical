@@ -306,7 +306,7 @@ OPTION( walkmaxeff,      1e7,  0,2e9,1,0,1, "maximum efficiency (in 1e3 ticks)")
 OPTION( walkmineff,        0,  0,1e7,1,0,1, "minimum efficiency") \
 OPTION( walkmineffinit,  1e3,  0,1e7,1,0,1, "minimum efficiency of initial local search") \
 OPTION( walknonstable,     1,  0,  1,0,0,1, "walk in non-stabilizing phase") \
-OPTION( walkpalsat,        0,  0,  5,1,0,1, "walkpalsat expansion strategy: 0 = off, 1 = classic palsat, 2 = 1% barrier, 3 = 10% barrier, 4 = dynamic barrier (change between 1% and 10%), 5 = anti-stagnation") \
+OPTION( walkpalsat,        0,  0,  5,1,0,1, "walkpalsat expansion strategy: 0 = off, 1 = classic palsat, 2 = 1percent barrier, 3 = 10percent barrier, 4 = dynamic barrier (change between 1 and 10 percent), 5 = anti-stagnation") \
 OPTION( walkpalsatautarky, 0,  0,  4,1,0,1, "walkpalsat autarky detection + elimination: 0 = off, 1 = after repair, 2 = after expansion, 3 = after rep. and exp., 4 = at the end of walkpalsat (once => no freezing during search)") \
 OPTION( walkpalsatautarkypure,0,0, 1,0,0,1, "walkpalsat pure literal fixpoint after each repair") \
 OPTION( walkpalsatautarkytuc,0, 0,  1,0,0,1, "walkpalsat autarky check at TUC minima") \

@@ -1476,6 +1476,7 @@ struct Internal {
                                  std::vector<int> &autark, int64_t pure,
                                  int frozen);
   void palsat_assign_pure_literals (Walker &walker);
+  void check_for_cuts (Walker &walker);
   void find_pure_literals(Walker &walker);
   bool probSAT_repair (Walker &walker);
   void walk_palsat ();

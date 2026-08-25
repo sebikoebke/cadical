@@ -127,9 +127,9 @@ struct Stats {
   } rephased;
 
   struct {
-    int64_t tries;   // number of attempts to find an autarky
-    int64_t eliminated;// number of eliminated literals
-    int64_t successful; // number of successful autarky rounds
+    int64_t tries = 0;   // number of attempts to find an autarky
+    int64_t eliminated = 0;// number of eliminated literals
+    int64_t successful = 0; // number of successful autarky rounds
     int64_t witnesses = 0; // autarky witness literals seen during extend()
     int64_t forced = 0;    // forced true witness literlas of all autarkies
   } autarkies;
@@ -195,7 +195,8 @@ struct Stats {
     int64_t palsatautarkylitsrep = 0;     // autarky literals whose polarity was produced by the repair
     int64_t palsatautarkyclausesexp = 0; // clauses newly marked unvisitable by the after-expansion call
     int64_t palsatautarkyclausesrep = 0; // clauses newly marked unvisitable by the after-repair call
-    int64_t palsatautarkyticksend = 0;   // ticks spent in the closing build_autarky (+ pure fixpoint)
+    int64_t palsatautarkyticksend = 0;   // ticks spent in the closing build_autarky (mode 4, after the loop)
+    int64_t palsatpureticksend = 0;      // ticks of the closing pure fixpoint (mode 4, after the loop)
     int64_t palsatautarkyclausesend = 0; // autarky clauses found by that closing call
     int64_t weight_reducing_var = 0;
     int64_t sideways = 0;
