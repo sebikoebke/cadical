@@ -170,6 +170,10 @@ struct Stats {
     int64_t palsatstagnationbreaks = 0; // anti-stagnation: repairs stopped early because stagnation_counter reached the limit
     int64_t palsatautarky = 0;       // number of build_autarky calls that found a non-empty autark part
     int64_t palsatautarkyruns = 0;   // walk_palsat runs that ended with a non-empty autarky
+    int64_t palsatpeelskipped = 0;   // in-loop autarky checks skipped after giving up
+    int64_t palsatpeelgaveup = 0;    // walk_palsat runs that gave up on the in-loop check
+    int64_t palsatrestlits = 0;      // autarky literals the trailing repair added on top
+    int64_t palsatrestticks = 0;     // ticks of the budget left unused by the expansion
     int64_t palsatautarkylits = 0;   // literals fixed as unflippable because of an autarky
     int64_t palsatautarkylitsmax = 0; // literals of the largest autarky found in a single run
     double palsatautarkylitrate = 0; // sum over the successful build_autarky calls of the percentage

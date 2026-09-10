@@ -113,6 +113,38 @@ static NameVal palsatmakebreak_config[] = {
 
 /*------------------------------------------------------------------------*/
 
+// Configurations to test whether the local search contributes autarky literals or not.
+
+// propagate to full assignment and peel afterwards
+static NameVal palsatnorepair_config[] = {
+    {"autarkies", 0},           {"walkpalsat", 3},
+    {"walkpalsatautarky", 4},   {"walkpalsatautarkypure", 0},
+    {"walkpalsatautarkytuc", 0}, {"walkpalsatiwtl", 0},
+    {"walkpalsatpick", 0},      {"walkpalsatrepairoff", 1},
+};
+
+// Peel after 10% of variables are activated + pure literal fixpoint. 
+// If two peelings in a row are fruitless, the in loop peeling is dropped
+// and we only peel on the full assignment at the end
+static NameVal palsatapc_config[] = {
+    {"autarkies", 0},           {"walkpalsat", 3},
+    {"walkpalsatautarky", 2},   {"walkpalsatautarkypure", 1},
+    {"walkpalsatautarkytuc", 0}, {"walkpalsatiwtl", 0},
+    {"walkpalsatpick", 0},      {"walkpalsatrepairoff", 1},
+    {"walkpalsatpeelgiveup", 2},
+};
+
+// as palsatapc, plus the local search on remaining ticks of the expansion 
+static NameVal palsatapcar_config[] = {
+    {"autarkies", 0},           {"walkpalsat", 3},
+    {"walkpalsatautarky", 2},   {"walkpalsatautarkypure", 1},
+    {"walkpalsatautarkytuc", 0}, {"walkpalsatiwtl", 0},
+    {"walkpalsatpick", 0},      {"walkpalsatrepairoff", 1},
+    {"walkpalsatpeelgiveup", 2}, {"walkpalsatrepairrest", 1},
+};
+
+/*------------------------------------------------------------------------*/
+
 #define CONFIGS \
 \
   CONFIG (default, "set default advanced internal options") \
@@ -131,7 +163,11 @@ static NameVal palsatmakebreak_config[] = {
   CONFIG (palsatpureiwtl, "as '--palsatbase' plus both of them") \
 \
   CONFIG (palsatlsl, "as '--palsatpureiwtl' but picking on base^lsl") \
-  CONFIG (palsatmakebreak, "as '--palsatpureiwtl' but picking on make-break")
+  CONFIG (palsatmakebreak, "as '--palsatpureiwtl' but picking on make-break") \
+\
+  CONFIG (palsatnorepair, "palsat without repair, autarky check at the end") \
+  CONFIG (palsatapc, "palsat without repair, autarky check at every barrier, giving up after two fruitless ones") \
+  CONFIG (palsatapcar, "as '--palsatapc' plus the local search on the leftover ticks")
 
 static const char *configs[] = {
 #define CONFIG(N, D) #N,

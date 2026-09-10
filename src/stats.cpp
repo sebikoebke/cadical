@@ -921,6 +921,17 @@ void Stats::print (Internal *internal) {
      PRT ("  autarky-lits:  %15" PRId64 "   %10.2f    total literals, average per autarky",
          stats.walk.palsatautarkylits,
          relative (stats.walk.palsatautarkylits, stats.walk.palsatautarkyruns));
+     PRT ("   gave-up:      %15" PRId64 "   %10.2f %%  of walk_palsat runs dropped the in-loop check",
+         stats.walk.palsatpeelgaveup,
+         percent (stats.walk.palsatpeelgaveup, stats.walk.palsat));
+     PRT ("    skipped:     %15" PRId64 "                 in-loop checks saved by giving up",
+         stats.walk.palsatpeelskipped);
+     PRT ("   rest-lits:    %15" PRId64 "   %10.2f %%  of autarky literals added by the trailing repair",
+         stats.walk.palsatrestlits,
+         percent (stats.walk.palsatrestlits, stats.walk.palsatautarkylits));
+     PRT ("  unused-ticks:  %15" PRId64 "   %10.2f    of the budget unused after full assignment",
+         stats.walk.palsatrestticks,
+         relative (stats.walk.palsatrestticks, stats.walk.palsat));
      PRT ("   largest:      %15" PRId64 "                 literals in the largest autarky",
          stats.walk.palsatautarkylitsmax);
      PRT ("   from-expand:  %15" PRId64 "   %10.2f %%  autarky literals found by expansion",

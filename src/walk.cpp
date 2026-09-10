@@ -153,6 +153,13 @@ struct Walker {
   vector<unsigned> peel_stamp;    // timestamp which show if we already visited a clause during peeling
   unsigned peel_generation = 0;   // current peel generation
 
+  bool repair_off = false;    // true if we want to turn repair off
+
+  size_t peel_give_up = 0;    // consecutive fruitless checks before giving up, 0 = never
+  size_t failed_peels = 0;    // consecutive fruitless checks in this run
+
+  bool repair_rest = false;   // spend the ticks left after the expansion on the repair
+
   std::vector<signed char> best_values; // best model stored so far
   double score (unsigned);              // compute score from break count
 #ifndef NDEBUG
@@ -1628,6 +1635,9 @@ bool Internal::advanced_expansion(Walker &walker) {
   // remember if probSAT_repair passed a solution with conflicts
   if (walker.anti_stagnation){
     no_conflict = walker.resolved_conflicts;
+  }
+  else if (walker.repair_off) {
+    no_conflict = walker.broken_clauses.empty ();
   }
 
   if (!palsat_up(walker)) no_conflict = false;
@@ -3210,6 +3220,14 @@ void Internal::walk_palsat() {
       (opts.walkpalsatautarky == 2 || opts.walkpalsatautarky == 3);
   walker.autarky_check_end = (opts.walkpalsatautarky == 4);
   walker.advanced_pure_finding = opts.walkpalsatautarkypure;
+  walker.repair_off = opts.walkpalsatrepairoff;
+  walker.peel_give_up = opts.walkpalsatpeelgiveup;
+  // the trailing repair only makes sense if the loop itself does not repair
+  walker.repair_rest = opts.walkpalsatrepairrest && walker.repair_off;
+
+  if (walker.repair_off)
+    walker.autarky_check_end = walker.autarky_mode;
+
   // checking at TUC minima is by construction an in-loop check and therefore off in mode 4
   walker.tuc_min_autarky_check =
       opts.walkpalsatautarkytuc && !walker.autarky_check_end;
@@ -3278,6 +3296,7 @@ void Internal::walk_palsat() {
     while (walker.ticks < walker.limit) {
       walker.loop_iteration++;
       int64_t ticks_before = walker.ticks;
+      const size_t activated_before = walker.activated;
       // count the conflicts of this advanced_expansion run
       if (walker.dynamic_barrier) walker.expansion_conflict_counter = 0;
       no_conflict = walker.use_up_expansion ? up_expansion(walker)
@@ -3285,7 +3304,9 @@ void Internal::walk_palsat() {
       stats.walk.palsatexpansionticks += walker.ticks - ticks_before;
 
       // SAT over the activated set
-      if (no_conflict)
+      if (no_conflict)  break;
+
+      if (walker.repair_off && walker.activated == activated_before)
         break;
 
       // check for autarkies before Repair, because maybe we found a autarky
@@ -3294,12 +3315,34 @@ void Internal::walk_palsat() {
       int64_t autarky_ticks_before = walker.ticks;
       int64_t autarky_clauses_before = stats.walk.palsatautarkyclauses;
 
-      if (walker.autarky_mode && walker.autarky_check_expansion)
+      // give_up == 0 keeps the old behaviour: check after every expansion
+      const bool give_up =
+          walker.peel_give_up && walker.failed_peels >= walker.peel_give_up;
+
+      if (walker.autarky_mode && walker.autarky_check_expansion && !give_up) {
+        // only the check itself counts towards the give-up counter
+        const size_t trail_before = walker.autarky_trail.size ();
         build_autarky (walker, "expansion");
-      else if (walker.autarky_mode && walker.shadow_mode)
+        if (walker.autarky_trail.size () > trail_before)
+          walker.failed_peels = 0;
+        else
+          walker.failed_peels++;
+      } else if (walker.autarky_mode && walker.autarky_check_expansion) {
+        stats.walk.palsatpeelskipped++;
+      } else if (walker.autarky_mode && walker.shadow_mode)
         build_autarky (walker, "expansion_shadow", true);
       stats.walk.palsatautarkyticksexp += walker.ticks - autarky_ticks_before;
       stats.walk.palsatautarkyclausesexp += stats.walk.palsatautarkyclauses - autarky_clauses_before;
+
+      if (walker.repair_off && walker.autarky_mode && walker.advanced_pure_finding &&
+          !walker.autarky_trail.empty()) {
+        const int64_t pure_ticks_before = walker.ticks;
+        find_pure_literals (walker);
+        const int64_t spent = walker.ticks - pure_ticks_before;
+        stats.walk.palsatpureticks += spent;
+        stats.walk.palsatextrapureticks += spent;
+        if (walker.trace_autarky) trace_autarky_check (walker, "pure");
+      }
 
       // update the dynamic barrier: after each run compare this runs conflicts to the previous runs conflicts
       if (walker.dynamic_barrier) {
@@ -3321,24 +3364,28 @@ void Internal::walk_palsat() {
         walker.last_expansion_conflicts = cur;
         first_run = false;
       }
+
+      bool repaired = false;
+
+      if (!walker.repair_off) {
+        ticks_before = walker.ticks;
+        repaired = probSAT_repair(walker);
+
+        stats.walk.palsatrepairticks += walker.ticks - ticks_before - walker.tuc_autarky_ticks;
+        stats.walk.palsatautarkytickstuc += walker.tuc_autarky_ticks;
+
+        // check for autarkies after Repair
+        // we could find autarkies if Repair luckily flipped one
+        autarky_ticks_before = walker.ticks;
+        autarky_clauses_before = stats.walk.palsatautarkyclauses;
+
+        if (walker.autarky_mode && walker.autarky_check_repair)
+          build_autarky (walker, "repair");
+
+        stats.walk.palsatautarkyticksrep += walker.ticks - autarky_ticks_before;
+        stats.walk.palsatautarkyclausesrep += stats.walk.palsatautarkyclauses - autarky_clauses_before;
+      }
       
-      ticks_before = walker.ticks;
-      const bool repaired = probSAT_repair(walker);
-      
-      stats.walk.palsatrepairticks += walker.ticks - ticks_before - walker.tuc_autarky_ticks;
-      stats.walk.palsatautarkytickstuc += walker.tuc_autarky_ticks;
-
-      // check for autarkies after Repair
-      // we could find autarkies if Repair luckily flipped one
-      autarky_ticks_before = walker.ticks;
-      autarky_clauses_before = stats.walk.palsatautarkyclauses;
-
-      if (walker.autarky_mode && walker.autarky_check_repair)
-        build_autarky (walker, "repair");
-
-      stats.walk.palsatautarkyticksrep += walker.ticks - autarky_ticks_before;
-      stats.walk.palsatautarkyclausesrep += stats.walk.palsatautarkyclauses - autarky_clauses_before;
-
       // try to find new pure literals; mode 4 runs this once after the loop instead
       if (walker.autarky_mode && walker.advanced_pure_finding &&
           !walker.autarky_check_end) {
@@ -3352,12 +3399,18 @@ void Internal::walk_palsat() {
         if (walker.trace_autarky) trace_autarky_check (walker, "pure");
       }
 
-      // conflict not resolvable -> UNSAT
-      // only anti_stagnation keeps going with expansion if tick limit is not exceeded
-      if (!repaired && (!walker.anti_stagnation || walker.assumption_unsat))
+      if (!walker.repair_off && !repaired &&
+          (!walker.anti_stagnation || walker.assumption_unsat))
         break;
     }
+
+    if (walker.peel_give_up && walker.failed_peels >= walker.peel_give_up)
+      stats.walk.palsatpeelgaveup++;
   }
+
+  // What is left of the tick budget once the expansion is exhausted
+  const int64_t ticks_left =
+      walker.limit > walker.ticks ? walker.limit - walker.ticks : 0;
 
   // if --walkpalsatautarky=4, the autarky detection runs on the final assignment of the walkpalsat run.
   // While the local search was running nothing was frozen as unflippable and no clause was locked as unvisitable
@@ -3384,6 +3437,37 @@ void Internal::walk_palsat() {
 
       const int64_t spent = walker.ticks - pure_ticks_before;
       stats.walk.palsatpureticksend += spent;
+    }
+  }
+
+  stats.walk.palsatrestticks += ticks_left;
+
+  if (!unsat && walker.repair_rest && ticks_left > 0) {
+    const size_t trail_before = walker.autarky_trail.size ();
+
+    walker.limit = walker.ticks + ticks_left;
+
+    int64_t rest_before = walker.ticks;
+    probSAT_repair (walker);
+    stats.walk.palsatrepairticks +=
+        walker.ticks - rest_before - walker.tuc_autarky_ticks;
+    stats.walk.palsatautarkytickstuc += walker.tuc_autarky_ticks;
+
+    if (walker.autarky_mode) {
+      rest_before = walker.ticks;
+      const int64_t clauses_before = stats.walk.palsatautarkyclauses;
+      build_autarky (walker, "end_after_repair");
+      stats.walk.palsatautarkyticksend += walker.ticks - rest_before;
+      stats.walk.palsatautarkyclausesend +=
+          stats.walk.palsatautarkyclauses - clauses_before;
+      stats.walk.palsatrestlits +=
+          (int64_t) (walker.autarky_trail.size () - trail_before);
+
+      if (walker.advanced_pure_finding) {
+        rest_before = walker.ticks;
+        find_pure_literals (walker);
+        stats.walk.palsatpureticksend += walker.ticks - rest_before;
+      }
     }
   }
 

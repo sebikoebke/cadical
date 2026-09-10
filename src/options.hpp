@@ -311,7 +311,10 @@ OPTION( walkpalsatautarky, 0,  0,  4,1,0,1, "walkpalsat autarky detection + elim
 OPTION( walkpalsatautarkypure,0,0, 1,0,0,1, "walkpalsat pure literal fixpoint after each repair") \
 OPTION( walkpalsatautarkytuc,0, 0,  1,0,0,1, "walkpalsat autarky check at TUC minima") \
 OPTION( walkpalsatiwtl,    0,  0,  1,0,0,1, "walkpalsat increased walk tick limit (2.5x)") \
+OPTION( walkpalsatpeelgiveup,0,0,1e3,0,0,1, "walkpalsat stops the in-loop autarky check if more than two peelings did not found any autarky literals") \
 OPTION( walkpalsatpick,    0,  0,  3,1,0,1, "walkpalsat literal pick score: 0 = base^bv (as normal walk), 1 = base^lsl, 2 = broken_occ*base^bv, 3 = advanced multi-clause picking") \
+OPTION( walkpalsatrepairoff,0, 0,  1,0,0,1, "walkpalsat without repair: expansion and peeling only, the local search never runs") \
+OPTION( walkpalsatrepairrest,0,0,  1,0,0,1, "walkpalsat: after the expansion is exhausted spend the remaining ticks on the repair and peel once more (needs --walkpalsatrepairoff)") \
 OPTION( walkredundant,     0,  0,  2,0,0,1, "walk redundant clauses too [0 = none, 1 = binary nonyhyper, 2=all]") \
 OPTION( warmup,            1,  0,  1,0,0,1, "warmup before walk using propagation") \
 
