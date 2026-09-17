@@ -185,6 +185,7 @@ struct Stats {
     int64_t palsatpureclauses = 0;   // clauses satisfied by a fixed pure literal before the main loop
     int64_t palsatextrapure = 0;     // subset of palsatautarkylits added by find_pure_literals 
     int64_t palsatextrapurerounds = 0; // fixpoint rounds of find_pure_literals that actually added a literal
+    int64_t palsatpureforced = 0;    // variables that was assigned to the opposite value by PPLE
     int64_t palsatadvclauses = 0;    // advanced_picking: clauses drawn/visited while collecting the candidate literals
     int64_t palsatpureticks = 0;     // ticks spent finding pure literals
     int64_t palsatextrapureticks = 0; // share of palsatpureticks spent in find_pure_literals

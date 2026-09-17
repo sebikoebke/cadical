@@ -949,6 +949,9 @@ void Stats::print (Internal *internal) {
      PRT ("    pure-rounds: %15" PRId64 "   %10.2f    productive fixpoint rounds, literals per round",
          stats.walk.palsatextrapurerounds,
          relative (stats.walk.palsatextrapure, stats.walk.palsatextrapurerounds));
+     PRT ("    forced:      %15" PRId64 "   %10.2f %%  of those, flipped from the opposite value",
+         stats.walk.palsatpureforced,
+         percent (stats.walk.palsatpureforced, stats.walk.palsatextrapure));
      PRT ("   from-tuc-min: %15" PRId64 "   %10.2f %%  overlaps the lines above: first seen at a TUC low-water mark",
          stats.walk.palsatautarkylitstuc,
          percent (stats.walk.palsatautarkylitstuc, stats.walk.palsatautarkylits));

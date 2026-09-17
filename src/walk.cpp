@@ -2541,9 +2541,8 @@ void Internal::palsat_assign_pure_literals(Walker &walker) {
 // lit can be added to the current autark set A, if every clause containing -lit is already satisfied by A.
 // (Kullmann's autarky closure)
 //
-// Only unassigned variables are candidates: an assigned variable that survived
-// the peeling is already in A, and a peeled one has an open clause containing
-// its negation, so it fails the test by construction.
+// unassigned literals => assign to true
+// assigned literals which are flippable => force to true
 //
 // The literals found here count as AUTARKY literals, not as pure literals:
 // they exist only because A already covers the clauses of their negation,
@@ -2551,14 +2550,33 @@ void Internal::palsat_assign_pure_literals(Walker &walker) {
 void Internal::find_pure_literals(Walker &walker){
   assert (walker.autarky_mode);
 
+  //if an autarky is empty, PPLE cannot find somethind
+  if(walker.autarky_trail.empty()) return;
+
   bool changed = true;
+
+  // testing lit means scanning the clauses of -lit: 
+  // all clauses of -lit have to be marked as unvisitable,
+  // then lit is pseudo pure given an autarky
+  auto addable = [&] (int lit) {
+    const auto &row = walker.palsat_lookup_table[vlit (-lit)];
+    size_t visited = 0;
+    bool pseudo_pure = true;
+    for (int c : row) {
+      visited++;
+      walker.ticks++;
+      if (!walker.unvisitable[c]) { pseudo_pure = false; break; }
+    }
+    walker.ticks += cache_lines (visited, sizeof (int));
+    return pseudo_pure;
+  };
 
   while (changed && walker.ticks < walker.limit) {
     changed = false;
 
     for (int i = 1; i <= max_var; i++) {
-      // try to find active but not assigned literal
-      if (!active(i) || val(i) != 0) continue;
+      // try to find an active literal that is not in A yet
+      if (!active(i) || walker.unflippable[i]) continue;
 
       const auto &pos = walker.palsat_lookup_table[vlit(i)];
       const auto &neg = walker.palsat_lookup_table[vlit(-i)];
@@ -2566,34 +2584,15 @@ void Internal::find_pure_literals(Walker &walker){
 
       if (pos.empty() && neg.empty()) continue;
 
-      // all clauses containing +i covered => -i is addable,
+      // the polarity that is already assigned is tested first: if it is addable,
+      // the literal enters A without a flip. for an unassigned variable the order
+      // stays -i before +i: all clauses containing +i covered => -i is addable,
       // because for lit = -i the clauses containing -lit are exactly those of +i
-      int pure_lit = 0;
-      bool addable = true;
-      // both scans can break early, so the sequential part is charged by the
-      // number of entries actually read
-      size_t visited = 0;
-      for (int c : pos) {
-        visited++;
-        walker.ticks++;
-        if (!walker.unvisitable[c]) { addable = false; break; }
-      }
-      walker.ticks += cache_lines (visited, sizeof (int));
+      const int first = val (i) ? (val (i) > 0 ? i : -i) : -i;
 
-      if (addable) {
-        pure_lit = -i;
-      } else {
-        // mirrored test: all clauses containing -i covered => +i is addable
-        addable = true;
-        visited = 0;
-        for (int c : neg) {
-          visited++;
-          walker.ticks++;
-          if (!walker.unvisitable[c]) { addable = false; break; }
-        }
-        walker.ticks += cache_lines (visited, sizeof (int));
-        if (addable) pure_lit = i;
-      }
+      int pure_lit = 0;
+      if (addable (first)) pure_lit = first;
+      else if (addable (-first)) pure_lit = -first;
 
       // both polarities still occur in an open clause
       if (!pure_lit) continue;
@@ -2601,11 +2600,20 @@ void Internal::find_pure_literals(Walker &walker){
       // frozen check: if a variable is marked as frozen, it is not allowed to be removed
       if (frozen(pure_lit)) walker.frozen_autarky = true;
 
-      // cannot fail: every clause containing -pure_lit is satisfied by an
-      // unflippable literal of A, so none of them can break
-      bool check = palsat_assign (walker, pure_lit);
-      assert(check);
-      (void) check;
+      if (!val (pure_lit)) {
+        // cannot fail: every clause containing -pure_lit is satisfied by an
+        // unflippable literal of A, so none of them can break
+        bool check = palsat_assign (walker, pure_lit);
+        assert(check);
+        (void) check;
+      } else if (val (pure_lit) < 0) {
+        // the variable is assigned to the opposite value, so pure_lit is forced.
+        // this cannot break a clause either: every clause containing -pure_lit is
+        // satisfied by an unflippable literal of A and only loses one more satisfier
+        flip_and_repair (walker, pure_lit);
+        stats.walk.palsatpureforced++;
+      }
+      // val (pure_lit) > 0: the value already matches, only the bookkeeping is missing
 
       // fix the literal
       walker.unflippable[vidx(pure_lit)] = 1;
